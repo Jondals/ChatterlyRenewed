@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-sidebar-servers',
+  selector: 'app-sidebar-layout',
   standalone: true,
   template: `
     <div class="w-16 bg-[#2b2d31] flex flex-col items-center py-3 gap-3">
@@ -11,4 +11,4 @@ import { Component } from '@angular/core';
     </div>
   `
 })
-export class SidebarServersComponent {}
+export class SidebarLayoutComponent {}
