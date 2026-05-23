@@ -9,7 +9,7 @@
     "test": "ng test"
   },
   "private": true,
-  "packageManager": "npm@11.12.1",
+  "packageManager": "pnpm@11.2.2",
   "dependencies": {
     "@angular-devkit/build-angular": "^21.2.4",
     "@angular/common": "^21.2.0",
