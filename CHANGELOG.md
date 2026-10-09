@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.13.0
+
+- Deploy: the automatic update failed at the end with `KeyError: 'ContainerConfig'` because it recreated the TURN relay with docker-compose 1.x. The relay is now only started when it is not running (`--no-recreate`), and `deploy/turn-setup.sh` replaces it by removing it first. The app was already replaced that way. The update also runs one at a time and with the minimum permissions of GitHub (`contents: read`). The four secrets of GitHub (`SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT`) are the right and only ones.
+- Security of the container: the app runs with a read-only file system (it writes only in its data volume and in memory), without any Linux capability, without the right to gain privileges, with an init process and a limit of processes. In the server, `@fastify/jwt` is updated and `fast-jwt` forced to 6.3.4 (an advisory about expired tokens in the verifier cache); `pnpm audit --prod` of the backend finds nothing. The encryption (end to end, keys derived in the browser, hash with a pepper of the server, sealed session) is untouched and the tests that check it pass.
+- Emoji starter pack, in every browser: in Chrome and Edge the web font of the emoji draws nothing on a canvas, so the pack came out blank or with the wrong squares. Each emoji is drawn with the emoji font of the system first and with the web font only if that gives nothing; a blank square is never saved, and when nothing can be drawn a notice says so. Tested in Chromium, Firefox and WebKit (24 stickers each).
+- Large text: the button of the emoji pack, the header of each pack and its buttons wrap instead of leaving their box; the icons of the settings menu no longer turn when the pointer is over them.
+- Weak devices (4 cores or fewer, 4 GB or less, or "save data"; also any device that cannot keep up while the introduction plays): the blur behind the panels is turned off, motion is "quick" by default, the background particles run at 30 frames per second, the web fonts of emoji and names are not downloaded, and the lights of the animations are fewer. With the processor slowed down 6 times, the introduction goes from 39.5 ms per frame to 19 ms in the light mode.
+- Animations: the lines of the floor of the introduction slide as one layer (no repaint every frame) and the exit does not use a full screen blur filter. Pictures of GIFs and stickers decode off the main thread.
+
 ## 2.12.0
 
 - Friends: pressing a friend opens the chat at once (the buttons on the right still do their own thing).

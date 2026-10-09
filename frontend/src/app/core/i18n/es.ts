@@ -1221,6 +1221,9 @@ export const ES: Record<string, string> = {
   'Encrypted before they leave your device. Up to 10 MB each':
     'Se cifran antes de salir de tu dispositivo. Hasta 10 MB cada uno',
   'Up to 8 MB': 'Hasta 8 MB',
+  'Could not make the emoji pack': 'No se pudo crear el paquete de emojis',
+  'This browser does not let the page draw the emoji (privacy protection?).':
+    'Este navegador no deja a la página dibujar los emojis (¿protección de privacidad?).',
   'Up to 5 MB': 'Hasta 5 MB',
   'Edit the sound': 'Edita el sonido',
   'Kept: {n} s': 'Se guarda: {n} s',

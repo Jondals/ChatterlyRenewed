@@ -18,6 +18,18 @@ services:
       TURN_SECRET: ${TURN_SECRET:-}
     volumes:
       - chatterly-data:/data
+    # Hardening: the container only writes in its data volume and in memory, has no extra privileges and has no
+    # capability of Linux (the app listens on ports above 1024 and needs none).
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    pids_limit: 512
     ports:
       - '127.0.0.1:3000:3000'
       - '127.0.0.1:3001:4200'

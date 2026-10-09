@@ -2054,6 +2054,11 @@ body.is-busy * {
 [data-bg='still'] .scene * {
   animation-play-state: paused !important;
 }
+/* Weak devices: the blur behind the panels is what costs most to draw, so it goes (the panels stay readable). */
+[data-perf='low'] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -3413,14 +3418,14 @@ html.has-session .boot-snapshot {
   height: 6.25rem;
 }
 
-/* The icons of the settings menu: on hover the tile turns a little, glows and a band of light crosses it. */
+/* The icons of the settings menu: on hover the tile grows a little, glows and a band of light crosses it (it does not turn). */
 .nav-item[role='link'] .nav-tile {
   transition:
     transform 0.35s var(--ease),
     box-shadow 0.35s var(--ease-suave);
 }
 .nav-item[role='link']:hover .nav-tile {
-  transform: scale(1.1) rotate(-5deg);
+  transform: scale(1.1);
   box-shadow:
     0 0 0 1px color-mix(in oklab, currentColor 40%, transparent),
     0 6px 16px -6px currentColor;

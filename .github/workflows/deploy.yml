@@ -10,6 +10,15 @@ on:
     branches: [master, main]
   workflow_dispatch:
 
+# The job only needs to read the repository (the server is reached with the SSH key, not with the token of GitHub).
+permissions:
+  contents: read
+
+# One update at a time: a push that arrives while another is running waits for it.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,6 +41,7 @@ jobs:
             $COMPOSE build app
             $COMPOSE rm -sf app
             $COMPOSE up -d app
-            # The TURN relay (when it was set up with deploy/turn-setup.sh) keeps running with the new version.
-            if grep -q '^TURN_SECRET=.' .env; then $COMPOSE --profile turn up -d turn; fi
+            # The TURN relay (when it was set up with deploy/turn-setup.sh) is started if it is not running, and left as it is
+            # otherwise (recreating it with docker-compose 1.x fails with 'ContainerConfig'; deploy/turn-setup.sh replaces it).
+            if grep -q '^TURN_SECRET=.' .env; then $COMPOSE --profile turn up -d --no-recreate turn; fi
             docker image prune -f

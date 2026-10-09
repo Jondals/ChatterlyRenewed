@@ -36,6 +36,8 @@ open_port udp 49152:49252
 sudo netfilter-persistent save >/dev/null 2>&1 || true
 
 if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"; else COMPOSE="docker-compose"; fi
+# Replaced (removed first, then created): recreating a container with docker-compose 1.x fails with 'ContainerConfig'.
+$COMPOSE --profile turn rm -sf turn
 $COMPOSE --profile turn up -d turn
 # The app reads the TURN variables when it starts.
 $COMPOSE rm -sf app

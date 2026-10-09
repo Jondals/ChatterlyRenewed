@@ -156,8 +156,7 @@ function followCover(part: string, element: Element | null): void {
       perspective: 900px;
       transition:
         opacity 0.7s var(--ease-suave),
-        transform 0.7s var(--ease-suave),
-        filter 0.7s var(--ease-suave);
+        transform 0.7s var(--ease-suave);
     }
     .arr-login,
     .arr-logout,
@@ -175,7 +174,6 @@ function followCover(part: string, element: Element | null): void {
     .arr.is-leaving {
       opacity: 0;
       transform: scale(1.35);
-      filter: blur(12px) brightness(1.6);
       pointer-events: none;
     }
     .arr-intro {
@@ -225,18 +223,24 @@ function followCover(part: string, element: Element | null): void {
       right: -50%;
       bottom: -10%;
       height: 55%;
+      overflow: hidden;
+      transform: rotateX(68deg);
+      transform-origin: 50% 100%;
+      mask-image: linear-gradient(to top, #000, transparent 85%);
+      opacity: 0;
+      animation: fade 1.6s 0.6s forwards;
+    }
+    /* The lines of the floor move by sliding one taller layer (the compositor does it), not by repainting a background. */
+    .arr-floor::before {
+      content: '';
+      position: absolute;
+      inset: -48px 0 0;
       background:
         linear-gradient(color-mix(in oklab, var(--a) 20%, transparent) 1px, transparent 1px) 0 0 /
           100% 48px,
         linear-gradient(90deg, color-mix(in oklab, var(--a) 20%, transparent) 1px, transparent 1px)
           0 0 / 48px 100%;
-      transform: rotateX(68deg);
-      transform-origin: 50% 100%;
-      mask-image: linear-gradient(to top, #000, transparent 85%);
-      opacity: 0;
-      animation:
-        fade 1.6s 0.6s forwards,
-        scroll 1.2s linear infinite;
+      animation: scroll 1.2s linear infinite;
     }
     .arr-login .arr-floor,
     .arr-logout .arr-floor,
@@ -245,9 +249,7 @@ function followCover(part: string, element: Element | null): void {
     }
     @keyframes scroll {
       to {
-        background-position:
-          0 48px,
-          48px 0;
+        transform: translateY(48px);
       }
     }
     .arr-fx {

@@ -116,7 +116,7 @@ export class AppComponent {
     this.injector.get(tooltip.TooltipService);
     // The emoji, script and serif fonts are a separate stylesheet that does not block the first paint.
     const lazyFonts = document.getElementById('lazy-fonts');
-    if (lazyFonts) {
+    if (lazyFonts && document.documentElement.dataset['perf'] !== 'low') {
       (lazyFonts as HTMLLinkElement).media = 'all';
     }
     const fonts = await import('./core/services/font.service');

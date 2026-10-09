@@ -35,7 +35,10 @@ const GLASS_LEVELS = [94, 80, 64, 46, 28];
 /** The animations to start with: off for whoever had "reduce motion" on before this setting existed. */
 function initialAnimations(): 'off' | 'quick' | 'full' {
   try {
-    return localStorage.getItem('chatterly.pref.reduceMotion') === 'true' ? 'off' : 'full';
+    if (localStorage.getItem('chatterly.pref.reduceMotion') === 'true') {
+      return 'off';
+    }
+    return document.documentElement.dataset['perf'] === 'low' ? 'quick' : 'full';
   } catch {
     return 'full';
   }

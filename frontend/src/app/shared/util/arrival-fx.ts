@@ -108,6 +108,10 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
   let frame = 0;
   let last = performance.now();
   let stopped = false;
+  /** A weak device (see main.ts) gets a lighter show from the start. */
+  const weak = document.documentElement.dataset['perf'] === 'low';
+  let slowFrames = 0;
+  let sparkLimit = Infinity;
 
   /** A spark that flies in from far away and takes its place in the ring. */
   function gatherer(index: number, total: number): Spark {
@@ -157,23 +161,26 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
   }
 
   if (mode !== 'register') {
-    const total = mode === 'intro' ? 150 : 80;
+    const total = (mode === 'intro' ? 150 : 80) * (weak ? 0.35 : 1);
     for (let i = 0; i < total; i++) {
       sparks.push(gatherer(i, total));
     }
   }
 
   /** Slow dust that floats upward all through the show and twinkles: it fills the background with life. */
-  const motes = Array.from({ length: mode === 'register' ? 40 : 90 }, function mote(_, i) {
-    return {
-      x: Math.random() * width,
-      y: Math.random() * height,
-      rise: 0.01 + Math.random() * 0.035,
-      sway: Math.random() * Math.PI * 2,
-      size: 0.6 + Math.random() * 1.6,
-      hue: HUES[i % HUES.length]!,
-    };
-  });
+  const motes = Array.from(
+    { length: (mode === 'register' ? 40 : 90) * (weak ? 0.25 : 1) },
+    function mote(_, i) {
+      return {
+        x: Math.random() * width,
+        y: Math.random() * height,
+        rise: 0.01 + Math.random() * 0.035,
+        sway: Math.random() * Math.PI * 2,
+        size: 0.6 + Math.random() * 1.6,
+        hue: HUES[i % HUES.length]!,
+      };
+    },
+  );
 
   /** One glowing dot of each color, drawn once: drawing a picture is much cheaper than making a gradient per spark per frame. */
   const palette = readPalette(canvas);
@@ -212,6 +219,17 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
       return;
     }
     const dt = Math.min(now - last, 40);
+    // A device that cannot keep up (frames longer than 30 ms, many times) gets fewer lights from then on.
+    if (now - last > 30) {
+      slowFrames++;
+      if (slowFrames === 12) {
+        motes.length = Math.floor(motes.length / 3);
+        sparkLimit = 60;
+      } else if (slowFrames === 40) {
+        // Still slow after all that: the whole page switches to the light mode (no blur, quick motion) for this visit.
+        document.documentElement.dataset['perf'] = 'low';
+      }
+    }
     last = now;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
@@ -287,7 +305,7 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
       }
     },
     burst(x: number, y: number, count: number, gravity = 0): void {
-      scatter(x * width, y * height, count, gravity, HUES);
+      scatter(x * width, y * height, Math.min(count * (weak ? 0.4 : 1), sparkLimit), gravity, HUES);
     },
     stop(): void {
       stopped = true;

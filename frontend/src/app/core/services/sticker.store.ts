@@ -84,11 +84,33 @@ function mimeOf(name: string): string {
   return extension === 'jpg' ? 'image/jpeg' : 'image/' + extension;
 }
 
-/** Renders a canvas as a WebP blob. */
-function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
-  return new Promise<Blob | null>(function encode(resolve) {
-    canvas.toBlob(resolve, 'image/webp', quality);
-  });
+/** Renders a canvas as a WebP blob (PNG where the browser cannot encode WebP, and when it gives nothing the other way). */
+async function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
+  const encode = function (type: string): Promise<Blob | null> {
+    return new Promise<Blob | null>(function run(resolve) {
+      try {
+        canvas.toBlob(resolve, type, quality);
+      } catch {
+        resolve(null);
+      }
+    });
+  };
+  return (await encode('image/webp')) ?? (await encode('image/png'));
+}
+
+/** Whether anything was drawn on the canvas (a browser that protects against fingerprinting can give back a blank one). */
+function hasPicture(canvas: HTMLCanvasElement): boolean {
+  try {
+    const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 3; i < data.length; i += 4 * 61) {
+      if (data[i] > 0) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -296,30 +318,58 @@ export class StickerStore {
     return;
   }
 
-  /** Draws 24 emoji as stickers, so the tab is useful from the first click. */
-  async addStarterPack(): Promise<void> {
+  /**
+   * Draws one emoji on a canvas: first with the emoji font of the system (the web font of the emoji does not draw on the
+   * canvas of some browsers, it leaves it blank), and with the web font only when the system has none.
+   * @returns Whether something was drawn.
+   */
+  private async drawEmoji(canvas: HTMLCanvasElement, emoji: string): Promise<boolean> {
+    const stacks = [
+      '"Apple Color Emoji", "Segoe UI Emoji", "Twemoji Mozilla", sans-serif',
+      '"Noto Color Emoji", sans-serif',
+    ];
+    for (const stack of stacks) {
+      if (stack.startsWith('"Noto')) {
+        // The emoji font arrives in pieces, only when a text needs them: ask for the piece of this emoji first.
+        await Promise.race([
+          document.fonts.load('200px "Noto Color Emoji"', emoji).catch(this.ignoreFont),
+          new Promise<void>(function wait(resolve) {
+            setTimeout(resolve, 1500);
+          }),
+        ]);
+      }
+      const context = canvas.getContext('2d')!;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.font = '200px ' + stack;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(emoji, 128, 140);
+      if (hasPicture(canvas)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Draws 24 emoji as stickers, so the tab is useful from the first click. Returns how many were made. */
+  async addStarterPack(): Promise<number> {
     const blobs: Blob[] = [];
     for (const emoji of STARTER) {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 256;
-      // The emoji font arrives in pieces, only when a text needs them: ask for the piece of this emoji, or it is drawn blank.
-      await Promise.race([
-        document.fonts.load('200px "Noto Color Emoji"', emoji).catch(this.ignoreFont),
-        new Promise<void>(function wait(resolve) {
-          setTimeout(resolve, 1500);
-        }),
-      ]);
-      const context = canvas.getContext('2d')!;
-      context.font = '200px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(emoji, 128, 140);
+      // Nothing drawn (no emoji font, a protected canvas): this one is left out instead of saving a blank square.
+      if (!(await this.drawEmoji(canvas, emoji))) {
+        continue;
+      }
       const blob = await canvasToBlob(canvas, 0.92);
       if (blob) {
         blobs.push(blob);
       }
     }
-    await this.addImages(blobs, { name: 'Emoji starter' });
+    if (blobs.length === 0) {
+      return 0;
+    }
+    return this.addImages(blobs, { name: 'Emoji starter' });
   }
 
   /** Opens the file chooser and imports what the person picks. */

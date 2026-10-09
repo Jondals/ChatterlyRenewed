@@ -271,15 +271,23 @@ export class ParticleNetworkComponent implements OnDestroy {
 
   /** One frame: moves and draws the particles (nothing moves when the person asked for no motion). */
   private loop(): void {
+    // On weak devices every other frame is skipped (30 per second) and the motion is doubled to keep its speed.
+    const weak = document.documentElement.dataset['perf'] === 'low';
+    if (weak && (this.skipFrame = !this.skipFrame)) {
+      this.frameId = requestAnimationFrame(this.loop.bind(this));
+      return;
+    }
     const reducido =
       document.documentElement.dataset['motion'] === 'reduced' ||
       document.documentElement.dataset['bg'] === 'still';
-    const velocidad = reducido ? 0 : this.velocidad();
+    const velocidad = reducido ? 0 : this.velocidad() * (weak ? 2 : 1);
     if (this.estilo() === 'flow') this.dibujarFlujo(velocidad);
     else if (this.estilo() === 'bokeh') this.dibujarBokeh(velocidad);
     else this.draw(velocidad);
     this.frameId = requestAnimationFrame(this.loop.bind(this));
   }
+
+  private skipFrame = false;
 
   /** Stops the animation while the page is hidden and starts it again when it is seen. */
   private handleVisibility(): void {

@@ -17,6 +17,25 @@ function start(): void {
   bootstrapApplication(AppComponent, appConfig).catch(reportStartError);
 }
 
+/**
+ * Marks weak devices (4 cores or fewer, 4 GB of memory or less, or "save data" on) so the page can do less of what is only
+ * decoration: no blur behind panels, a lighter animation of arriving, no web fonts for emoji and names, and quick motion.
+ */
+function markWeakDevice(): void {
+  const info = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+  if (
+    (info.hardwareConcurrency ?? 8) <= 4 ||
+    (info.deviceMemory ?? 8) <= 4 ||
+    info.connection?.saveData === true
+  ) {
+    document.documentElement.dataset['perf'] = 'low';
+  }
+}
+
+markWeakDevice();
 startFlagSupport();
 if (document.querySelector('app-root[data-snapshot]')) {
   // The picture of the sign-in page that came inside the HTML is painted first, and only then does the app start (and replace it).

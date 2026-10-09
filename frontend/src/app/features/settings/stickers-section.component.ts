@@ -34,7 +34,11 @@ import { IconComponent } from '../../shared/components/icon.component';
         }}</span>
       </button>
       <div class="flex flex-col gap-3 rounded-ui-lg border border-white/8 bg-black/20 p-4">
-        <button class="btn justify-start" type="button" (click)="starter()">
+        <button
+          class="btn min-h-9 justify-start !h-auto !whitespace-normal py-2 text-left"
+          type="button"
+          (click)="starter()"
+        >
           <app-icon name="smile" [size]="15" class="text-accent" />
           {{ 'Add emoji starter pack' | t }}
         </button>
@@ -63,9 +67,9 @@ import { IconComponent } from '../../shared/components/icon.component';
 
     @for (p of stickers.packs(); track p.id) {
       <section class="anim-fade-up mb-4 rounded-ui-lg border border-white/8 p-4">
-        <div class="mb-3 flex items-center gap-3">
+        <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <input
-            class="input !h-9 max-w-xs !bg-transparent font-semibold"
+            class="input !h-9 min-w-0 max-w-xs flex-1 !bg-transparent font-semibold"
             [value]="p.name"
             maxlength="40"
             (change)="stickers.rename(p.id, $any($event.target).value)"
@@ -73,7 +77,11 @@ import { IconComponent } from '../../shared/components/icon.component';
           />
           <span class="text-xs text-muted">{{ p.items.length }}</span>
           <span class="flex-1"></span>
-          <button class="btn btn-sm btn-soft-danger" type="button" (click)="remove(p)">
+          <button
+            class="btn btn-sm btn-soft-danger !h-auto !whitespace-normal py-1.5"
+            type="button"
+            (click)="remove(p)"
+          >
             <app-icon name="trash" [size]="13" /> {{ 'Delete pack' | t }}
           </button>
         </div>
@@ -86,6 +94,7 @@ import { IconComponent } from '../../shared/components/icon.component';
               [attr.title]="'Click to remove' | t"
             >
               <img
+                decoding="async"
                 [src]="stickers.url(s)"
                 alt=""
                 loading="lazy"
@@ -133,7 +142,22 @@ export class StickersSectionComponent {
 
   /** Adds the pack of the emoji as stickers. */
   protected async starter(): Promise<void> {
-    await this.stickers.addStarterPack();
+    try {
+      const added = await this.stickers.addStarterPack();
+      if (added > 0) {
+        this.toast.success(this.i18n.t('Imported {n} stickers', { n: added }));
+      } else {
+        this.toast.error(
+          this.i18n.t('Could not make the emoji pack'),
+          this.i18n.t('This browser does not let the page draw the emoji (privacy protection?).'),
+        );
+      }
+    } catch (e) {
+      this.toast.error(
+        this.i18n.t('Could not make the emoji pack'),
+        e instanceof Error ? e.message : undefined,
+      );
+    }
   }
 
   /** Asks to confirm and deletes a pack. */

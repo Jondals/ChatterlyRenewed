@@ -22,6 +22,10 @@
 6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
 7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478**, **TCP 3478** and **UDP 49152-49252**. Without that last step Oracle drops the packets before they reach the machine. To check it: Settings > Voice & video > "Hide my IP address" on, then make a call; if the call connects, the relay works.
 
+### Secrets of GitHub for the automatic update
+
+`SSH_HOST` (public IP or domain of the server), `SSH_USER` (for example `ubuntu`), `SSH_KEY` (the whole private key, with the lines BEGIN and END) and `SSH_PORT` (22 unless you changed it). Nothing else is needed. Use a key made only for this (`ssh-keygen -t ed25519`) and put its public part in `~/.ssh/authorized_keys` of the server.
+
 ## Calls: STUN, TURN and the signalling
 
 - **Signalling** is the WebSocket `/ws` of the backend. Caddy passes it on by itself (`reverse_proxy` understands WebSockets), so nothing else is needed. What travels through it is sealed: the messages are encrypted in the browser and the offers and answers of a call are signed and encrypted between the two people, so the server only forwards them.

@@ -52,6 +52,7 @@ const FREQ_KEY = 'chatterly.emojiFreq';
     >
       @if (src(); as url) {
         <img
+          decoding="async"
           [src]="url"
           [alt]="gif().title"
           loading="lazy"
@@ -290,6 +291,7 @@ export class GifThumbComponent {
                 [attr.title]="p.name"
               >
                 <img
+                  decoding="async"
                   [src]="stickers.url(p.items[0]!)"
                   alt=""
                   class="h-full w-full object-contain"
@@ -326,6 +328,7 @@ export class GifThumbComponent {
                     (contextmenu)="removeSticker($event, pack, s)"
                   >
                     <img
+                      decoding="async"
                       [src]="stickers.url(s)"
                       alt=""
                       loading="lazy"

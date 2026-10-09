@@ -1,3 +1,5 @@
 allowBuilds:
   better-sqlite3: true
   esbuild: true
+overrides:
+  fast-jwt: '>=6.3.4'
