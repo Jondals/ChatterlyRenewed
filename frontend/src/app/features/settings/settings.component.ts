@@ -8,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../core/i18n/i18n.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ArrivalService } from '../../core/services/arrival.service';
 import { CallService } from '../../core/services/call.service';
 import { SocketService } from '../../core/services/socket.service';
 import { UiService } from '../../core/services/ui.service';
@@ -199,6 +200,7 @@ export class SettingsComponent {
   private readonly router = inject(Router);
   private readonly ui = inject(UiService);
   private readonly auth = inject(AuthService);
+  private readonly arrival = inject(ArrivalService);
   private readonly socket = inject(SocketService);
   private readonly social = inject(SocialStore);
   private readonly guilds = inject(GuildStore);
@@ -261,6 +263,7 @@ export class SettingsComponent {
     await this.call.leave().catch(function () {
       return undefined;
     });
+    await this.arrival.play('logout', this.auth.user()?.displayName ?? '');
     this.socket.disconnect();
     this.social.reset();
     this.guilds.reset();

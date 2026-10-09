@@ -45,7 +45,7 @@ export interface AppConfig {
   logger: boolean;
 }
 
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 
 /** A list from an environment variable, separated by commas. */
 function list(value: string | undefined, fallback: string[]): string[] {

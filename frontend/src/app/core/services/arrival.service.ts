@@ -1,13 +1,13 @@
 /**
  * src/app/core/services/arrival.service.ts
- * The moments of arriving in the app: the introduction the very first time, the transition after signing in and
- * the celebration after creating an account. This file only decides when they play and tells the caller when the
+ * The moments of arriving in the app: the introduction the very first time, the transition after signing in, the
+ * celebration after creating an account and the goodbye when signing out. This file only decides when they play and tells the caller when the
  * page underneath may change; the animations themselves live in a component that is loaded only when needed.
  */
 import { Injectable, signal } from '@angular/core';
 
 /** Which animation plays. */
-export type ArrivalKind = 'intro' | 'login' | 'register';
+export type ArrivalKind = 'intro' | 'login' | 'register' | 'logout';
 
 /** The animation that is on screen and the name of the person it greets. */
 export interface Arrival {
@@ -16,7 +16,7 @@ export interface Arrival {
 }
 
 /** Key that remembers that the introduction was already seen on this device. */
-const SEEN_KEY = 'chatterly.intro';
+const SEEN_KEY = 'chatterly.intro2';
 /** The longest the caller waits for the animation to reach its reveal point (if the component fails to load). */
 const GIVE_UP_MS = 4000;
 

@@ -1,0 +1,9 @@
+# Caddyfile used by docker-compose.yml. The domain comes from the DOMAIN variable of the .env file.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The API and the WebSocket go to the backend, everything else is the web app.
+	@backend path /api/* /ws
+	reverse_proxy @backend app:3000
+	reverse_proxy app:4200
+}

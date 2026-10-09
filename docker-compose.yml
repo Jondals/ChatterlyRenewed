@@ -1,0 +1,51 @@
+# docker-compose.yml
+# The whole server in two containers: the app, and Caddy in front of it (it gets the HTTPS certificate by itself).
+#   cp deploy/.env.docker.example .env   (write your domain and secrets)
+#   docker compose up -d --build
+# Optional own TURN server for calls: docker compose --profile turn up -d
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      CORS_ORIGINS: https://${DOMAIN}
+      JWT_SECRET: ${JWT_SECRET:-}
+      SERVER_SECRET: ${SERVER_SECRET:-}
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+    volumes:
+      - chatterly-data:/data
+    expose:
+      - '3000'
+      - '4200'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # Relay of the calls when two networks cannot talk directly. It needs the host network (many UDP ports).
+  turn:
+    profiles: ['turn']
+    image: coturn/coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./deploy/turnserver.conf:/etc/coturn/turnserver.conf:ro
+
+volumes:
+  chatterly-data:
+  caddy-data:
+  caddy-config:

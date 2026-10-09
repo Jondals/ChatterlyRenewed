@@ -12,6 +12,16 @@
 8. **Updates after every commit.** Let the user run `deploy/update.sh` without a password (`echo 'ubuntu ALL=NOPASSWD: /bin/systemctl restart chatterly' | sudo tee /etc/sudoers.d/chatterly`) and add the three secrets that `.github/workflows/deploy.yml` mentions. From then on, every push to `main` updates the server.
 9. **Your own STUN and TURN servers, free, in the same machine** (see "Calls" below).
 
+## With Docker (instead of steps 4 to 8)
+
+1. Do steps 1 to 3 above (the machine, the ports 80 and 443, and the domain). Also open UDP 443 if you want HTTP/3.
+2. Install Docker: `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER` (log out and in again).
+3. `git clone <your repository> ~/ChatterlyRenewed && cd ~/ChatterlyRenewed && cp deploy/.env.docker.example .env`, then edit `.env` (the domain at least).
+4. `docker compose up -d --build`. The first build takes a few minutes on the ARM machine; Caddy gets the certificate by itself.
+5. Update: `git pull && docker compose up -d --build`. Logs: `docker compose logs -f app`.
+6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
+7. Own TURN server: write the real values in `deploy/turnserver.conf`, set `TURN_URLS` and `TURN_SECRET` in `.env` and run `docker compose --profile turn up -d`.
+
 ## Calls: STUN, TURN and the signalling
 
 - **Signalling** is the WebSocket `/ws` of the backend. Caddy passes it on by itself (`reverse_proxy` understands WebSockets), so nothing else is needed. What travels through it is sealed: the messages are encrypted in the browser and the offers and answers of a call are signed and encrypted between the two people, so the server only forwards them.

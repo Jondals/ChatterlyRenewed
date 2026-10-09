@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0
+
+- The introduction plays again for everyone: the mark that remembers it was seen has a new name, so devices that saw the old, weak one see the new one once.
+- Signing out has its own animation: the iris closes over the app, the lock of the logo snaps shut, the lights gather and the screen says "See you soon, {name}" while the app is cleaned under the cover.
+- The sign-in and sign-out scenes have a bigger logo with two rings of light that turn in opposite directions, a keyhole in the lock and a lock that opens (or closes) with a spring.
+- Docker: a `Dockerfile` (ARM and x86), a `docker-compose.yml` with Caddy for HTTPS and an optional TURN server, and a Docker section in `deploy/DEPLOY.md`. One command (`docker compose up -d --build`) puts the server up.
+- Fixed the build on Linux: five type annotations had been written with an absolute path of Windows (`D:/dev/...`) by the editor; they are normal imports now.
+
 ## 2.2.0
 
 - New arrival animations, much bigger. The first visit opens with an aurora of moving light over a glowing floor in perspective; a hundred and fifty points of light spiral in from the edges of the screen and gather into a ring around the logo, which spins in from the side while its outline draws itself in a gradient; the lock snaps shut, and the ring explodes in a flash, a shockwave and a burst of sparks; the name rises letter by letter with a shine that sweeps across it, and the whole scene leaves with a zoom. Signing in opens like an iris from the centre, the lock of the logo opens and the lights burst out as the app appears. Creating an account ends with fireworks over the aurora, a gradient check mark and the welcome. They are still only code (CSS, SVG and a small canvas), load only when they play and are skipped for people who asked for no motion.

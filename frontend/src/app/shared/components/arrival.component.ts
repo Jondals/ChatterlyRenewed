@@ -25,6 +25,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
   intro: { reveal: 0, leave: 3900, end: 4600 },
   login: { reveal: 1000, leave: 1700, end: 2300 },
   register: { reveal: 2200, leave: 3500, end: 4100 },
+  logout: { reveal: 1100, leave: 1900, end: 2500 },
 };
 
 /** The animation of an arrival. */
@@ -46,6 +47,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       <canvas #fx class="arr-fx"></canvas>
       <span class="arr-flash"></span>
       <div class="arr-stage">
+        <span class="arr-orbit"></span><span class="arr-orbit o2"></span>
         <span class="arr-wave"></span><span class="arr-wave w2"></span>
         @if (kind() === 'register') {
           <svg class="arr-logo" viewBox="0 0 64 64" aria-hidden="true">
@@ -61,6 +63,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
             />
             <path class="shackle" d="M28 24v-3a4 4 0 0 1 8 0v3" />
             <rect class="body" x="25" y="24" width="14" height="11" rx="3" />
+            <path class="key" d="M32 28.4v3.4" />
           </svg>
         }
         <svg width="0" height="0" aria-hidden="true">
@@ -84,6 +87,10 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
           @case ('login') {
             <p class="arr-line a">{{ 'Unlocking your keys…' | t }}</p>
             <p class="arr-line b">{{ 'Welcome back, {name}' | t: { name: name() } }}</p>
+          }
+          @case ('logout') {
+            <p class="arr-line a">{{ 'Locking your keys…' | t }}</p>
+            <p class="arr-line b">{{ 'See you soon, {name}' | t: { name: name() } }}</p>
           }
           @case ('register') {
             <p class="arr-line a">{{ 'Your account is ready' | t }}</p>
@@ -117,6 +124,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         filter 0.7s var(--ease-suave);
     }
     .arr-login,
+    .arr-logout,
     .arr-register {
       animation: iris 0.8s var(--ease) both;
     }
@@ -173,6 +181,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         scroll 1.2s linear infinite;
     }
     .arr-login .arr-floor,
+    .arr-logout .arr-floor,
     .arr-register .arr-floor {
       display: none;
     }
@@ -224,7 +233,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
     }
     .arr-wave {
       position: absolute;
-      top: 4.5rem;
+      top: 6rem;
       width: 9rem;
       height: 9rem;
       margin: -4.5rem 0 0;
@@ -241,13 +250,15 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       border-color: #a78bfa;
       box-shadow: 0 0 30px #a78bfa;
     }
-    .arr-login .arr-wave {
+    .arr-login .arr-wave,
+    .arr-logout .arr-wave {
       animation: wave 1s ease-out 0.8s;
     }
     .arr-register .arr-wave {
       animation: wave 1.2s ease-out 1.1s;
     }
     .arr-login .w2,
+    .arr-logout .w2,
     .arr-register .w2 {
       display: none;
     }
@@ -277,9 +288,8 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         glow 2.4s ease-in-out 1.6s infinite;
     }
     .arr-login .arr-logo,
+    .arr-logout .arr-logo,
     .arr-register .arr-logo {
-      width: 7rem;
-      height: 7rem;
       animation:
         spin-in 0.9s var(--ease) 0.2s forwards,
         glow 2.4s ease-in-out 1.1s infinite;
@@ -337,7 +347,49 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         fade 0.2s 0.4s forwards,
         unlock 0.5s var(--ease) 0.7s forwards;
     }
-    .arr-login .body {
+    .arr-logout .shackle {
+      transform: translate(5px, -7px) rotate(20deg);
+      animation:
+        fade 0.2s 0.4s forwards,
+        snap 0.4s cubic-bezier(0.6, 0, 0.3, 1.6) 0.8s forwards;
+    }
+    .key {
+      stroke: #04070d;
+      stroke-width: 2.2;
+      opacity: 0;
+      animation: fade 0.3s 1.2s forwards;
+    }
+    .arr-login .key,
+    .arr-logout .key {
+      animation-delay: 0.5s;
+    }
+    .arr-orbit {
+      position: absolute;
+      top: 6rem;
+      width: 13rem;
+      height: 13rem;
+      margin-top: -6.5rem;
+      border-radius: 50%;
+      border: 2px dashed #2ef2b066;
+      border-top-color: #2ef2b0;
+      opacity: 0;
+      animation:
+        fade 0.6s 0.3s forwards,
+        drift 6s linear infinite;
+    }
+    .arr-orbit.o2 {
+      width: 16rem;
+      height: 16rem;
+      margin-top: -8rem;
+      border-color: #a78bfa44;
+      border-bottom-color: #a78bfa;
+      animation-direction: normal, reverse;
+    }
+    .arr-register .arr-orbit {
+      display: none;
+    }
+    .arr-login .body,
+    .arr-logout .body {
       animation-delay: 0.4s;
     }
     @keyframes snap {
@@ -417,12 +469,14 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       font-weight: 700;
       animation-delay: 0.5s;
     }
-    .arr-login .arr-line.a {
+    .arr-login .arr-line.a,
+    .arr-logout .arr-line.a {
       animation:
         fade 0.3s 0.4s forwards,
         gone 0.3s 0.95s forwards;
     }
-    .arr-login .arr-line.b {
+    .arr-login .arr-line.b,
+    .arr-logout .arr-line.b {
       position: absolute;
       bottom: 0.6rem;
       color: #2ef2b0;
@@ -476,11 +530,11 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Starts the lights once the canvas exists, and times the explosions to the shapes (the lock, the check). */
   ngAfterViewInit(): void {
     const kind = this.kind();
-    this.fx = startFx(this.canvas().nativeElement, kind);
+    this.fx = startFx(this.canvas().nativeElement, kind === 'logout' ? 'login' : kind);
     if (kind === 'intro') {
       this.at(1550, this.blast.bind(this, 0.5, 0.42, 40));
-    } else if (kind === 'login') {
-      this.at(800, this.blast.bind(this, 0.5, 0.45, 0));
+    } else if (kind === 'login' || kind === 'logout') {
+      this.at(kind === 'login' ? 800 : 1000, this.blast.bind(this, 0.5, 0.45, 0));
     } else {
       this.at(1100, this.blast.bind(this, 0.5, 0.45, 70));
       this.at(1500, this.firework.bind(this, 0.25, 0.35));

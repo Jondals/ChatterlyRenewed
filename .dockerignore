@@ -1,0 +1,11 @@
+.git
+.github
+**/node_modules
+**/dist
+**/.angular
+backend/data
+backend/.env
+.env
+*.log
+test
+deploy/*.md

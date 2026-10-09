@@ -1278,6 +1278,8 @@ export const ES: Record<string, string> = {
   'Private by design': 'Privado por diseño',
   'Click to skip': 'Pulsa para saltar',
   'Unlocking your keys…': 'Desbloqueando tus claves…',
+  'Locking your keys…': 'Guardando tus claves…',
+  'See you soon, {name}': 'Hasta pronto, {name}',
   'Welcome back, {name}': 'Te damos la bienvenida otra vez, {name}',
   'Your account is ready': 'Tu cuenta está lista',
   'Welcome, {name}': 'Te damos la bienvenida, {name}',
