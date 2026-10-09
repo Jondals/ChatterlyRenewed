@@ -434,9 +434,6 @@ textarea,
 }
 button:disabled,
 [disabled],
-.is-disabled {
-  cursor: var(--cur-forbidden, not-allowed);
-}
 .cursor-pointer {
   cursor: var(--cur-pointer, pointer);
 }
@@ -3011,24 +3008,6 @@ html.cursor-js.cursor-native * {
     transform: none;
     opacity: 1;
   }
-}
-/* Links to the security section from the encryption labels */
-/* Spinly wheel: a conic-gradient disc, labels along the radius and a fixed pointer on top. */
-.sp-wheel {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  container-type: inline-size;
-}
-.sp-disc {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 4px rgba(255, 255, 255, 0.1),
-    0 0 0 8px rgba(0, 0, 0, 0.35),
-    0 14px 40px -12px rgba(0, 0, 0, 0.75);
-  will-change: transform;
 }
 /* Sent / delivered / read mark under your messages: rings, calmer than ticks. */
 .status-dot {

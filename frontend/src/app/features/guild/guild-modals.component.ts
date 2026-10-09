@@ -2,7 +2,15 @@
  * src/app/features/guild/guild-modals.component.ts
  * Group dialogs: create, invite, settings, members and channels.
  */
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Component,
+  EnvironmentInjector,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
 import { DialogService } from '../../core/services/dialog.service';
@@ -301,6 +309,7 @@ export class GuildModalsComponent {
   protected readonly guilds = inject(GuildStore);
   protected readonly social = inject(SocialStore);
   private readonly images = inject(ImageService);
+  private readonly injector = inject(EnvironmentInjector);
   private readonly toast = inject(ToastService);
   private readonly dialog = inject(DialogService);
   private readonly router = inject(Router);
@@ -374,7 +383,9 @@ export class GuildModalsComponent {
     const file = await this.images.pickFile();
     if (!file) return;
     try {
-      const blob = await this.images.prepare(file, IMAGE_PRESETS.group);
+      const adjuster = await import('../../shared/components/image-adjust.component');
+      const blob = await adjuster.prepareImage(this.injector, file, IMAGE_PRESETS.group);
+      if (!blob) return;
       this.createBlob.set(blob);
       this.createPreview.set(URL.createObjectURL(blob));
     } catch {
@@ -458,7 +469,8 @@ export class GuildModalsComponent {
     const g = this.guild();
     if (!g) return;
     try {
-      const id = await this.images.pickAndUpload('group');
+      const adjuster = await import('../../shared/components/image-adjust.component');
+      const id = await adjuster.pickAndUploadImage(this.images, this.injector, 'group');
       if (id) await this.guilds.update(g.id, { iconImage: id });
     } catch (e) {
       this.toast.error(this.i18n.t('Could not upload the image'), describeError(e));

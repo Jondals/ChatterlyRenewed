@@ -24,9 +24,6 @@ const WALLPAPER_SIZE = { width: 1920, height: 1080 };
  * browser before upload (which also strips EXIF/location metadata), then fetched back through the
  * authenticated API as blob URLs so the strict CSP never has to allow remote images.
  */
-/** The biggest animated picture kept as it is (the server accepts up to 2 MB). */
-const ANIMATED_MAX_BYTES = 2 * 1024 * 1024 - 2048;
-
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly api = inject(ApiService);
@@ -100,42 +97,11 @@ export class ImageService {
     }
   }
 
-  /** True for a GIF or an animated WebP (a picture that moves). */
-  async isAnimated(file: Blob): Promise<boolean> {
-    const head = new Uint8Array(await file.slice(0, 256).arrayBuffer());
-    const text = String.fromCharCode(...head);
-    if (text.startsWith('GIF8')) {
-      return true;
-    }
-    return text.startsWith('RIFF') && text.slice(8, 12) === 'WEBP' && text.includes('ANIM');
-  }
-
-  /**
-   * Gets a picture ready for a profile, a banner or a group: a picture that moves (GIF or animated WebP, up to 2 MB)
-   * is kept as it is so it keeps moving; any other is cropped and re-encoded.
-   */
-  async prepare(file: Blob, target: { width: number; height: number }): Promise<Blob> {
-    if (file.size <= ANIMATED_MAX_BYTES && (await this.isAnimated(file))) {
-      return file;
-    }
-    return this.process(file, target);
-  }
-
   /** Uploads a processed picture and returns its id. */
   async upload(kind: ImageKind, blob: Blob): Promise<string> {
     const bytes = new Uint8Array(await blob.arrayBuffer());
     const response = await this.api.upload<{ id: string }>('/api/images?kind=' + kind, bytes);
     return response.id;
-  }
-
-  /** Pick, crop and upload in one go. Returns the new image id, or null when the person cancels. */
-  async pickAndUpload(kind: ImageKind): Promise<string | null> {
-    const file = await this.pickFile();
-    if (!file) {
-      return null;
-    }
-    const blob = await this.prepare(file, IMAGE_PRESETS[kind]);
-    return this.upload(kind, blob);
   }
 
   /** A wallpaper kept only on this device, as a data URL (it never leaves the device). */

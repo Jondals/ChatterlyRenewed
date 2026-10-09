@@ -240,6 +240,27 @@ async function cleanup() {
 }
 
 /** The whole test, step by step. */
+/**
+ * A new picture opens the window to adjust it (move and zoom): drags the picture a little, zooms with the slider and
+ * saves, then waits for the window to close.
+ * @param {import('playwright').Page} page
+ */
+async function saveAdjusted(page) {
+  await page.waitForSelector('.adjust-frame', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  const box = await page.locator('.adjust-frame').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 - 30, box.y + box.height / 2 + 10, { steps: 4 });
+  await page.mouse.up();
+  await page.locator('.adjust-frame ~ label input[type=range]').evaluate(function zoomIn(slider) {
+    slider.value = '1.8';
+    slider.dispatchEvent(new Event('input'));
+  });
+  await page.click('[aria-label="Adjust the picture"] button:has-text("Save")');
+  await page.waitForSelector('.adjust-frame', { state: 'detached', timeout: 15000 });
+}
+
 async function main() {
   step('types and languages');
   run('pnpm', ['--dir', 'backend', 'typecheck']);
@@ -1039,6 +1060,7 @@ async function main() {
   const iconChooser = a.waitForEvent('filechooser');
   await a.click('button[aria-label="Upload an icon"]');
   (await iconChooser).setFiles(pngPath);
+  await saveAdjusted(a);
   await a.waitForSelector('img[src^="blob:"]');
   await a.click('button:has-text("Create group")');
   await a.waitForURL('**/groups/**/**', { timeout: 20000 });
@@ -1177,10 +1199,12 @@ async function main() {
   const avatarChooser = a.waitForEvent('filechooser');
   await a.click('[aria-label="Change picture"]');
   (await avatarChooser).setFiles(pngPath);
+  await saveAdjusted(a);
   await a.waitForSelector('img[src^="blob:"]', { timeout: 15000 });
   const bannerChooser = a.waitForEvent('filechooser');
   await a.click('[aria-label="Change banner"]');
   (await bannerChooser).setFiles(pngPath);
+  await saveAdjusted(a);
   await a.click('button[aria-expanded]:has-text("Name font")');
   await a.click('button.choice-card:has-text("Serif")');
   await a.click('button[aria-label="Banner color"]');
@@ -1463,8 +1487,41 @@ async function main() {
   const soundChooser = a.waitForEvent('filechooser');
   await a.click('button:has-text("Add a sound")');
   (await soundChooser).setFiles(wavPath);
-  await a.waitForSelector('button:has-text("beep")', { timeout: 10000 });
-  check(true, 'soundboard: own sound uploaded');
+  // The sound opens in a window to cut it, name it and give it an emoji (there is no limit of 8 seconds any more).
+  const editor = '[role="dialog"][aria-label="Edit the sound"]';
+  await a.waitForSelector(editor + ' canvas.sound-wave', { timeout: 10000 });
+  await a.waitForFunction(function (selector) {
+    const ends = document.querySelectorAll(selector + ' input[type=range]');
+    return ends.length === 2 && Number(ends[1].max) > 0.1 && Number(ends[1].value) > 0.1;
+  }, editor);
+  await a.fill(editor + ' input[aria-label="Emoji"]', '🔥');
+  await a.fill(editor + ' input[aria-label="Name"]', 'boom');
+  const keptBefore = await a.locator(editor + ' .text-accent').innerText();
+  await a
+    .locator(editor + ' input[type=range]')
+    .nth(1)
+    .evaluate(function halve(slider) {
+      slider.value = String(Number(slider.max) / 2);
+      slider.dispatchEvent(new Event('input'));
+    });
+  const keptAfter = await a.locator(editor + ' .text-accent').innerText();
+  check(keptBefore !== keptAfter, 'soundboard: the end of the sound can be moved to cut it');
+  await a.click(editor + ' button:has-text("Save")');
+  await a.waitForSelector('button:has-text("boom")', { timeout: 10000 });
+  check(
+    (await a.locator('button:has-text("boom") .emoji-glyph').innerText()) === '🔥',
+    'soundboard: own sound uploaded, cut, renamed and with an emoji',
+  );
+  await a.hover('button:has-text("boom")');
+  await a.click('button[aria-label="Edit the sound"]');
+  await a.waitForSelector(editor + ' canvas.sound-wave');
+  await a.fill(editor + ' input[aria-label="Name"]', 'bam');
+  await a.click(editor + ' button:has-text("Save")');
+  await a.waitForSelector('button:has-text("bam")', { timeout: 10000 });
+  check(
+    (await a.locator('button:has-text("boom")').count()) === 0,
+    'soundboard: an edited sound replaces the old one',
+  );
   await a.click('div[class*="z-[75]"] button[aria-label="Close"]');
 
   await a.click('a:has-text("Stickers")');

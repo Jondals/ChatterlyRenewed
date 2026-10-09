@@ -966,7 +966,7 @@ export const ES: Record<string, string> = {
   'Encrypted': 'Cifrada',
   'Read these numbers aloud to each person. If they see the same ones, nobody can be listening in the middle.':
     'Lee estos números en voz alta a cada persona. Si ven los mismos, nadie puede estar escuchando en medio.',
-  'Fonts can be up to 2 MB.': 'Las tipografías pueden pesar hasta 2 MB.',
+  'Fonts can be up to 5 MB.': 'Las tipografías pueden pesar hasta 5 MB.',
   'That file is not a usable font.': 'Ese archivo no es una tipografía válida.',
   'End-to-end encrypted · verified contact': 'Cifrado de extremo a extremo · contacto verificado',
   'End-to-end encrypted · press to verify': 'Cifrado de extremo a extremo · pulsa para verificar',
@@ -1167,8 +1167,6 @@ export const ES: Record<string, string> = {
   'Join a call to share them: now only you hear them.':
     'Únete a una llamada para compartirlos: ahora solo los oyes tú.',
   'Add a sound': 'Añadir un sonido',
-  'Add any audio file (up to 8 seconds). Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.':
-    'Añade cualquier archivo de audio (hasta 8 segundos). Toda la llamada lo oye; se envía una vez, cifrado, y solo se guarda en tu dispositivo.',
   'Mute or unmute': 'Silenciar o activar el micro',
   'Deafen or undeafen': 'Ensordecer o dejar de ensordecer',
   'Camera on or off': 'Encender o apagar la cámara',
@@ -1223,6 +1221,24 @@ export const ES: Record<string, string> = {
   'Encrypted before they leave your device. Up to 10 MB each':
     'Se cifran antes de salir de tu dispositivo. Hasta 10 MB cada uno',
   'Up to 2 MB': 'Hasta 2 MB',
+  'Up to 5 MB': 'Hasta 5 MB',
+  'Edit the sound': 'Edita el sonido',
+  'Kept: {n} s': 'Se guarda: {n} s',
+  'Only up to {n} seconds can be kept: choose the part you want.':
+    'Solo se pueden guardar hasta {n} segundos: elige la parte que quieras.',
+  'Start': 'Inicio',
+  'End': 'Fin',
+  'Sounds can be up to 25 MB.': 'Los sonidos pueden pesar hasta 25 MB.',
+  'Cut it, name it, add an emoji': 'Recórtalo, ponle nombre y un emoji',
+  'Sound updated': 'Sonido actualizado',
+  'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.':
+    'Añade cualquier archivo de audio y quédate con la parte que quieras (hasta 30 segundos): puedes recortarlo, renombrarlo y ponerle un emoji. Todos en la llamada lo oyen; se envía una vez, cifrado, y se guarda solo en tu dispositivo.',
+  'The call could not connect': 'La llamada no pudo conectar',
+  'The two networks may need a relay (TURN) server: see the deploy guide.':
+    'Las dos redes pueden necesitar un servidor de relevo (TURN): mira la guía de despliegue.',
+  'Adjust the picture': 'Ajusta la imagen',
+  'Drag the picture to move it, scroll or use the slider to zoom.':
+    'Arrastra la imagen para moverla; usa la rueda o el deslizador para hacer zoom.',
   'A picture, a GIF or a short video (up to 12 MB for pictures and 25 MB for videos). It moves if it is animated. Stored only on this device.':
     'Una imagen, un GIF o un vídeo corto (hasta 12 MB las imágenes y 25 MB los vídeos). Se mueve si está animado. Se guarda solo en este dispositivo.',
   'Works with .cur, .ani (animated), PNG, GIF and WebP, up to 1 MB. Stored only on this device.':
@@ -1238,7 +1254,6 @@ export const ES: Record<string, string> = {
   '{n} participants · {d} duels': '{n} participantes · {d} duelos',
   'Hide the bracket': 'Ocultar el cuadro',
   'See the bracket': 'Ver el cuadro',
-  'Up to 2 MB, 8 s': 'Hasta 2 MB, 8 s',
   'Open it from the bar of a call or with its shortcut, to try the effects and upload your own sounds.':
     'Ábrelo desde la barra de una llamada o con su atajo, para probar los efectos y subir tus propios sonidos.',
   'Cursor': 'Cursor',

@@ -4,7 +4,14 @@
  * is heard by everybody in the call (the sounds of the person are sent to the others once, encrypted).
  */
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  EnvironmentInjector,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { I18nService, TranslatePipe } from '../core/i18n/i18n.service';
 import { CallService } from '../core/services/call.service';
 import { SoundboardStore, type CustomSound } from '../core/services/soundboard.store';
@@ -128,12 +135,24 @@ import { IconComponent } from '../shared/components/icon.component';
                   [class.is-hit]="hit() === c.id"
                   (click)="playClip(c)"
                 >
-                  <app-icon name="music" [size]="22" class="text-accent" />
+                  @if (c.emoji) {
+                    <span class="emoji-glyph text-2xl leading-none">{{ c.emoji }}</span>
+                  } @else {
+                    <app-icon name="music" [size]="22" class="text-accent" />
+                  }
                   <span class="w-full truncate text-[11px]">{{ c.name }}</span>
                 </button>
                 <button
                   type="button"
-                  class="absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
+                  class="sb-act absolute left-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-accent group-hover:flex"
+                  (click)="edit(c)"
+                  [attr.aria-label]="'Edit the sound' | t"
+                >
+                  <app-icon name="edit" [size]="11" />
+                </button>
+                <button
+                  type="button"
+                  class="sb-act absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
                   (click)="store.remove(c.id)"
                   [attr.aria-label]="'Delete' | t"
                 >
@@ -144,18 +163,25 @@ import { IconComponent } from '../shared/components/icon.component';
             <button type="button" class="sb-tile sb-add" (click)="upload()">
               <app-icon name="plus" [size]="22" class="text-muted" />
               <span class="text-[11px]">{{ 'Add a sound' | t }}</span>
-              <span class="text-[10px] text-dim">{{ 'Up to 2 MB, 8 s' | t }}</span>
+              <span class="text-[10px] text-dim">{{ 'Cut it, name it, add an emoji' | t }}</span>
             </button>
           </div>
           <p class="mt-3 text-[11px] leading-snug text-dim">
             {{
-              'Add any audio file (up to 8 seconds). Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
+              'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
                 | t
             }}
           </p>
         }
       </div>
     </ng-template>
+  `,
+  styles: `
+    @media (hover: none) {
+      .sb-act {
+        display: flex;
+      }
+    }
   `,
 })
 export class SoundboardDockComponent {
@@ -165,6 +191,7 @@ export class SoundboardDockComponent {
   private readonly sound = inject(SoundService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
+  private readonly injector = inject(EnvironmentInjector);
   protected readonly groups = SOUNDBOARD_GROUPS;
   /** The category shown (or 'mine' for the sounds of the person). */
   protected readonly current = signal('effects');
@@ -201,8 +228,11 @@ export class SoundboardDockComponent {
     clearTimeout(this.hitTimer);
   }
 
-  @HostListener('document:mousedown') closeOutside() {
-    this.ui.soundboardOpen.set(false);
+  /** A press anywhere else closes the board (but not a press inside the window that edits a sound, which opens from it). */
+  @HostListener('document:mousedown', ['$event']) closeOutside(event: MouseEvent) {
+    if (!(event.target as Element).closest('app-sound-edit')) {
+      this.ui.soundboardOpen.set(false);
+    }
   }
 
   /** The effects of one category. */
@@ -237,13 +267,51 @@ export class SoundboardDockComponent {
     void this.call.sendClip(clip);
   }
 
-  /** Adds a sound chosen by the person. */
+  /** Adds a sound chosen by the person: it opens the window to cut and name it. */
   protected async upload(): Promise<void> {
     const file = await this.store.pickFile();
     if (!file) return;
     try {
-      await this.store.add(file);
-      this.toast.success(this.i18n.t('Sound added'));
+      const editor = await import('../shared/components/sound-edit.component');
+      if (file.size > editor.MAX_SOURCE_BYTES) {
+        throw new Error('Sounds can be up to 25 MB.');
+      }
+      const result = await editor.editSound(
+        this.injector,
+        file,
+        null,
+        file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Sound',
+      );
+      if (result) {
+        await this.store.save({ id: crypto.randomUUID(), createdAt: Date.now(), ...result });
+        this.toast.success(this.i18n.t('Sound added'));
+      }
+    } catch (e) {
+      this.toast.error(
+        this.i18n.t('Could not add the sound'),
+        this.i18n.t(e instanceof Error ? e.message : 'Unknown error'),
+      );
+    }
+  }
+
+  /**
+   * Edits a sound: cut, name and emoji. The edited sound gets a new identity, so the people in a call (who keep the
+   * sounds they received by identity) get the new one instead of the old.
+   */
+  protected async edit(clip: CustomSound): Promise<void> {
+    try {
+      const editor = await import('../shared/components/sound-edit.component');
+      const result = await editor.editSound(
+        this.injector,
+        clip.original ?? clip.blob,
+        clip,
+        clip.name,
+      );
+      if (result) {
+        await this.store.remove(clip.id);
+        await this.store.save({ id: crypto.randomUUID(), createdAt: clip.createdAt, ...result });
+        this.toast.success(this.i18n.t('Sound updated'));
+      }
     } catch (e) {
       this.toast.error(
         this.i18n.t('Could not add the sound'),

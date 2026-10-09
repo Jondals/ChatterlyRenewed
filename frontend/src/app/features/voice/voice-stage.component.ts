@@ -24,6 +24,7 @@ import { SpinlyCallPanelComponent } from '../spinly/spinly-call-panel.component'
 import { focusBoxes, gridBoxes, type Box } from './call-layout';
 import { AuthService } from '../../core/services/auth.service';
 import { CallService, type PeerView } from '../../core/services/call.service';
+import { ToastService } from '../../core/services/toast.service';
 import { DirectoryService } from '../../core/services/directory.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { UiService } from '../../core/services/ui.service';
@@ -1390,6 +1391,8 @@ export class VoiceStageComponent {
   private readonly messages = inject(MessageStore);
   private readonly auth = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly toast = inject(ToastService);
+  private warnedConnection = false;
 
   protected readonly ui = inject(UiService);
   protected readonly bars = [0.5, 0.8, 1, 0.7, 0.4, 0.9, 0.6];
@@ -1400,7 +1403,24 @@ export class VoiceStageComponent {
   /** Watches the call: when it ends (or the page is opened without a call) the person goes back to the home screen. */
   constructor() {
     effect(this.watchCall.bind(this));
+    effect(this.watchConnections.bind(this));
     this.startStage();
+  }
+
+  /** Tells the person once per call when the media of somebody could not connect (the networks may need a TURN relay). */
+  private watchConnections(): void {
+    const failed = Object.values(this.call.peers()).some(function isFailed(peer: PeerView) {
+      return peer.connection === 'failed';
+    });
+    if (failed && !this.warnedConnection) {
+      this.warnedConnection = true;
+      this.toast.error(
+        this.i18n.t('The call could not connect'),
+        this.i18n.t('The two networks may need a relay (TURN) server: see the deploy guide.'),
+      );
+    } else if (!failed && !this.call.inCall()) {
+      this.warnedConnection = false;
+    }
   }
 
   /** Follows the state of the call. */

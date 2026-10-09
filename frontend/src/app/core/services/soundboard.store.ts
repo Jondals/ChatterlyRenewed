@@ -11,7 +11,16 @@ import { SoundService } from './sound.service';
 export interface CustomSound {
   id: string;
   name: string;
+  /** An emoji shown on the tile (none: a note). */
+  emoji?: string;
+  /** The sound as it plays (the part that was kept). */
   blob: Blob;
+  /** The whole file, when the sound was cut: it lets the cut be changed later. */
+  original?: Blob;
+  /** The part kept, in seconds from the start of the original, and how long it lasts. */
+  start?: number;
+  end?: number;
+  duration?: number;
   createdAt: number;
 }
 
@@ -20,10 +29,6 @@ const LOCATION: StoreLocation = {
   store: 'clips',
   keyPath: 'id',
 };
-/** Biggest sound file accepted (2 MB) and longest sound (20 seconds). */
-const MAX_BYTES = 2 * 1024 * 1024;
-const MAX_SECONDS = 8;
-
 /** Reads every clip. */
 function readAll(store: IDBObjectStore): IDBRequest {
   return store.getAll();
@@ -65,33 +70,10 @@ export class SoundboardStore {
     }
   }
 
-  /** Adds an audio file after checking that it decodes and is short enough; throws a readable message otherwise. */
-  async add(file: File): Promise<void> {
-    if (file.size > MAX_BYTES) {
-      throw new Error('Sounds can be up to 2 MB.');
-    }
-    const buffer = await this.sound.context
-      .decodeAudioData(await file.arrayBuffer())
-      .catch(this.noBuffer);
-    if (!buffer) {
-      throw new Error('That file is not a playable audio file.');
-    }
-    if (buffer.duration > MAX_SECONDS) {
-      throw new Error('Sounds can last up to 8 seconds.');
-    }
-    const clip: CustomSound = {
-      id: crypto.randomUUID(),
-      name: file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Sound',
-      blob: file,
-      createdAt: Date.now(),
-    };
+  /** Keeps a sound that was prepared (checked and cut) in the window that edits sounds. */
+  async save(clip: CustomSound): Promise<void> {
     await runInStore(LOCATION, 'readwrite', writeClip.bind(null, clip));
     this.clips.set([...this.clips(), clip]);
-  }
-
-  /** Result used when a file cannot be decoded as audio. */
-  private noBuffer(): null {
-    return null;
   }
 
   /** Deletes a clip. */

@@ -43,6 +43,8 @@ export const NAME_FONTS = [
   'condensed',
   'marker',
   'rounded',
+  // The font the person uploaded themselves (it is drawn on their own device).
+  'custom',
 ] as const;
 const HEX = '^#[0-9a-fA-F]{6}$';
 const UUID = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';

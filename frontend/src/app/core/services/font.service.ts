@@ -17,8 +17,8 @@ const FAMILIES: Record<CustomFontKind, string> = Object.fromEntries([
   ['ui', 'Chatterly Custom UI'],
   ['name', 'Chatterly Custom Name'],
 ]) as Record<CustomFontKind, string>;
-/** Biggest font file accepted (2 MB). */
-const MAX_BYTES = 2 * 1024 * 1024;
+/** Biggest font file accepted (5 MB): the fonts stay on this device, so the only limit is a sensible one. */
+const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Keeps and registers the uploaded fonts. */
 @Injectable({ providedIn: 'root' })
@@ -39,7 +39,7 @@ export class FontService {
       return;
     }
     if (file.size > MAX_BYTES) {
-      throw new Error('Fonts can be up to 2 MB.');
+      throw new Error('Fonts can be up to 5 MB.');
     }
     const buffer = await file.arrayBuffer();
     await this.register(kind, buffer);

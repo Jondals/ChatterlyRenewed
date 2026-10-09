@@ -5,6 +5,7 @@
 import {
   Component,
   ElementRef,
+  EnvironmentInjector,
   HostListener,
   computed,
   inject,
@@ -278,7 +279,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                           ><app-icon name="upload" [size]="16" /> {{ 'Upload font' | t }}</span
                         >
                         <span class="text-[11px] text-dim"
-                          >.ttf .otf .woff2 · {{ 'Up to 2 MB' | t }}</span
+                          >.ttf .otf .woff2 · {{ 'Up to 5 MB' | t }}</span
                         >
                       }
                     </button>
@@ -663,6 +664,7 @@ export class ProfileSectionComponent {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly images = inject(ImageService);
+  private readonly injector = inject(EnvironmentInjector);
   private readonly directory = inject(DirectoryService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
@@ -1095,7 +1097,8 @@ export class ProfileSectionComponent {
   ): Promise<void> {
     this.busy.set(true);
     try {
-      const id = await this.images.pickAndUpload(kind);
+      const adjuster = await import('../../shared/components/image-adjust.component');
+      const id = await adjuster.pickAndUploadImage(this.images, this.injector, kind);
       if (id) {
         await this.send({ [field]: id });
         this.images.ensure(id);

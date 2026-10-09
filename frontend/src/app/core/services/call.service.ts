@@ -898,12 +898,12 @@ export class CallService {
     }
   }
 
-  /** Turns a sound into a short mono WAV (the first 8 seconds) cut into pieces small enough for the signalling. */
+  /** Turns a sound into a short mono WAV (up to 30 seconds) cut into pieces small enough for the signalling. */
   private async prepareClip(blob: Blob): Promise<string[] | null> {
     try {
       const decoded = await this.sound.context.decodeAudioData(await blob.arrayBuffer());
       const rate = 16000;
-      const frames = Math.max(1, Math.min(Math.ceil(decoded.duration * rate), rate * 8));
+      const frames = Math.max(1, Math.min(Math.ceil(decoded.duration * rate), rate * 30));
       const offline = new OfflineAudioContext(1, frames, rate);
       const source = offline.createBufferSource();
       source.buffer = decoded;
@@ -939,7 +939,7 @@ export class CallService {
         for (let i = start; i < end; i++) binary += String.fromCharCode(bytes[i]);
         pieces.push(btoa(binary));
       }
-      return pieces.length <= 40 ? pieces : null;
+      return pieces.length <= 100 ? pieces : null;
     } catch {
       return null;
     }
@@ -954,7 +954,7 @@ export class CallService {
       typeof clip.part === 'number' &&
       typeof clip.of === 'number'
     ) {
-      if (clip.of < 1 || clip.of > 40 || clip.part < 0 || clip.part >= clip.of) return;
+      if (clip.of < 1 || clip.of > 100 || clip.part < 0 || clip.part >= clip.of) return;
       if (clip.data.length > 20000 || this.receivedClips.has(key)) return;
       let entry = this.incomingClips.get(key);
       if (!entry) {

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.9.0
+
+- Soundboard, your sounds: no more limit of 8 seconds. Choose any audio file (up to 25 MB) and a window opens to prepare it: see its wave, cut the part you want (drag on the wave or use the Start and End sliders; up to 30 seconds are kept), listen to it, give it a name and an emoji, and save. Every sound has a pencil to edit it again later (the whole file is kept, so the cut can be changed), and the tile shows its emoji. An edited sound gets a new identity, so the people in a call receive the new version.
+- Calls: the sounds of the soundboard travel in up to 100 pieces (30 seconds), and the server allows more frames per 10 seconds so a long sound sent to several people is not taken for abuse.
+- Calls on a server behind a proxy: the WebSocket (where calls, messages and presence travel) now also accepts the page that was served from the same address as the socket, so it no longer depends on `CORS_ORIGINS` being written for the real domain (a forgotten `DOMAIN` in `.env` left the socket closed with "origin not allowed" and nothing in real time worked). When the media of a call cannot connect, a notice says that the two networks may need a TURN relay server (see `deploy/DEPLOY.md`).
+
+## 2.8.0
+
+- Adjust your pictures: after choosing a profile picture, a banner or a group icon, a window shows exactly what will be kept (a circle for pictures, a wide frame for banners). Drag the picture to move it, scroll or use the slider to zoom, then save. Pictures that move (GIF, animated WebP) are still kept as they are.
+- Fixed: the profile could not be saved ("Some values are not valid") after choosing the font you uploaded for your name, because the server did not accept that value. It does now.
+- The warning limit of the first download is 520 kB (it was 500 kB and the new windows loaded only when needed still add a little to the shared code); the first download is 500.3 kB.
+
+## 2.7.0
+
+- Fonts you upload (for the interface and for your name) can weigh up to 5 MB, instead of 2 MB. They stay on your device, so the server is not involved.
+
 ## 2.6.7
 
 - Deploy: the automatic update failed with `KeyError: 'ContainerConfig'`, a bug of docker-compose 1.29 when it recreates a container made from an image built by a newer Docker. The workflow now builds the image, removes the old container (the data volume stays) and starts the new one, which works with docker-compose 1.x and with `docker compose`.

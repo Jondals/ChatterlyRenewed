@@ -12,6 +12,18 @@ import type { Client, Presence } from './hub';
 const PRESENCE_VALUES: Presence[] = ['online', 'idle', 'dnd', 'invisible'];
 const MAX_SIGNAL_BYTES = 48 * 1024;
 
+/**
+ * Whether a page was served from the same address that opens the socket (a browser cannot forge the Host header, so
+ * this is as safe as the list of origins, and it keeps working when the list was not written for the real domain).
+ */
+function isSameHost(origin: string, host: string | undefined): boolean {
+  try {
+    return !!host && new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 type Json = Record<string, unknown>;
 
 /**
@@ -39,7 +51,7 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
   app.get('/ws', { websocket: true }, function (socket: WebSocket, req) {
     // Cross-site WebSocket hijacking guard. Non-browser clients send no Origin.
     const origin = req.headers.origin;
-    if (origin && !config.corsOrigins.includes(origin)) {
+    if (origin && !config.corsOrigins.includes(origin) && !isSameHost(origin, req.headers.host)) {
       socket.close(1008, 'origin not allowed');
       return;
     }
@@ -51,9 +63,9 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
     const authTimer = setTimeout(function () {
       return socket.close(4401, 'auth timeout');
     }, 5000);
-    let budget = 400; // frames per 10 s window
+    let budget = 1500; // frames per 10 s window (a 30 s sound is sent to each person in about 80 frames)
     const budgetTimer = setInterval(function () {
-      return (budget = 400);
+      return (budget = 1500);
     }, 10_000);
     let alive = true;
     const heartbeat = setInterval(function () {
