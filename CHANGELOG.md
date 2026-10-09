@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.11.0
+
+- Calls on the server: the signalling (messages, ringing, the sounds of the soundboard) went through but the media (audio, camera, screen) did not connect when the two people could not reach each other directly (two people behind the same router, mobile data, firewalls; no setting of the browsers fixes it). The Docker setup now includes a TURN relay (coturn) that is set up with one command, `bash deploy/turn-setup.sh`: it writes the TURN variables of `.env` (secret, public and private IP, addresses), opens the ports of the machine and starts the relay and the app. The three rules of the Oracle Cloud network (UDP 3478, TCP 3478, UDP 49152-49252) still have to be added in the Oracle console; `deploy/DEPLOY.md` says where. The media stays end-to-end encrypted: the relay only sees encrypted frames. The automatic update also keeps the relay running.
+- Pictures: browsers that protect against fingerprinting (Firefox with that option, Brave) hand back a blank canvas, which made a banner or a picture upload as an empty image; now, when the result is blank, the picture that was chosen is uploaded as it is (up to 8 MB).
+
 ## 2.10.0
 
 - Pictures: the profile picture, the banner and the group icon can be up to 8 MB (moving ones, GIF or animated WebP, are kept as they are up to that size; before it was 2 MB).

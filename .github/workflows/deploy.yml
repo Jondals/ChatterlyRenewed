@@ -32,4 +32,6 @@ jobs:
             $COMPOSE build app
             $COMPOSE rm -sf app
             $COMPOSE up -d app
+            # The TURN relay (when it was set up with deploy/turn-setup.sh) keeps running with the new version.
+            if grep -q '^TURN_SECRET=.' .env; then $COMPOSE --profile turn up -d turn; fi
             docker image prune -f

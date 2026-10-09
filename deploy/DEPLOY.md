@@ -20,7 +20,7 @@
 4. `docker compose up -d --build app`. The first build takes a few minutes on the ARM machine. HTTPS: if the machine already has a Caddy, add the block of `deploy/Caddyfile.host` (the API on 3000 AND the web on 3001, or sign-in fails with "JSON.parse: unexpected character") and `sudo systemctl reload caddy`; if not, `docker compose --profile caddy up -d --build` runs one inside Docker.
 5. Update: `git pull && docker compose up -d --build app`, or let GitHub do it after every push (`.github/workflows/deploy.yml`; the branch must be the one named in the file: `master` or `main`). Logs: `docker compose logs -f app`.
 6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
-7. Own TURN server: write the real values in `deploy/turnserver.conf`, set `TURN_URLS` and `TURN_SECRET` in `.env` and run `docker compose --profile turn up -d`.
+7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478**, **TCP 3478** and **UDP 49152-49252**. Without that last step Oracle drops the packets before they reach the machine. To check it: Settings > Voice & video > "Hide my IP address" on, then make a call; if the call connects, the relay works.
 
 ## Calls: STUN, TURN and the signalling
 

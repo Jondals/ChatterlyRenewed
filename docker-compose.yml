@@ -4,7 +4,7 @@
 #   cp deploy/.env.docker.example .env   (write your domain and secrets)
 #   docker compose up -d --build app
 # Without a Caddy of your own, this file can run one too:  docker compose --profile caddy up -d --build
-# Optional own TURN server for calls: docker compose --profile turn up -d
+# Own TURN relay for calls (recommended when people are on different networks): bash deploy/turn-setup.sh
 services:
   app:
     build: .
@@ -42,14 +42,34 @@ services:
       - caddy-data:/data
       - caddy-config:/config
 
-  # Relay of the calls when two networks cannot talk directly. It needs the host network (many UDP ports).
+  # Relay of the calls when two networks cannot reach each other directly (the media is already encrypted in the
+  # browsers: the relay only sees encrypted frames). It needs the host network (a range of UDP ports). Set it up with
+  # `deploy/turn-setup.sh`, which fills the TURN_* variables of `.env` and opens the ports of the machine.
   turn:
     profiles: ['turn']
     image: coturn/coturn
     restart: unless-stopped
     network_mode: host
-    volumes:
-      - ./deploy/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --realm=${DOMAIN:-localhost}
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:-}
+      - --external-ip=${TURN_PUBLIC_IP:-}/${TURN_PRIVATE_IP:-}
+      - --min-port=49152
+      - --max-port=49252
+      - --fingerprint
+      - --no-cli
+      - --no-tls
+      - --no-dtls
+      - --no-multicast-peers
+      - --allowed-peer-ip=${TURN_PRIVATE_IP:-}
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
 
 volumes:
   chatterly-data:

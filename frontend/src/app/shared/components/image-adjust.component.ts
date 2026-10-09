@@ -29,6 +29,8 @@ import { ModalComponent } from './modal.component';
 
 /** The biggest animated picture kept as it is (the server accepts up to 8 MB). */
 const ANIMATED_MAX_BYTES = 8 * 1024 * 1024 - 2048;
+/** The biggest original picture that is sent as it is when the canvas cannot be read (the server accepts up to 8 MB). */
+const MAX_ORIGINAL_BYTES = 8 * 1024 * 1024 - 2048;
 /** The most the picture can be zoomed in (times the size that just covers the frame). */
 const MAX_ZOOM = 4;
 
@@ -278,7 +280,32 @@ export class ImageAdjustComponent implements OnInit, AfterViewInit, OnDestroy {
       width,
       height,
     );
+    // Browsers that protect against fingerprinting (Firefox with that option, Brave) hand back a blank canvas: then the
+    // picture that was chosen is kept as it is instead of a blank one (the server checks its type and size).
+    if (this.isBlank(context, target) && this.file().size <= MAX_ORIGINAL_BYTES) {
+      this.done.emit(this.file());
+      return;
+    }
     canvas.toBlob(this.done.emit.bind(this.done), 'image/webp', 0.86);
+  }
+
+  /** Whether what was drawn on the canvas reads back as one single color (a blank canvas). */
+  private isBlank(
+    context: CanvasRenderingContext2D,
+    target: { width: number; height: number },
+  ): boolean {
+    const data = context.getImageData(0, 0, target.width, target.height).data;
+    for (let i = 4; i < data.length; i += 4 * 97) {
+      if (
+        data[i] !== data[0] ||
+        data[i + 1] !== data[1] ||
+        data[i + 2] !== data[2] ||
+        data[i + 3] !== data[3]
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Closes without a picture. */
