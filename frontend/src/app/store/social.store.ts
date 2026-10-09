@@ -7,7 +7,7 @@ import type { DmSummary, PresenceStatus, SelfPresence, User } from '../core/mode
 import { ApiService } from '../core/services/api.service';
 import { AuthService } from '../core/services/auth.service';
 import { DirectoryService } from '../core/services/directory.service';
-import { SocketService } from '../core/services/socket.service';
+import { SocketService, type ServerEvent } from '../core/services/socket.service';
 
 interface FriendsResponse {
   friends: string[];
@@ -99,10 +99,7 @@ export class SocialStore {
     if (this.started) return;
     this.started = true;
     this.socket.events$.subscribe(
-      function (
-        this: SocialStore,
-        event: import('D:/dev/ChatterlyRenewed/frontend/src/app/core/services/socket.service').ServerEvent,
-      ) {
+      function (this: SocialStore, event: ServerEvent) {
         const e = event as unknown as Record<string, unknown>;
         switch (event.t) {
           case 'ready':

@@ -23,7 +23,7 @@ import { SpinlyService } from '../../core/services/spinly.service';
 import { SpinlyCallPanelComponent } from '../spinly/spinly-call-panel.component';
 import { focusBoxes, gridBoxes, type Box } from './call-layout';
 import { AuthService } from '../../core/services/auth.service';
-import { CallService } from '../../core/services/call.service';
+import { CallService, type PeerView } from '../../core/services/call.service';
 import { DirectoryService } from '../../core/services/directory.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { UiService } from '../../core/services/ui.service';
@@ -2517,10 +2517,7 @@ export class VoiceStageComponent {
   protected readonly peerCodes = computed(
     function (this: VoiceStageComponent) {
       return Object.values(this.call.peers()).map(
-        function (
-          this: VoiceStageComponent,
-          p: import('D:/dev/ChatterlyRenewed/frontend/src/app/core/services/call.service').PeerView,
-        ) {
+        function (this: VoiceStageComponent, p: PeerView) {
           return {
             id: p.userId,
             user: this.directory.get(p.userId),

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.0
+
+- New arrival animations, much bigger. The first visit opens with an aurora of moving light over a glowing floor in perspective; a hundred and fifty points of light spiral in from the edges of the screen and gather into a ring around the logo, which spins in from the side while its outline draws itself in a gradient; the lock snaps shut, and the ring explodes in a flash, a shockwave and a burst of sparks; the name rises letter by letter with a shine that sweeps across it, and the whole scene leaves with a zoom. Signing in opens like an iris from the centre, the lock of the logo opens and the lights burst out as the app appears. Creating an account ends with fireworks over the aurora, a gradient check mark and the welcome. They are still only code (CSS, SVG and a small canvas), load only when they play and are skipped for people who asked for no motion.
+- The warning limit for the style size of a component was raised from 4 kB to 6 kB for these animations (the error limit stays at 8 kB).
+
 ## 2.1.0
 
 - Arriving in the app, with animation: the very first visit opens with an introduction (a chat bubble with a lock that draws itself, the name rising letter by letter, rings of light; a click skips it); signing in opens the app behind a wipe with a lock that opens and a welcome by name; creating an account ends in a celebration (a check that draws itself, a burst of confetti and the words "your keys were made on this device and never left it"). They are made only of CSS and SVG, load only when they play, are not shown to people who asked for no motion, and the page underneath changes while they cover it.

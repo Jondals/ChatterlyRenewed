@@ -3,7 +3,15 @@
  * Window to compare the safety number with a contact.
  */
 import { copyText } from '../../shared/util/clipboard';
-import { Component, computed, inject, input, output, resource } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  resource,
+  type ResourceLoaderParams,
+} from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
 import { DirectoryService } from '../../core/services/directory.service';
 import { fingerprint, formatFingerprint, safetyNumber } from '../../core/crypto/fingerprint';
@@ -100,11 +108,7 @@ export class SafetyModalComponent {
     }.bind(this),
     loader: async function (
       this: SafetyModalComponent,
-      {
-        params,
-      }: import('D:/dev/ChatterlyRenewed/frontend/node_modules/.pnpm/@angular+core@21.2.14_@angular+compiler@21.2.14_rxjs@7.8.2/node_modules/@angular/core/types/_api-chunk').ResourceLoaderParams<
-        User | undefined
-      >,
+      { params }: ResourceLoaderParams<User | undefined>,
     ) {
       return safetyNumber(this.auth.identity.publicKeys, params.publicKeys);
     }.bind(this),
@@ -115,11 +119,7 @@ export class SafetyModalComponent {
     }.bind(this),
     loader: async function (
       this: SafetyModalComponent,
-      {
-        params,
-      }: import('D:/dev/ChatterlyRenewed/frontend/node_modules/.pnpm/@angular+core@21.2.14_@angular+compiler@21.2.14_rxjs@7.8.2/node_modules/@angular/core/types/_api-chunk').ResourceLoaderParams<
-        User | undefined
-      >,
+      { params }: ResourceLoaderParams<User | undefined>,
     ) {
       return {
         mine: formatFingerprint(await fingerprint(this.auth.identity.publicKeys)),

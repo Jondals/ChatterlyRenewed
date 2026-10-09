@@ -64,7 +64,7 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
   ],
   host: { class: 'block h-full min-h-0' },
   template: `
-    @for (key of [guild()?.id ?? '']; track key) {
+    @for (key of [guild().id]; track key) {
       <div class="page-enter block h-full min-h-0">
         @if (!guilds.loaded()) {
           <div class="flex h-full items-center justify-center">

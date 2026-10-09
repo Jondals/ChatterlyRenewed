@@ -11,7 +11,7 @@ import { ApiError, ApiService } from '../core/services/api.service';
 import { AuthService } from '../core/services/auth.service';
 import { DirectoryService } from '../core/services/directory.service';
 import { SettingsService } from '../core/services/settings.service';
-import { SocketService } from '../core/services/socket.service';
+import { SocketService, type ServerEvent } from '../core/services/socket.service';
 import { SoundService } from '../core/services/sound.service';
 import { ToastService } from '../core/services/toast.service';
 import { replaceShortcodes } from '../shared/util/emoji';
@@ -157,10 +157,7 @@ export class MessageStore {
     this.receipts.start();
     document.addEventListener('visibilitychange', this.onVisibilityChange.bind(this));
     this.socket.events$.subscribe(
-      function (
-        this: MessageStore,
-        event: import('D:/dev/ChatterlyRenewed/frontend/src/app/core/services/socket.service').ServerEvent,
-      ) {
+      function (this: MessageStore, event: ServerEvent) {
         const e = event as unknown as Record<string, unknown>;
         switch (event.t) {
           case 'message.new':

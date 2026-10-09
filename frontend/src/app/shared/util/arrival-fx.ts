@@ -1,0 +1,202 @@
+/**
+ * src/app/shared/util/arrival-fx.ts
+ * The light show behind the arrival animations, drawn on a canvas: points of light that spiral in from the edges of
+ * the screen and gather into a ring (then burst outward), and fireworks with gravity for the celebration.
+ * It is plain math on a 2D canvas, with no library, and it stops by itself when the show ends.
+ */
+
+/** Which show to put on. */
+export type FxMode = 'intro' | 'login' | 'register';
+
+/** What the caller can do while the show runs. */
+export interface Fx {
+  /** The ring of light explodes outward. */
+  explode(): void;
+  /** A burst of sparks at a point of the screen (0 to 1 on each side), with gravity or without. */
+  burst(x: number, y: number, count: number, gravity?: number): void;
+  /** Stops the show and frees the canvas. */
+  stop(): void;
+}
+
+/** One point of light. */
+interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  age: number;
+  life: number;
+  size: number;
+  hue: number;
+  gravity: number;
+  /** While true the spark follows its path into the ring instead of flying free. */
+  gathering: boolean;
+  fromR: number;
+  toR: number;
+  angle: number;
+  spin: number;
+  delay: number;
+}
+
+const HUES = [160, 175, 200, 265, 330, 45];
+
+/** Smooth start and end of a movement, from 0 to 1. */
+function ease(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/**
+ * Starts the show on a canvas.
+ * @param canvas Where to draw (it is sized to fill its box).
+ * @param mode The show: the introduction, the sign-in or the celebration.
+ */
+export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
+  const context = canvas.getContext('2d');
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = canvas.clientWidth || window.innerWidth;
+  const height = canvas.clientHeight || window.innerHeight;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const centreX = width / 2;
+  const centreY = height / 2 - (mode === 'intro' ? 50 : 20);
+  const ringR = mode === 'intro' ? 96 : 62;
+  const sparks: Spark[] = [];
+  let frame = 0;
+  let last = performance.now();
+  let stopped = false;
+
+  /** A spark that flies in from far away and takes its place in the ring. */
+  function gatherer(index: number, total: number): Spark {
+    const angle = (index / total) * Math.PI * 2 + Math.random() * 0.4;
+    return {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      age: 0,
+      life: (mode === 'intro' ? 1500 : 700) + Math.random() * 300,
+      size: 1 + Math.random() * 2.2,
+      hue: HUES[index % 4]!,
+      gravity: 0,
+      gathering: true,
+      fromR: Math.max(width, height) * (0.55 + Math.random() * 0.4),
+      toR: ringR + (Math.random() - 0.5) * 16,
+      angle,
+      spin: (Math.random() < 0.5 ? -1 : 1) * (1.6 + Math.random() * 1.4),
+      delay: Math.random() * (mode === 'intro' ? 500 : 200),
+    };
+  }
+
+  /** Sparks that fly free from a point. */
+  function scatter(x: number, y: number, count: number, gravity: number, hues: number[]): void {
+    for (let i = 0; i < count; i++) {
+      const direction = Math.random() * Math.PI * 2;
+      const speed = 1.2 + Math.random() * (gravity ? 6.5 : 4.5);
+      sparks.push({
+        x,
+        y,
+        vx: Math.cos(direction) * speed,
+        vy: Math.sin(direction) * speed - (gravity ? 1.5 : 0),
+        age: 0,
+        life: 900 + Math.random() * 900,
+        size: 1.2 + Math.random() * 2.4,
+        hue: hues[i % hues.length]!,
+        gravity,
+        gathering: false,
+        fromR: 0,
+        toR: 0,
+        angle: 0,
+        spin: 0,
+        delay: 0,
+      });
+    }
+  }
+
+  if (mode !== 'register') {
+    const total = mode === 'intro' ? 150 : 80;
+    for (let i = 0; i < total; i++) {
+      sparks.push(gatherer(i, total));
+    }
+  }
+
+  /** Draws one spark as a small glowing dot. */
+  function draw(spark: Spark, alpha: number): void {
+    if (!context) {
+      return;
+    }
+    const radius = spark.size * 3.2;
+    const glow = context.createRadialGradient(spark.x, spark.y, 0, spark.x, spark.y, radius);
+    glow.addColorStop(0, 'hsla(' + spark.hue + ',95%,75%,' + alpha + ')');
+    glow.addColorStop(0.35, 'hsla(' + spark.hue + ',95%,60%,' + alpha * 0.45 + ')');
+    glow.addColorStop(1, 'hsla(' + spark.hue + ',95%,55%,0)');
+    context.fillStyle = glow;
+    context.fillRect(spark.x - radius, spark.y - radius, radius * 2, radius * 2);
+  }
+
+  /** One frame: moves every spark and draws them all. */
+  function step(now: number): void {
+    if (stopped || !context) {
+      return;
+    }
+    const dt = Math.min(now - last, 40);
+    last = now;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.globalCompositeOperation = 'lighter';
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const spark = sparks[i]!;
+      if (spark.delay > 0) {
+        spark.delay -= dt;
+        continue;
+      }
+      spark.age += dt;
+      if (spark.gathering) {
+        const t = Math.min(spark.age / spark.life, 1);
+        const radius = spark.fromR + (spark.toR - spark.fromR) * ease(t);
+        const angle = spark.angle + spark.spin * (1 - ease(t)) + spark.age * 0.0004;
+        spark.x = centreX + Math.cos(angle) * radius;
+        spark.y = centreY + Math.sin(angle) * radius * 0.92;
+        draw(spark, 0.25 + 0.75 * ease(t));
+        continue;
+      }
+      spark.vy += spark.gravity * (dt / 16);
+      spark.vx *= 0.992;
+      spark.x += spark.vx * (dt / 16);
+      spark.y += spark.vy * (dt / 16);
+      const left = 1 - spark.age / spark.life;
+      if (left <= 0) {
+        sparks.splice(i, 1);
+        continue;
+      }
+      draw(spark, left);
+    }
+    context.globalCompositeOperation = 'source-over';
+    frame = requestAnimationFrame(step);
+  }
+  frame = requestAnimationFrame(step);
+
+  return {
+    explode(): void {
+      for (const spark of sparks) {
+        if (spark.gathering) {
+          const out = spark.angle + spark.spin * 0 + spark.age * 0.0004;
+          const speed = 2.5 + Math.random() * 5;
+          spark.gathering = false;
+          spark.delay = 0;
+          spark.age = 0;
+          spark.life = 700 + Math.random() * 700;
+          spark.vx = Math.cos(out) * speed;
+          spark.vy = Math.sin(out) * speed;
+        }
+      }
+    },
+    burst(x: number, y: number, count: number, gravity = 0): void {
+      scatter(x * width, y * height, count, gravity, HUES);
+    },
+    stop(): void {
+      stopped = true;
+      cancelAnimationFrame(frame);
+      context?.clearRect(0, 0, width, height);
+    },
+  };
+}

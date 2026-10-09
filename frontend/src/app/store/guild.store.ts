@@ -8,7 +8,7 @@ import type { ChannelRef, Guild, GuildChannel, User } from '../core/models';
 import { ApiService } from '../core/services/api.service';
 import { AuthService } from '../core/services/auth.service';
 import { DirectoryService } from '../core/services/directory.service';
-import { SocketService } from '../core/services/socket.service';
+import { SocketService, type ServerEvent } from '../core/services/socket.service';
 
 /**
  * Guilds (servers) and their E2EE group keys. A guild shares one AES-256-GCM key per "key
@@ -50,10 +50,7 @@ export class GuildStore {
     if (this.started) return;
     this.started = true;
     this.socket.events$.subscribe(
-      function (
-        this: GuildStore,
-        event: import('D:/dev/ChatterlyRenewed/frontend/src/app/core/services/socket.service').ServerEvent,
-      ) {
+      function (this: GuildStore, event: ServerEvent) {
         if (event.t === 'ready' || event.t === 'guild.update') void this.refresh();
         if (event.t === 'guild.removed') {
           const id = (event as unknown as { guildId: string }).guildId;
