@@ -72,6 +72,20 @@ import { describeError, passwordScore } from '../../shared/util/errors';
         />
       </app-setting-row>
     </section>
+    <section class="mt-6 rounded-ui-lg border border-red-400/20 bg-red-500/[.04] p-5">
+      <h2 class="mb-1 flex items-center gap-2 text-sm font-semibold text-red-300">
+        <app-icon name="trash" [size]="16" /> {{ 'Delete account' | t }}
+      </h2>
+      <p class="mb-3 text-sm text-muted">
+        {{
+          'Erases your account for good: your messages, files, friends, direct chats and the groups you own. It cannot be undone.'
+            | t
+        }}
+      </p>
+      <button class="btn btn-sm btn-soft-danger" type="button" (click)="deleteOpen.set(true)">
+        <app-icon name="trash" [size]="14" /> {{ 'Delete my account' | t }}
+      </button>
+    </section>
     <section class="mt-6">
       <h2 class="mb-3 text-sm font-semibold">{{ 'How your data is protected' | t }}</h2>
       <ul class="space-y-3">
@@ -103,6 +117,62 @@ import { describeError, passwordScore } from '../../shared/util/errors';
         }
       </ul>
     </section>
+
+    @if (deleteOpen()) {
+      <app-modal
+        [title]="'Delete account' | t"
+        [subtitle]="'This cannot be undone.' | t"
+        (closed)="closeDelete()"
+      >
+        <form class="space-y-3" (submit)="deleteAccount($event)">
+          <ul class="list-disc space-y-1 pl-5 text-sm text-muted">
+            <li>
+              {{ 'Your messages, files, reactions and pictures are erased from the server.' | t }}
+            </li>
+            <li>{{ 'Your friendships and direct chats disappear.' | t }}</li>
+            <li>
+              {{
+                'The groups you own are deleted for everybody; in the others you just leave.' | t
+              }}
+            </li>
+            <li>
+              {{
+                'Your keys, your preferences and everything kept on this device are erased too.' | t
+              }}
+            </li>
+          </ul>
+          <input
+            class="input"
+            type="text"
+            autocomplete="off"
+            [placeholder]="'Type your username to confirm' | t"
+            [value]="confirmName()"
+            (input)="confirmName.set($any($event.target).value)"
+          />
+          <input
+            class="input"
+            type="password"
+            autocomplete="current-password"
+            [placeholder]="'Your password' | t"
+            [value]="deletePw()"
+            (input)="deletePw.set($any($event.target).value)"
+          />
+          @if (deleteError()) {
+            <p class="text-sm text-red-300">{{ deleteError() }}</p>
+          }
+          <div class="flex justify-end gap-2">
+            <button class="btn" type="button" (click)="closeDelete()">{{ 'Cancel' | t }}</button
+            ><button class="btn btn-danger" type="submit" [disabled]="!canDelete() || deleteBusy()">
+              @if (deleteBusy()) {
+                {{ 'Erasing…' | t }}
+              } @else {
+                {{ 'Delete my account forever' | t }}
+              }
+            </button>
+          </div>
+        </form>
+      </app-modal>
+    }
 
     @if (pwOpen()) {
       <app-modal
@@ -172,6 +242,20 @@ export class SecuritySectionComponent {
   protected readonly newPw = signal('');
   protected readonly pwError = signal('');
   protected readonly pwBusy = signal(false);
+  protected readonly deleteOpen = signal(false);
+  protected readonly confirmName = signal('');
+  protected readonly deletePw = signal('');
+  protected readonly deleteError = signal('');
+  protected readonly deleteBusy = signal(false);
+  /** The account can be erased when the username was typed right and a password is there. */
+  protected readonly canDelete = computed(
+    function (this: SecuritySectionComponent) {
+      return (
+        this.confirmName().trim().toLowerCase() === this.auth.user()?.username.toLowerCase() &&
+        this.deletePw().length > 0
+      );
+    }.bind(this),
+  );
   protected readonly score = computed(
     function (this: SecuritySectionComponent) {
       return passwordScore(this.newPw());
@@ -217,6 +301,32 @@ export class SecuritySectionComponent {
         return this.fingerprintText.set(formatFingerprint(fp));
       }.bind(this),
     );
+  }
+
+  /** Closes the window to erase the account and forgets what was typed in it. */
+  protected closeDelete(): void {
+    this.deleteOpen.set(false);
+    this.confirmName.set('');
+    this.deletePw.set('');
+    this.deleteError.set('');
+  }
+
+  /** Erases the account (the server checks the proof of the password) and starts again from the sign-in page. */
+  protected async deleteAccount(event: Event): Promise<void> {
+    event.preventDefault();
+    if (!this.canDelete()) {
+      return;
+    }
+    this.deleteBusy.set(true);
+    this.deleteError.set('');
+    try {
+      await this.auth.deleteAccount(this.auth.user()!.username, this.deletePw());
+      // A new load of the page leaves nothing of the account in memory (keys, open calls, sockets).
+      window.location.assign('/login');
+    } catch (e) {
+      this.deleteError.set(describeError(e));
+      this.deleteBusy.set(false);
+    }
   }
 
   /** Copies the fingerprint of the own keys. */

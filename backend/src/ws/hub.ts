@@ -83,6 +83,13 @@ export class Hub {
     }
   }
 
+  /** Closes every connection of a person (their account was erased) and takes them out of their call. */
+  dropUser(userId: string): void {
+    this.leaveRoom(userId);
+    for (const client of [...(this.clients.get(userId) ?? [])])
+      client.close(4401, 'account deleted');
+  }
+
   /** Whether a person has any connection open. */
   isOnline(userId: string): boolean {
     return this.clients.has(userId);

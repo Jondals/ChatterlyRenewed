@@ -37,7 +37,7 @@ interface Painter {
   /** A line drawing in a color. */
   line(path: string, color: string): string;
   /** Closed shapes (each one is the text of an SVG element ending before its attributes) painted in a color. */
-  shape(elements: string[], color: string): string;
+  shape(elements: string[], color: string, thin?: boolean): string;
   /** The color of a mark drawn over a filled shape (the "?" of the help cursor). */
   mark: string;
 }
@@ -157,12 +157,24 @@ const soft: Painter = {
       ' stroke="#fff" stroke-opacity=".35" stroke-width="1.2" transform="translate(-.4 -.4)"/>'
     );
   },
-  shape(elements, color) {
+  // The hand has thin fingers: with the thick outline of the arrow they would fuse into one blob, so it gets a thinner one.
+  shape(elements, color, thin) {
+    const edge = thin ? '2.6' : '5.4';
+    const fill = thin ? '1' : '2.8';
     return (
-      dress(elements, 'fill="{d}" stroke="{d}" stroke-width="5.4" stroke-linejoin="round"') +
       dress(
         elements,
-        'fill="' + color + '" stroke="' + color + '" stroke-width="2.8" stroke-linejoin="round"',
+        'fill="{d}" stroke="{d}" stroke-width="' + edge + '" stroke-linejoin="round"',
+      ) +
+      dress(
+        elements,
+        'fill="' +
+          color +
+          '" stroke="' +
+          color +
+          '" stroke-width="' +
+          fill +
+          '" stroke-linejoin="round"',
       )
     );
   },
@@ -368,7 +380,7 @@ export function stateSvg(family: string, name: string): string {
   const geometry = GEOMETRY[name] ?? GEOMETRY['default']!;
   let out = '';
   if (geometry.shapes.length) {
-    out += painter.shape(geometry.shapes, painter.base);
+    out += painter.shape(geometry.shapes, painter.base, name === 'pointer');
   }
   for (const mark of geometry.marks) {
     out += painter.line(mark, painter.mark);
@@ -407,7 +419,9 @@ export function arrowSvg(family: string, hover: boolean): string {
   const halo = hover
     ? '<path d="' +
       path +
-      '" fill="none" stroke="{a}" stroke-opacity=".4" stroke-width="9" stroke-linejoin="round"/>'
+      '" fill="none" stroke="{a}" stroke-opacity=".4" stroke-width="' +
+      (family === 'soft' ? '4.5' : '9') +
+      '" stroke-linejoin="round"/>'
     : '';
   let body: string;
   if (family === 'sleek') {
@@ -418,7 +432,7 @@ export function arrowSvg(family: string, hover: boolean): string {
       dress(fill, hover ? 'fill="{a}" fill-opacity=".5"' : 'fill="#fff" fill-opacity=".12"') +
       painter.line(path, '{a}');
   } else {
-    body = halo + painter.shape(shape, painter.base);
+    body = halo + painter.shape(shape, painter.base, hover);
     if (hover && family === 'themed') {
       body += dress(shape, 'fill="{a}" fill-opacity=".45"');
     }

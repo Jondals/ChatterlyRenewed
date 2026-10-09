@@ -385,7 +385,9 @@ async function main() {
       if (
         m.type() === 'error' &&
         !m.text().includes('502 (Bad Gateway)') &&
-        !m.text().includes('Permissions policy violation')
+        !m.text().includes('Permissions policy violation') &&
+        // The wrong password typed on purpose when the account is erased answers 401.
+        !(name === 'carol' && m.text().includes('401'))
       )
         errors.push(`[${name}] ${m.text().slice(0, 300)}`);
     });
@@ -1601,6 +1603,51 @@ async function main() {
       `"${secret.slice(0, 18)}" does not appear in the database or in the files`,
     );
   }
+
+  step('deleting the account');
+  const C = { user: 'carol_' + suffix, pw: 'correct-horse-battery-1' };
+  const c = await newUser('carol');
+  let carolBearer = '';
+  c.on('request', function remember(request) {
+    carolBearer = request.headers()['authorization'] ?? carolBearer;
+  });
+  await register(c, C);
+  await c.waitForTimeout(1200);
+  await c.goto(WEB + '/direct(settings:settings/security)');
+  await c.click('button:has-text("Delete my account")');
+  const eraseForm = '[role="dialog"][aria-label="Delete account"]';
+  await c.waitForSelector(eraseForm);
+  check(
+    await c.locator(eraseForm + ' button[type=submit]').isDisabled(),
+    'delete account: the button is off until the username is typed',
+  );
+  await c.fill(eraseForm + ' input[type=text]', C.user);
+  await c.fill(eraseForm + ' input[type=password]', 'not-the-password-1');
+  await c.click(eraseForm + ' button[type=submit]');
+  await c.waitForSelector(eraseForm + ' .text-red-300');
+  check(true, 'delete account: a wrong password does not erase it');
+  await c.fill(eraseForm + ' input[type=password]', C.pw);
+  await c.click(eraseForm + ' button[type=submit]');
+  await c.waitForURL('**/login', { timeout: 30000 });
+  check(true, 'delete account: it goes back to the sign in');
+  const again = await fetch(API + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: C.user, authSecret: 'A'.repeat(43) }),
+  });
+  check(
+    again.status === 401 || again.status === 400,
+    'delete account: the name can not sign in any more',
+  );
+  const stale = await fetch(API + '/api/me', { headers: { authorization: carolBearer } });
+  check(
+    carolBearer.length > 20 && stale.status === 401,
+    'delete account: the old session token stops working at once',
+  );
+  const cLeft = await c.evaluate(function () {
+    return localStorage.length;
+  });
+  check(cLeft <= 1, 'delete account: nothing of the account stays in the browser');
 
   step('API: requests without a session, and CORS');
   for (const route of [

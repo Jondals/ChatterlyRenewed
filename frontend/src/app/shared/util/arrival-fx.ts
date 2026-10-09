@@ -96,7 +96,11 @@ function ease(t: number): number {
  */
 export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
   const context = canvas.getContext('2d');
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  // Sharper than 1.5 pixels per pixel is not seen in glowing dots, and it costs the square of it to fill.
+  const ratio = Math.min(
+    window.devicePixelRatio || 1,
+    document.documentElement.dataset['perf'] === 'low' ? 1 : 1.5,
+  );
   const width = canvas.clientWidth || window.innerWidth;
   const height = canvas.clientHeight || window.innerHeight;
   canvas.width = Math.round(width * ratio);

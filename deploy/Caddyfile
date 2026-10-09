@@ -3,6 +3,14 @@
 chatterly.example.com {
 	encode zstd gzip
 
+	# The browser is told to use HTTPS only, not to guess types and not to send where it came from.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
 	# The API and the WebSocket go to the backend, everything else is the web app.
 	@backend path /api/* /ws
 	reverse_proxy @backend 127.0.0.1:3000

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.15.0
+
+- Delete the account (Settings > Privacy & security): asks for the username and the password again (the server checks the proof of the password; a stolen session is not enough, and a wrong password does not sign anybody out). It erases the messages, reactions, files and pictures of the person from the server and from the disk, their friendships, their direct chats and the groups they own (in the others they just leave), closes every session and connection, and then erases everything kept on the device (keys, preferences, stickers, sounds, fonts). What stays is a stub row with no name, no password and no private keys: the people of the groups they were in hold keys wrapped by them, and without that row they could not read their own groups. The old tokens stop working at once.
+- Calls, more private: the effects of the soundboard travel sealed inside the encrypted signals (before, the server saw which effect was played); when the server has its own relay, Google is no longer asked for STUN (it would learn the address of every caller) and the relay itself answers; `bash deploy/turn-setup.sh --private` makes every call go through the relay, so no person learns the address of another one and no third party sees any. The media was already encrypted end to end (the relay only sees encrypted frames) and the signals sealed and signed between the two people.
+- Server log: it keeps no address of anybody and no query of the address (it could carry a name), only the method, the path and the status. Caddy sends HSTS and the other defensive headers.
+- Cursor "soft": the hand is drawn with a thinner outline so the fingers do not fuse into one blob.
+- Animations: the letters of the title do not blur while they rise, and the canvas of lights is drawn at most at 1.5 pixels per pixel (1 on weak devices).
+
 ## 2.14.0
 
 - Sounds in the animations: the introduction has a rising sweep while the lights gather, the click of the padlock when it shuts, a deep boom with the flash and a shimmer of notes; signing in plays the click and spring of the padlock opening and the shimmer; signing out, the padlock shutting; creating an account, a fanfare and the pops of the fireworks. They are made with Web Audio (no files), follow the interface sounds of the settings and the volume, and wait for the first press of the person (before it the browser allows no sound, so the introduction of a reload is silent).

@@ -61,7 +61,7 @@ export function guildPayload(db: Db, guild: GuildRow, userId: string) {
   }
   const keys = db
     .prepare(
-      `SELECT key_version AS keyVersion, wrapper_id AS wrapperId, iv, data
+      `SELECT key_version AS keyVersion, wrapper_id AS wrapperId, wrapper_pub AS wrapperPub, iv, data
          FROM guild_keys WHERE guild_id = ? AND user_id = ? ORDER BY key_version`,
     )
     .all(guild.id, userId);

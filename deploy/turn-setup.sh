@@ -2,7 +2,8 @@
 # deploy/turn-setup.sh
 # Puts a TURN relay next to the app so the calls (audio, camera, screen) connect between any two networks: it writes the
 # TURN_* variables of .env, opens the ports of the machine and starts the relay and the app. Run it once on the server:
-#   bash deploy/turn-setup.sh
+#   bash deploy/turn-setup.sh            (calls try a direct path first and use the relay when they must)
+#   bash deploy/turn-setup.sh --private  (every call goes through the relay: the most private)
 # Afterwards, in Oracle Cloud (Networking > your VCN > Security List > Ingress rules) allow: UDP 3478, TCP 3478 and
 # UDP 49152-49252 (source 0.0.0.0/0). That part cannot be done from here.
 set -euo pipefail
@@ -24,6 +25,8 @@ put TURN_SECRET "$SECRET"
 put TURN_PUBLIC_IP "$PUBLIC_IP"
 put TURN_PRIVATE_IP "$PRIVATE_IP"
 put TURN_URLS "turn:$DOMAIN:3478?transport=udp,turn:$DOMAIN:3478?transport=tcp"
+# With --private every call goes through the relay: the addresses of the people are never shown to each other or to anybody else.
+if [ "${1:-}" = "--private" ]; then put RELAY_ONLY 1; fi
 echo "Public IP $PUBLIC_IP, private IP $PRIVATE_IP, domain $DOMAIN."
 
 # The images of Oracle block everything with iptables except what is allowed here.

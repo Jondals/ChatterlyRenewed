@@ -40,12 +40,14 @@ export interface AppConfig {
   rateLimit: { max: number; authMax: number; windowMs: number };
   loginLockout: { maxFailures: number; windowMs: number; lockMs: number };
   stunUrls: string[];
+  /** Every call goes through the relay (no peer learns the address of another and no third party sees it). */
+  relayOnly: boolean;
   turn: { urls: string[]; secret: string; ttlSec: number } | null;
   tls: { key: string; cert: string } | null;
   logger: boolean;
 }
 
-export const APP_VERSION = '2.14.0';
+export const APP_VERSION = '2.15.0';
 
 /** A list from an environment variable, separated by commas. */
 function list(value: string | undefined, fallback: string[]): string[] {
@@ -135,10 +137,14 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       windowMs: 15 * 60_000,
       lockMs: 15 * 60_000,
     },
-    stunUrls: list(process.env['STUN_URLS'], [
-      'stun:stun.l.google.com:19302',
-      'stun:stun1.l.google.com:19302',
-    ]),
+    // With an own relay (coturn also answers STUN) Google is not asked at all: it would learn the address of every caller.
+    stunUrls: list(
+      process.env['STUN_URLS'],
+      turnUrls.length && turnSecret
+        ? []
+        : ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'],
+    ),
+    relayOnly: process.env['RELAY_ONLY'] === '1' && turnUrls.length > 0 && !!turnSecret,
     turn:
       turnUrls.length && turnSecret ? { urls: turnUrls, secret: turnSecret, ttlSec: 3600 } : null,
     tls: tlsKey && tlsCert ? { key: tlsKey, cert: tlsCert } : null,

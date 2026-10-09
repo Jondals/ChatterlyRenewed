@@ -37,13 +37,29 @@ declare module '@fastify/jwt' {
   }
 }
 
+/** What the log says about a request: the method and the path, never the address of who asks or the query. */
+function logRequest(request: { method?: string; url?: string }): { method?: string; path: string } {
+  return { method: request.method, path: (request.url ?? '').split('?')[0]! };
+}
+
+/** What the log says about an answer: only its status. */
+function logResponse(response: { statusCode?: number }): { status?: number } {
+  return { status: response.statusCode };
+}
+
 /**
  * Builds the whole server: security headers, CORS, limits, tokens, database and every route. The tests build it too.
  */
 export async function buildApp(overrides: Partial<AppConfig> = {}) {
   const config = loadConfig(overrides);
   const app = Fastify({
-    logger: config.logger ? { redact: ['req.headers.authorization'] } : false,
+    // The log keeps no address of anybody and no query of the address (it can carry a name): only what is needed to see errors.
+    logger: config.logger
+      ? {
+          redact: ['req.headers.authorization'],
+          serializers: { req: logRequest, res: logResponse },
+        }
+      : false,
     bodyLimit: 256 * 1024,
     trustProxy: process.env['TRUST_PROXY'] === '1',
     ...(config.tls
@@ -95,7 +111,8 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
     try {
       await req.jwtVerify();
       const who = (req.user as { sub: string }).sub;
-      if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(who)) throw new Error('gone');
+      if (!db.prepare('SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL').get(who))
+        throw new Error('gone');
     } catch {
       reply.code(401).send({ error: 'unauthorized' });
     }

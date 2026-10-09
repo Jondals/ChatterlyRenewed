@@ -538,13 +538,23 @@ export function registerMessageRoutes(app: FastifyInstance, ctx: AppContext): vo
       urls: string | string[];
       username?: string;
       credential?: string;
-    }[] = [{ urls: config.stunUrls }];
+    }[] = config.stunUrls.length ? [{ urls: config.stunUrls }] : [];
     if (config.turn) {
+      // The relay also answers STUN: the same addresses without the transport.
+      iceServers.push({
+        urls: [
+          ...new Set(
+            config.turn.urls.map(function asStun(url) {
+              return url.replace(/^turns?:/, 'stun:').replace(/\?.*$/, '');
+            }),
+          ),
+        ],
+      });
       // coturn "use-auth-secret" scheme: short-lived credentials, never a shared static password.
       const username = `${Math.floor(Date.now() / 1000) + config.turn.ttlSec}:${me(req)}`;
       const credential = createHmac('sha1', config.turn.secret).update(username).digest('base64');
       iceServers.push({ urls: config.turn.urls, username, credential });
     }
-    return { iceServers };
+    return { iceServers, relayOnly: config.relayOnly };
   });
 }

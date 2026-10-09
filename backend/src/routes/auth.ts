@@ -3,11 +3,13 @@
  * Registration, zero-knowledge sign in, token renewal and sign out, and profile editing.
  */
 import { createHash, createPublicKey, createHmac, randomBytes, randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context';
 import { getUser, toPublicUser, presenceAudience, type UserRow } from '../models';
 import { hashAuthSecret, verifyAuthSecret, needsUpgrade } from '../security/password';
-import { deleteImage, ownsImage } from './images';
+import { deleteImage, imageFile, ownsImage } from './images';
 import {
   authSecretField,
   b64Field,
@@ -127,6 +129,11 @@ const registerSchema = {
 } as const;
 
 const clean = cleanText;
+
+/** Does nothing (the answer of a file removal that nobody waits for). */
+function noop(): void {
+  return;
+}
 
 /**
  * Registers the routes of the accounts: sign-up, sign-in, sessions, profile and password. Passwords are never received in clear.
@@ -553,6 +560,131 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       // Every other device must log in again.
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
       return issueTokens(id);
+    },
+  );
+
+  app.post(
+    '/api/me/delete',
+    {
+      onRequest: [app.authenticate],
+      ...authLimit,
+      schema: {
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['authSecret'],
+          properties: { authSecret: authSecretField },
+        },
+      },
+    },
+    /**
+     * POST /api/me/delete: erases the account. It asks for the proof of the password again (a stolen session must not be
+     * enough). Everything of the person goes: their messages, reactions, files, pictures, friendships, direct
+     * conversations and the groups they own, and the keys that protect their private data, and the row of the person
+     * itself: nothing stays. The only thing kept is the public key of the person inside the key envelopes they wrapped
+     * for others, so those people can still read their groups.
+     */
+    async function (req, reply) {
+      const id = userId(req);
+      const { authSecret } = req.body as { authSecret: string };
+      const lockKey = 'delete:' + id;
+      const wait = ctx.throttle.retryAfter(lockKey);
+      if (wait > 0) {
+        return reply
+          .code(429)
+          .header('Retry-After', String(wait))
+          .send({ error: 'account_locked', retryAfter: wait });
+      }
+      const row = getUser(db, id);
+      if (!row || !(await verifyAuthSecret(authSecret, row.auth_hash, config.serverSecret))) {
+        ctx.throttle.recordFailure(lockKey);
+        return reply.code(401).send({ error: 'invalid_credentials' });
+      }
+      ctx.throttle.recordSuccess(lockKey);
+
+      // What is read now (whom to tell, what to remove from the disk) cannot be read once the rows are gone.
+      const column = function (sql: string, ...args: unknown[]): string[] {
+        return (db.prepare(sql).all(...args) as Record<string, string>[]).map(function first(r) {
+          return Object.values(r)[0]!;
+        });
+      };
+      const friends = column(
+        'SELECT CASE WHEN user_a = ? THEN user_b ELSE user_a END FROM friendships WHERE user_a = ? OR user_b = ?',
+        id,
+        id,
+        id,
+      );
+      const dmChannels = column('SELECT channel_id FROM dm_members WHERE user_id = ?', id);
+      const dmPeers = column(
+        `SELECT DISTINCT user_id FROM dm_members WHERE user_id != ? AND channel_id IN
+           (SELECT channel_id FROM dm_members WHERE user_id = ?)`,
+        id,
+        id,
+      );
+      const ownedGuilds = column('SELECT id FROM guilds WHERE owner_id = ?', id);
+      const joinedGuilds = column(
+        "SELECT guild_id FROM guild_members WHERE user_id = ? AND role != 'owner'",
+        id,
+      );
+      const peersOf = function (guilds: string[]): string[] {
+        return guilds.flatMap(function members(guild) {
+          return column(
+            'SELECT user_id FROM guild_members WHERE guild_id = ? AND user_id != ?',
+            guild,
+            id,
+          );
+        });
+      };
+      const ownedMembers = peersOf(ownedGuilds);
+      const joinedMembers = peersOf(joinedGuilds);
+      const doomedChannels = [
+        ...dmChannels,
+        ...ownedGuilds.flatMap(function channels(guild) {
+          return column('SELECT id FROM channels WHERE guild_id = ?', guild);
+        }),
+      ];
+      const files = [
+        ...column('SELECT id FROM files WHERE uploader_id = ?', id),
+        ...doomedChannels.flatMap(function filesOf(channel) {
+          return column('SELECT id FROM files WHERE channel_id = ?', channel);
+        }),
+      ];
+      const images = [
+        ...column('SELECT id FROM images WHERE owner_id = ?', id),
+        ...column(
+          'SELECT icon_image FROM guilds WHERE owner_id = ? AND icon_image IS NOT NULL',
+          id,
+        ),
+      ];
+      db.transaction(function erase() {
+        for (const channel of dmChannels)
+          db.prepare('DELETE FROM channels WHERE id = ?').run(channel);
+        db.prepare('DELETE FROM guilds WHERE owner_id = ?').run(id);
+        // The people of the groups keep the envelopes that this person wrapped for them: the public key goes into the
+        // envelope (it is public) because the row of the person goes now, and the owner is asked to renew the key.
+        db.prepare(
+          `UPDATE guild_keys SET wrapper_pub = (SELECT pub_ecdh FROM users WHERE id = ?)
+             WHERE wrapper_id = ? AND wrapper_pub IS NULL`,
+        ).run(id, id);
+        for (const guild of joinedGuilds)
+          db.prepare('UPDATE guilds SET needs_rotation = 1 WHERE id = ?').run(guild);
+        db.prepare('DELETE FROM reactions WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM messages WHERE sender_id = ?').run(id);
+        db.prepare('DELETE FROM files WHERE uploader_id = ?').run(id);
+        db.prepare('DELETE FROM guild_keys WHERE user_id = ?').run(id);
+        // Everything else that hangs from the person (friendships, memberships, tags, receipts, sessions, pictures) goes with it.
+        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      })();
+
+      for (const file of files) fs.rm(path.join(config.uploadDir, file), { force: true }, noop);
+      for (const image of images) fs.rm(imageFile(ctx, image), { force: true }, noop);
+      ctx.hub.dropUser(id);
+      ctx.hub.sendToMany([...friends, ...dmPeers], { t: 'friends.update' });
+      for (const guild of joinedGuilds)
+        ctx.hub.sendToMany(joinedMembers, { t: 'guild.update', guildId: guild });
+      for (const guild of ownedGuilds)
+        ctx.hub.sendToMany(ownedMembers, { t: 'guild.removed', guildId: guild });
+      return reply.code(204).send();
     },
   );
 }

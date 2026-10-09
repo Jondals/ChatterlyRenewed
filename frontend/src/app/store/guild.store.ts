@@ -166,14 +166,15 @@ export class GuildStore {
       for (const row of guild.keys) {
         if (known.has(row.keyVersion)) continue;
         try {
-          const wrapper = await this.directory.require(row.wrapperId);
+          const wrapperKey =
+            row.wrapperPub ?? (await this.directory.require(row.wrapperId)).publicKeys.ecdh;
           known.set(
             row.keyVersion,
             await unwrapGuildKey(
               { iv: row.iv, data: row.data },
               this.auth.identity.ecdhPrivate,
               this.auth.identity.publicKeys.ecdh,
-              wrapper.publicKeys.ecdh,
+              wrapperKey,
               { guildId: guild.id, keyVersion: row.keyVersion, recipientId: me.id },
             ),
           );

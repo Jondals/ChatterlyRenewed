@@ -1221,6 +1221,21 @@ export const ES: Record<string, string> = {
   'Encrypted before they leave your device. Up to 10 MB each':
     'Se cifran antes de salir de tu dispositivo. Hasta 10 MB cada uno',
   'Up to 8 MB': 'Hasta 8 MB',
+  'Delete account': 'Eliminar cuenta',
+  'Delete my account': 'Eliminar mi cuenta',
+  'Erases your account for good: your messages, files, friends, direct chats and the groups you own. It cannot be undone.':
+    'Borra tu cuenta para siempre: tus mensajes, archivos, amigos, chats directos y los grupos que tienes. No se puede deshacer.',
+  'This cannot be undone.': 'No se puede deshacer.',
+  'Your messages, files, reactions and pictures are erased from the server.':
+    'Tus mensajes, archivos, reacciones e imágenes se borran del servidor.',
+  'Your friendships and direct chats disappear.': 'Tus amistades y chats directos desaparecen.',
+  'The groups you own are deleted for everybody; in the others you just leave.':
+    'Los grupos que tienes se borran para todos; de los demás simplemente sales.',
+  'Your keys, your preferences and everything kept on this device are erased too.':
+    'Tus claves, tus preferencias y todo lo guardado en este dispositivo también se borran.',
+  'Type your username to confirm': 'Escribe tu nombre de usuario para confirmar',
+  'Erasing…': 'Borrando…',
+  'Delete my account forever': 'Eliminar mi cuenta para siempre',
   'Could not make the emoji pack': 'No se pudo crear el paquete de emojis',
   'This browser does not let the page draw the emoji (privacy protection?).':
     'Este navegador no deja a la página dibujar los emojis (¿protección de privacidad?).',

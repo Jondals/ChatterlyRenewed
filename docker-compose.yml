@@ -16,6 +16,7 @@ services:
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       TURN_URLS: ${TURN_URLS:-}
       TURN_SECRET: ${TURN_SECRET:-}
+      RELAY_ONLY: ${RELAY_ONLY:-}
     volumes:
       - chatterly-data:/data
     # Hardening: the container only writes in its data volume and in memory, has no extra privileges and has no

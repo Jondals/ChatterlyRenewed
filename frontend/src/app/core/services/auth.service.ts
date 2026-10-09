@@ -38,6 +38,18 @@ type LoginResponse = AuthResponse & { wrappedKeys: WrappedKeys };
  * split into an auth secret (sent over TLS, hashed again by the server) and a wrapping key (kept here) that
  * decrypts the identity private keys stored on the server.
  */
+/** The databases of this device where the keys and the person's own files are kept (the ones that exist are erased). */
+const LOCAL_DATABASES = [
+  'chatterly-renewed-keys',
+  'chatterly-renewed-vault',
+  'chatterly-renewed-stickers',
+  'chatterly-renewed-sounds',
+  'chatterly-renewed-fonts',
+  'chatterly-renewed-click',
+  'chatterly-renewed-ringtone',
+  'chatterly-renewed-wallpaper',
+];
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiService);
@@ -190,6 +202,32 @@ export class AuthService {
       wrappedKeys,
     });
     this.storeSession(tokens);
+  }
+
+  /**
+   * Erases the account for good: the server removes everything of the person after checking the proof of the password,
+   * and then everything kept on this device goes too (keys, session, preferences, stickers, sounds, fonts).
+   */
+  async deleteAccount(username: string, password: string): Promise<void> {
+    const kdf = await this.api.get<{ salt: string; iterations: number }>(
+      '/api/auth/kdf?username=' + encodeURIComponent(username),
+    );
+    const secrets = await deriveSecrets(password, kdf.salt, kdf.iterations);
+    // The password is checked through a sign in first: a wrong one must not look like an expired session (which signs out).
+    await this.api.post('/api/auth/login', { username, authSecret: secrets.authSecret }, false);
+    await this.api.post('/api/me/delete', { authSecret: secrets.authSecret });
+    // Everything kept on this device goes, without touching the state in memory: the page is loaded again right after.
+    const names = new Set(LOCAL_DATABASES);
+    for (const database of (await indexedDB.databases?.()) ?? []) {
+      if (database.name) {
+        names.add(database.name);
+      }
+    }
+    for (const name of names) {
+      indexedDB.deleteDatabase(name);
+    }
+    localStorage.clear();
+    sessionStorage.clear();
   }
 
   /** Signs out; the server is told too unless the session was already refused. */

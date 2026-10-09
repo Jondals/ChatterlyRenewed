@@ -69,6 +69,8 @@ export interface GuildChannel {
 export interface GuildKeyRow {
   keyVersion: number;
   wrapperId: string;
+  /** Public key of the wrapper when that person erased their account (their row is gone, the key is kept here). */
+  wrapperPub?: string | null;
   iv: string;
   data: string;
 }

@@ -105,6 +105,8 @@ interface SignalBody {
     /** The sender votes to skip what is playing. */
     skip?: boolean;
   };
+  /** An effect of the soundboard of the sender (its name; the sound is made here). */
+  sfx?: string;
   /** A sound of the soundboard of the sender: its pieces (sent once) and the order to play it. */
   clip?: { id: string; name?: string; part?: number; of?: number; data?: string; play?: boolean };
   /** The wheel or tournament shared with the call (plain data, checked by the receiver); `fresh` is false for a snapshot sent to someone who just joined. */
@@ -248,6 +250,8 @@ export class CallService {
   );
 
   private iceServers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+  /** The server asks that every call goes through its relay (the addresses of the people stay hidden). */
+  private serverRelayOnly = false;
   private readonly links = new Map<string, Link>();
   private micStream: MediaStream | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
@@ -336,9 +340,6 @@ export class CallService {
               e['from'] as string,
               e['payload'] as SignalPayload,
             );
-            break;
-          case 'call.sfx':
-            this.sound.sfx(e['sfx'] as SfxId);
             break;
           case 'socket.closed':
             this.rooms.set({});
@@ -1004,7 +1005,8 @@ export class CallService {
   /** Plays a soundboard effect here and sends it to everybody in the call. */
   sendSfx(id: SfxId): void {
     this.sound.sfx(id);
-    this.socket.send({ t: 'call.sfx', sfx: id });
+    // Sealed for each person like everything else of the call: the server does not learn which effect was played.
+    for (const link of this.links.values()) this.sendSignal(link, { sfx: id });
   }
 
   /** Joins the call that is ringing. */
@@ -1034,8 +1036,11 @@ export class CallService {
 
   private async loadIce(): Promise<void> {
     try {
-      const res = await this.api.get<{ iceServers: RTCIceServer[] }>('/api/rtc/config');
+      const res = await this.api.get<{ iceServers: RTCIceServer[]; relayOnly?: boolean }>(
+        '/api/rtc/config',
+      );
       this.iceServers = res.iceServers;
+      this.serverRelayOnly = res.relayOnly === true;
     } catch {
       /* keep the STUN fallback */
     }
@@ -1249,7 +1254,7 @@ export class CallService {
     const me = this.auth.user()!.id;
     const pc = new RTCPeerConnection({
       iceServers: this.iceServers,
-      iceTransportPolicy: this.settings.relayOnly() ? 'relay' : 'all',
+      iceTransportPolicy: this.serverRelayOnly || this.settings.relayOnly() ? 'relay' : 'all',
       bundlePolicy: 'max-bundle',
     });
     const link: Link = {
@@ -1434,7 +1439,7 @@ export class CallService {
   /** Sends a signaling message to a person, encrypted with the pair key and signed with this device's identity key. */
   private sendSignal(
     link: Link,
-    body: Pick<SignalBody, 'description' | 'candidate' | 'music' | 'spinly' | 'clip'>,
+    body: Pick<SignalBody, 'description' | 'candidate' | 'music' | 'spinly' | 'clip' | 'sfx'>,
   ): void {
     const roomId = this.roomId() ?? this.pendingRoom;
     if (!roomId) return;
@@ -1509,6 +1514,9 @@ export class CallService {
     if (body.screen !== link.screenStreamIdRemote) this.noteRemoteScreen(link, body.screen);
     if (body.music) this.onMusicReceived(link.userId, body.music);
     if (body.clip) this.onClipReceived(link.userId, body.clip);
+    if (typeof body.sfx === 'string' && body.sfx.length <= 16 && !this.deafened()) {
+      this.sound.sfx(body.sfx as SfxId);
+    }
     if (body.spinly) this.onSpinlyShared?.(link.userId, body.spinly);
     // The key agreement must finish before any media (or answer) leaves this device.
     if (body.eph && !link.remoteEph) await this.agreeMediaKeys(link, body.eph);

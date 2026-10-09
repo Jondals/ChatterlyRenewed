@@ -95,7 +95,9 @@ CREATE TABLE IF NOT EXISTS guild_keys (
   guild_id     TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key_version  INTEGER NOT NULL,
-  wrapper_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  wrapper_id   TEXT NOT NULL,
+  -- Public key of whoever wrapped it, written when that person erases their account (their row goes with them).
+  wrapper_pub  TEXT,
   iv           TEXT NOT NULL,
   data         TEXT NOT NULL,
   PRIMARY KEY (guild_id, user_id, key_version)
@@ -182,10 +184,47 @@ const MIGRATIONS: [table: string, column: string, definition: string][] = [
   ['users', 'profile_color', "TEXT NOT NULL DEFAULT ''"],
   ['users', 'name_font', "TEXT NOT NULL DEFAULT 'default'"],
   ['users', 'aura_color', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'deleted_at', 'INTEGER'],
+  ['guild_keys', 'wrapper_pub', 'TEXT'],
   ['guilds', 'icon_image', 'TEXT'],
   ['guild_members', 'sort_order', 'INTEGER'],
   ['guild_tags', 'position', 'INTEGER NOT NULL DEFAULT 0'],
 ];
+
+/**
+ * Older databases tied the person who wrapped a key envelope to the row of that person (so erasing an account would have
+ * erased the envelopes of other people). The tie is cut by building the table again without it.
+ */
+function untieWrappers(db: Database.Database): void {
+  const ties = db.prepare('PRAGMA foreign_key_list(guild_keys)').all() as { from: string }[];
+  if (
+    !ties.some(function onWrapper(tie) {
+      return tie.from === 'wrapper_id';
+    })
+  ) {
+    return;
+  }
+  db.pragma('foreign_keys = OFF');
+  db.transaction(function rebuild() {
+    db.exec(`
+      CREATE TABLE guild_keys_new (
+        guild_id     TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+        user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        key_version  INTEGER NOT NULL,
+        wrapper_id   TEXT NOT NULL,
+        wrapper_pub  TEXT,
+        iv           TEXT NOT NULL,
+        data         TEXT NOT NULL,
+        PRIMARY KEY (guild_id, user_id, key_version)
+      );
+      INSERT INTO guild_keys_new (guild_id, user_id, key_version, wrapper_id, wrapper_pub, iv, data)
+        SELECT guild_id, user_id, key_version, wrapper_id, wrapper_pub, iv, data FROM guild_keys;
+      DROP TABLE guild_keys;
+      ALTER TABLE guild_keys_new RENAME TO guild_keys;
+    `);
+  })();
+  db.pragma('foreign_keys = ON');
+}
 
 /** Adds the columns that older databases do not have, so an update never needs a manual step. */
 function migrate(db: Database.Database): void {
@@ -212,5 +251,6 @@ export function openDatabase(dbPath: string): Db {
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
   migrate(db);
+  untieWrappers(db);
   return db;
 }

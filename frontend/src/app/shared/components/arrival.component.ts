@@ -596,7 +596,6 @@ function followCover(part: string, element: Element | null): void {
       -webkit-text-fill-color: transparent;
       opacity: 0;
       transform: translateY(0.7em) rotateX(-80deg) scale(0.8);
-      filter: blur(8px);
       animation:
         rise 0.8s var(--ease) calc(1.7s + var(--i) * 55ms) forwards,
         shine 1.1s ease-in-out 2.9s;
@@ -605,7 +604,6 @@ function followCover(part: string, element: Element | null): void {
       to {
         opacity: 1;
         transform: none;
-        filter: none;
       }
     }
     @keyframes shine {

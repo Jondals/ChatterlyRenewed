@@ -309,6 +309,7 @@ body {
 }
 input,
 textarea,
+.selectable,
 [contenteditable],
 [contenteditable] * {
   -webkit-user-select: text;

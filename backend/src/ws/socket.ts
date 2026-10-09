@@ -107,7 +107,7 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
         } catch {
           return socket.close(4401, 'invalid token');
         }
-        if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId))
+        if (!db.prepare('SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL').get(userId))
           return socket.close(4401, 'unknown user');
         clearTimeout(authTimer);
         client = {
@@ -236,21 +236,6 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
         if (JSON.stringify(payload).length > MAX_SIGNAL_BYTES) return;
         if (!hub.inSameRoom(roomId, userId, to)) return;
         hub.sendTo(to, { t: 'rtc.signal', roomId, from: userId, payload });
-        return;
-      }
-
-      case 'call.sfx': {
-        const room = hub.roomOf(userId);
-        if (!room || typeof msg['sfx'] !== 'string' || msg['sfx'].length > 16) return;
-        for (const p of hub.participants(room)) {
-          if (p.userId !== userId)
-            hub.sendTo(p.userId, {
-              t: 'call.sfx',
-              roomId: room,
-              from: userId,
-              sfx: msg['sfx'],
-            });
-        }
         return;
       }
 
