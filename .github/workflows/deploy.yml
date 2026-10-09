@@ -1,0 +1,20 @@
+# Deploys to the server after every push to main. It needs three secrets in the repository
+# (Settings > Secrets and variables > Actions): SERVER_HOST, SERVER_USER and SERVER_SSH_KEY (a private key
+# whose public key is in ~/.ssh/authorized_keys of the server).
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update the server
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          install -m 600 /dev/null key
+          printf '%s\n' "$KEY" > key
+          ssh -i key -o StrictHostKeyChecking=accept-new "$USER_NAME@$HOST" 'bash ~/ChatterlyRenewed/deploy/update.sh'

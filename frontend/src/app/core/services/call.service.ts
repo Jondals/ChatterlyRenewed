@@ -1,0 +1,1853 @@
+/**
+ * src/app/core/services/call.service.ts
+ * WebRTC call engine: encrypted and signed signaling, encryption of every media frame, level meters, screen
+ * sharing, camera and the music everybody in the call listens to together.
+ */
+import { parseMusicLink, type MusicLink } from '../../shared/util/music-link';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { toB64 } from '../crypto/bytes';
+import { importEcdhPublic } from '../crypto/identity';
+import { deriveLinkSecrets, securityCode } from '../crypto/media-cipher';
+import {
+  derivePairKey,
+  open,
+  seal,
+  signSealed,
+  signalContext,
+  verifySealed,
+  type Sealed,
+} from '../crypto/pairwise';
+import type { CallParticipant } from '../models';
+import { AuthService } from './auth.service';
+import { DirectoryService } from './directory.service';
+import { ApiService } from './api.service';
+import { SettingsService } from './settings.service';
+import { SocketService, type ServerEvent } from './socket.service';
+import { SoundService, type SfxId } from './sound.service';
+import { ToastService } from './toast.service';
+
+/** One song waiting in the queue of the call. */
+export interface QueueItem {
+  id: string;
+  url: string;
+  link: MusicLink;
+  by: string;
+  /** True when it is a video to watch (it takes the stage), false for music. */
+  video: boolean;
+}
+
+export interface PeerView {
+  userId: string;
+  connection: RTCPeerConnectionState | 'new';
+  audio: MediaStream | null;
+  camera: MediaStream | null;
+  screen: MediaStream | null;
+  rttMs: number | null;
+  /** Frame-level end-to-end encryption is negotiated and flowing for this peer. */
+  encrypted: boolean;
+  /** 4 emojis both sides can compare aloud to prove nobody tampered with the key exchange. */
+  securityCode: string | null;
+  mediaStats: {
+    encrypted: number;
+    decrypted: number;
+    failed: number;
+    dropped: number;
+    received?: number;
+    lastError?: string;
+  };
+}
+
+export interface CallStats {
+  rttMs: number | null;
+  jitterMs: number | null;
+  lossPct: number;
+  outKbps: number;
+  inKbps: number;
+  /** e.g. "AES_CM_128_HMAC_SHA1_80" as reported by the browser for the media transport. */
+  srtpCipher: string | null;
+  dtlsState: string | null;
+  connectedPeers: number;
+}
+
+const EMPTY_STATS: CallStats = {
+  rttMs: null,
+  jitterMs: null,
+  lossPct: 0,
+  outKbps: 0,
+  inKbps: 0,
+  srtpCipher: null,
+  dtlsState: null,
+  connectedPeers: 0,
+};
+
+interface SignalBody {
+  sid: string;
+  n: number;
+  description?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
+  /** Id of the MediaStream that carries the sender's screen share, so the receiver can label it. */
+  screen?: string;
+  /** Ephemeral ECDH public key (base64 raw P-256) for the media-encryption key agreement. */
+  eph?: string;
+  /** "Listen together": a YouTube/Spotify link and the second it is at, or `stop`. It travels encrypted and signed like the rest. */
+  music?: {
+    url?: string;
+    pos?: number;
+    stop?: boolean;
+    video?: boolean;
+    paused?: boolean;
+    index?: number;
+    /** The whole queue (newest `qrev` wins). */
+    queue?: { id?: string; url?: string; by?: string; video?: boolean }[];
+    qrev?: number;
+    /** The sender takes a video out of the playlist (its id). */
+    remove?: string;
+    /** The sender votes to skip what is playing. */
+    skip?: boolean;
+  };
+  /** A sound of the soundboard of the sender: its pieces (sent once) and the order to play it. */
+  clip?: { id: string; name?: string; part?: number; of?: number; data?: string; play?: boolean };
+  /** The wheel or tournament shared with the call (plain data, checked by the receiver); `fresh` is false for a snapshot sent to someone who just joined. */
+  spinly?: { state?: unknown; fresh?: boolean };
+}
+
+interface SignalPayload extends Sealed {
+  signature: string;
+}
+
+interface Link {
+  userId: string;
+  pc: RTCPeerConnection;
+  polite: boolean;
+  makingOffer: boolean;
+  ignoreOffer: boolean;
+  sid: string;
+  remoteSid: string | null;
+  sendCounter: number;
+  lastReceived: number;
+  screenStreamId: string | undefined;
+  screenStreamIdRemote?: string;
+  candidates: RTCIceCandidateInit[];
+  sendQueue: Promise<void>;
+  receiveQueue: Promise<void>;
+  senders: { camera?: RTCRtpSender[]; screen?: RTCRtpSender[] };
+  audioIn?: AudioChain;
+  lastBytes: { in: number; out: number; at: number };
+  lost: number;
+  received: number;
+  /** Per-call, per-peer ephemeral ECDH pair: gives the media keys forward secrecy. */
+  eph: CryptoKeyPair | null;
+  ephPub: string;
+  ephReady: Promise<void>;
+  remoteEph: string | null;
+  protectedReceivers: WeakSet<RTCRtpReceiver>;
+}
+
+interface AudioChain {
+  element: HTMLAudioElement;
+  source: MediaStreamAudioSourceNode;
+  gain: GainNode;
+  panner: PannerNode;
+  analyser: AnalyserNode;
+  spatial: boolean;
+}
+
+/**
+ * Full-mesh WebRTC calls. Media flows peer-to-peer over DTLS-SRTP, so the server never touches
+ * audio/video. The signaling that sets those sessions up goes through the server but is encrypted
+ * with the pair key and signed with each peer's identity key: the server can neither read it nor
+ * swap DTLS fingerprints to mount a man-in-the-middle attack.
+ */
+@Injectable({ providedIn: 'root' })
+export class CallService {
+  private readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
+  private readonly directory = inject(DirectoryService);
+  private readonly socket = inject(SocketService);
+  private readonly sound = inject(SoundService);
+  private readonly settings = inject(SettingsService);
+  private readonly toast = inject(ToastService);
+
+  readonly roomId = signal<string | null>(null);
+  readonly status = signal<'idle' | 'connecting' | 'connected'>('idle');
+  readonly participants = signal<CallParticipant[]>([]);
+  /** Participants of every room I can see (for "who's in this voice channel"). */
+  readonly rooms = signal<Record<string, CallParticipant[]>>({});
+  readonly peers = signal<Record<string, PeerView>>({});
+  readonly incoming = signal<{ roomId: string; from: string } | null>(null);
+
+  /** Music or a video shared in the call (every participant plays it on their own device, starting together). */
+  readonly music = signal<{
+    url: string;
+    link: MusicLink;
+    by: string;
+    receivedAt: number;
+    pos: number;
+    /** True when it is a video to watch together (the stage shows it big), false for music. */
+    video: boolean;
+  } | null>(null);
+  /**
+   * The latest pause or resume of the shared player, by this person (remote false) or by somebody else (remote true,
+   * which the player must obey). `pos` is the second it happened at.
+   */
+  readonly musicControl = signal<{
+    paused: boolean;
+    pos: number;
+    /** Position in a YouTube playlist, when it changed. */
+    index?: number;
+    remote: boolean;
+    seq: number;
+  } | null>(null);
+  private controlSeq = 0;
+  /** What waits to be played after the current song, for everybody in the call. */
+  readonly musicQueue = signal<QueueItem[]>([]);
+  /** The people who voted to skip the current song. */
+  readonly skipVotes = signal<string[]>([]);
+  /** Titles of the songs and videos, found when somebody shares them (best effort). */
+  readonly musicTitles = signal<Record<string, string>>({});
+  private queueRev = 0;
+  private readonly titleRequests = new Set<string>();
+  readonly muted = signal(false);
+  readonly deafened = signal(false);
+  readonly cameraOn = signal(false);
+  readonly screenOn = signal(false);
+  readonly localCamera = signal<MediaStream | null>(null);
+  readonly localScreen = signal<MediaStream | null>(null);
+
+  /** 0..1 voice levels per user id, refreshed ~12 times a second. */
+  readonly levels = signal<Record<string, number>>({});
+  readonly speaking = signal<ReadonlySet<string>>(new Set());
+  readonly stats = signal<CallStats>(EMPTY_STATS);
+  readonly rttHistory = signal<number[]>([]);
+  /** Binaural spread multiplier for spatial audio (1 = ±70°). */
+  readonly spread = signal(1);
+  readonly angles = computed(
+    function (this: CallService) {
+      const ids = this.participants()
+        .map(function (p) {
+          return p.userId;
+        })
+        .filter(
+          function (this: CallService, id: string) {
+            return id !== this.auth.user()?.id;
+          }.bind(this),
+        );
+      const span = 70 * this.spread();
+      return Object.fromEntries(
+        ids.map(function (id, i) {
+          return [id, ids.length === 1 ? 0 : -span + (2 * span * i) / (ids.length - 1)];
+        }),
+      ) as Record<string, number>;
+    }.bind(this),
+  );
+
+  readonly inCall = computed(
+    function (this: CallService) {
+      return this.roomId() !== null;
+    }.bind(this),
+  );
+
+  private iceServers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+  private readonly links = new Map<string, Link>();
+  private micStream: MediaStream | null = null;
+  private micSource: MediaStreamAudioSourceNode | null = null;
+  private gate: GainNode | null = null;
+  private sendDest: MediaStreamAudioDestinationNode | null = null;
+  private localAnalyser: AnalyserNode | null = null;
+  private sendTrack: MediaStreamTrack | null = null;
+  private meterTimer: ReturnType<typeof setInterval> | undefined;
+  private statsTimer: ReturnType<typeof setInterval> | undefined;
+  private stopRing: (() => void) | null = null;
+  private lastSpeech = new Map<string, number>();
+  private started = false;
+  private previousParticipants = new Set<string>();
+  private worker: Worker | null = null;
+
+  /** 'active' once every connected peer exchanged keys and frames decrypt cleanly. */
+  readonly mediaEncryption = computed<'none' | 'pending' | 'active' | 'failing'>(
+    function (this: CallService) {
+      const peers = Object.values(this.peers());
+      if (!this.inCall() || !peers.length) return 'none';
+      if (
+        peers.some(function (p) {
+          return p.mediaStats.failed > 20 && p.mediaStats.failed > p.mediaStats.decrypted;
+        })
+      )
+        return 'failing';
+      return peers.every(function (p) {
+        return p.encrypted;
+      })
+        ? 'active'
+        : 'pending';
+    }.bind(this),
+  );
+
+  /** Keeps the spatial audio and the output device in sync with the settings. */
+  constructor() {
+    effect(
+      function (this: CallService) {
+        const spatial = this.settings.spatialAudio();
+        const angles = this.angles();
+        const deaf = this.deafened();
+        for (const link of this.links.values())
+          this.configureChain(link, spatial, angles[link.userId] ?? 0, deaf);
+      }.bind(this),
+    );
+    effect(
+      function (this: CallService) {
+        const id = this.settings.outputDeviceId();
+        const ctx = this.sound.context as AudioContext & {
+          setSinkId?: (id: string) => Promise<void>;
+        };
+        if (this.inCall() && ctx.setSinkId && id !== 'default')
+          void ctx.setSinkId(id).catch(function () {
+            return undefined;
+          });
+      }.bind(this),
+    );
+  }
+
+  /** Starts listening to the server events that drive calls (joined, state, left, incoming, signals, sound effects). */
+  start(): void {
+    if (this.started) return;
+    this.started = true;
+    this.socket.events$.subscribe(
+      function (this: CallService, event: ServerEvent) {
+        const e = event as unknown as Record<string, unknown>;
+        switch (event.t) {
+          case 'call.joined':
+            void this.onJoined(e['roomId'] as string, e['participants'] as CallParticipant[]);
+            break;
+          case 'call.state':
+            this.onState(e['roomId'] as string, e['participants'] as CallParticipant[]);
+            break;
+          case 'call.left':
+            // The answer to our own "leave" arrives late; it must not end the call we are joining now.
+            if (e['roomId'] === this.roomId()) {
+              this.teardown();
+            }
+            break;
+          case 'call.incoming':
+            this.onIncoming(e['roomId'] as string, e['from'] as string);
+            break;
+          case 'rtc.signal':
+            this.onSignal(
+              e['roomId'] as string,
+              e['from'] as string,
+              e['payload'] as SignalPayload,
+            );
+            break;
+          case 'call.sfx':
+            this.sound.sfx(e['sfx'] as SfxId);
+            break;
+          case 'socket.closed':
+            this.rooms.set({});
+            if (this.inCall()) {
+              this.teardown();
+              this.toast.error('Call disconnected', 'The connection to the server dropped.');
+            }
+            break;
+          case 'error':
+            if (this.status() === 'connecting') {
+              this.teardown();
+              this.toast.error('Could not join the call', String(e['code']));
+            }
+            break;
+        }
+      }.bind(this),
+    );
+  }
+
+  // ---- public controls -----------------------------------------------------------------------
+
+  async join(roomId: string): Promise<void> {
+    if (this.roomId() === roomId) return;
+    if (this.inCall() || this.status() === 'connecting') await this.leave();
+    this.dismissIncoming();
+    if (typeof RTCRtpScriptTransform === 'undefined') {
+      this.toast.error(
+        'Browser not supported for secure calls',
+        'End-to-end encrypted media needs Insertable Streams (Chrome/Edge 94+, Firefox 117+, Safari 15.4+).',
+      );
+      return;
+    }
+    this.status.set('connecting');
+    try {
+      this.startWorker();
+      this.sound.context; // creates/resumes the AudioContext inside the user gesture
+      await Promise.all([this.loadIce(), this.startMic()]);
+    } catch (error) {
+      this.teardown();
+      const denied =
+        error instanceof DOMException &&
+        (error.name === 'NotAllowedError' || error.name === 'SecurityError');
+      this.toast.error(
+        denied ? 'Microphone blocked' : 'Could not start the call',
+        denied
+          ? 'Allow microphone access in your browser to talk.'
+          : String((error as Error).message ?? error),
+      );
+      return;
+    }
+    this.pendingRoom = roomId;
+    if (!this.socket.send({ t: 'call.join', roomId })) {
+      this.teardown();
+      this.toast.error('Offline', 'Reconnect to the server before joining a call.');
+    }
+  }
+
+  private pendingRoom: string | null = null;
+
+  /** Leaves the current call and plays the leave sound. */
+  async leave(): Promise<void> {
+    if (this.roomId() || this.status() === 'connecting') this.socket.send({ t: 'call.leave' });
+    this.teardown();
+    this.sound.play('leave');
+  }
+
+  /**
+   * Starts listening to a YouTube or Spotify link (or watching a YouTube video) together with everybody in the call.
+   * Whatever was playing stops for everybody. Returns false when the link is not valid.
+   */
+  startMusic(text: string, video = false): boolean {
+    const musicLink = parseMusicLink(text);
+    if (!musicLink || !this.roomId() || (video && musicLink.kind !== 'youtube')) return false;
+    const url = text.trim();
+    this.musicControl.set(null);
+    this.skipVotes.set([]);
+    this.playlist.set({ ids: [], index: 0 });
+    this.findTitle(url);
+    this.music.set({
+      url,
+      link: musicLink,
+      by: this.auth.userId,
+      receivedAt: Date.now(),
+      pos: 0,
+      video,
+    });
+    for (const link of this.links.values())
+      this.sendSignal(link, { music: { url, pos: 0, video } });
+    return true;
+  }
+
+  /** Called with what somebody else shared about Spinly (set by SpinlyService; the data is checked there). */
+  onSpinlyShared: ((from: string, share: { state?: unknown; fresh?: boolean }) => void) | null =
+    null;
+  /** Gives the wheel or tournament the call has right now, to tell whoever just joined (set by SpinlyService). */
+  spinlySnapshot: (() => unknown) | null = null;
+  /** Called when the call ends, so the shared wheel is forgotten (set by SpinlyService). */
+  onSpinlyReset: (() => void) | null = null;
+
+  /** Tells everybody in the call the new state of the shared wheel or tournament. Does nothing outside a call. */
+  shareSpinly(state: unknown): void {
+    if (!this.roomId()) return;
+    for (const link of this.links.values())
+      this.sendSignal(link, { spinly: { state, fresh: true } });
+  }
+
+  /** Tells somebody who just connected what the call is spinning, if anything. */
+  private tellSpinlyTo(link: Link): void {
+    const state = this.spinlySnapshot?.();
+    if (state) this.sendSignal(link, { spinly: { state, fresh: false } });
+  }
+
+  /** Everybody in the call, me included. */
+  private participantIds(): string[] {
+    return [this.auth.userId, ...Object.keys(this.peers())];
+  }
+
+  /** True for exactly one person of the call (the one with the lowest id): the one who moves the queue on. */
+  private isQueueKeeper(): boolean {
+    const ids = this.participantIds().sort();
+    return ids[0] === this.auth.userId;
+  }
+
+  /** Votes needed to skip a song: more than half of the call. */
+  skipNeeded(): number {
+    return Math.floor(this.participantIds().length / 2) + 1;
+  }
+
+  /** Looks the title of a YouTube or Spotify link up (it is only a label; nothing depends on it). */
+  findTitle(url: string): void {
+    if (this.titleRequests.has(url) || this.musicTitles()[url]) return;
+    const parsed = parseMusicLink(url);
+    if (!parsed) return;
+    this.titleRequests.add(url);
+    const service =
+      parsed.kind === 'spotify'
+        ? 'https://open.spotify.com/oembed?url='
+        : 'https://www.youtube.com/oembed?format=json&url=';
+    fetch(service + encodeURIComponent(url), { credentials: 'omit', referrerPolicy: 'no-referrer' })
+      .then(function toJson(answer) {
+        return answer.json();
+      })
+      .then(this.keepTitle.bind(this, url))
+      .catch(function ignore() {
+        return undefined;
+      });
+  }
+
+  /** Remembers a title that was found. */
+  private keepTitle(url: string, data: { title?: unknown }): void {
+    if (typeof data.title === 'string' && data.title) {
+      this.musicTitles.update(function put(all) {
+        return { ...all, [url]: String(data.title).slice(0, 90) };
+      });
+    }
+  }
+
+  /** Adds a link to the end of the queue (or plays it right away when nothing is playing). Returns false when the link is not valid. */
+  queueMusic(text: string, video = false): boolean {
+    const link = parseMusicLink(text);
+    if (!link || !this.roomId() || (video && link.kind !== 'youtube')) return false;
+    if (!this.music()) return this.startMusic(text, video);
+    const url = text.trim();
+    this.findTitle(url);
+    const item: QueueItem = {
+      id: Math.random().toString(36).slice(2, 10),
+      url,
+      link,
+      by: this.auth.userId,
+      video,
+    };
+    this.setQueue([...this.musicQueue(), item].slice(0, 50));
+    return true;
+  }
+
+  /** Takes a song out of the queue (anybody can). */
+  removeFromQueue(id: string): void {
+    this.setQueue(
+      this.musicQueue().filter(function keep(item) {
+        return item.id !== id;
+      }),
+    );
+  }
+
+  /** Replaces the queue and tells everybody. */
+  private setQueue(items: QueueItem[]): void {
+    this.queueRev = Math.max(Date.now(), this.queueRev + 1);
+    this.musicQueue.set(items);
+    this.sendQueueToAll();
+  }
+
+  /** Sends the whole queue to everybody in the call. */
+  private sendQueueToAll(): void {
+    const queue = this.queuePayload();
+    for (const link of this.links.values())
+      this.sendSignal(link, { music: { queue, qrev: this.queueRev } });
+  }
+
+  /** The queue as it travels: only the link, who added it and its id. */
+  private queuePayload(): { id: string; url: string; by: string; video: boolean }[] {
+    return this.musicQueue().map(function plain(item) {
+      return { id: item.id, url: item.url, by: item.by, video: item.video };
+    });
+  }
+
+  /** The person votes to skip the song that is playing (pressing again takes the vote back). */
+  voteSkip(): void {
+    if (!this.music()) return;
+    const me = this.auth.userId;
+    const has = this.skipVotes().includes(me);
+    this.skipVotes.set(
+      has
+        ? this.skipVotes().filter(function other(id) {
+            return id !== me;
+          })
+        : [...this.skipVotes(), me],
+    );
+    for (const link of this.links.values()) this.sendSignal(link, { music: { skip: !has } });
+    this.checkSkip();
+  }
+
+  /** When enough people voted, the keeper of the queue moves on. */
+  private checkSkip(): void {
+    if (this.music() && this.skipVotes().length >= this.skipNeeded() && this.isQueueKeeper()) {
+      this.skipNow();
+    }
+  }
+
+  /** True while the shared player is paused (the stage keeps it up to date, the floating bar reads it). */
+  readonly musicPaused = signal(false);
+  /** Counts the times somebody outside the stage asks to pause or resume the shared player. */
+  readonly pauseRequest = signal(0);
+  /** What the player of the stage reports about the playlist it plays (empty when it is not one). */
+  readonly playlist = signal<{ ids: string[]; index: number }>({ ids: [], index: 0 });
+  /** Counts the times the player of the stage must go to the next video of its playlist. */
+  readonly playlistNext = signal(0);
+  /** The latest video taken out of the playlist (by this person or by somebody else): the player must drop it. */
+  readonly playlistRemoval = signal<{ id: string; seq: number } | null>(null);
+  private removalSeq = 0;
+
+  /** Takes a video out of the playlist for everybody in the call. */
+  removeFromPlaylist(id: string): void {
+    if (!this.music() || !/^[\w-]{6,20}$/.test(id)) return;
+    this.playlistRemoval.set({ id, seq: ++this.removalSeq });
+    for (const link of this.links.values()) this.sendSignal(link, { music: { remove: id } });
+  }
+
+  /** True when there is something to skip to: a song in the queue or the next video of a playlist. */
+  hasNext(): boolean {
+    const list = this.playlist();
+    return (
+      this.musicQueue().length > 0 || (list.ids.length > 0 && list.index < list.ids.length - 1)
+    );
+  }
+
+  /** Goes on to the next video of the playlist, or to the next of the queue. */
+  private skipNow(): void {
+    const list = this.playlist();
+    if (list.ids.length > 0 && list.index < list.ids.length - 1) {
+      this.skipVotes.set([]);
+      this.playlistNext.update(function more(n) {
+        return n + 1;
+      });
+    } else {
+      this.playNext();
+    }
+  }
+
+  /** The player reports that the song ended: the keeper of the queue plays the next one. */
+  musicEnded(): void {
+    const list = this.playlist();
+    if (list.ids.length > 0 && list.index < list.ids.length - 1) return;
+    if (this.music() && this.isQueueKeeper()) this.playNext();
+  }
+
+  /** Starts the next song of the queue for everybody, or ends the music when there is none. */
+  private playNext(): void {
+    const [next, ...rest] = this.musicQueue();
+    if (!next) {
+      this.stopMusic();
+      return;
+    }
+    this.queueRev = Math.max(Date.now(), this.queueRev + 1);
+    this.musicQueue.set(rest);
+    this.startMusic(next.url, next.video);
+    this.sendQueueToAll();
+  }
+
+  /** Tells everybody that the shared player was paused or resumed at a second. */
+  setMusicPaused(paused: boolean, pos: number, index?: number): void {
+    if (!this.music()) return;
+    this.musicControl.set({ paused, pos, index, remote: false, seq: ++this.controlSeq });
+    for (const link of this.links.values())
+      this.sendSignal(link, { music: { paused, pos, index } });
+  }
+
+  /** Closes the shared music or video only for this person; the others keep it. */
+  dismissMusic(): void {
+    this.music.set(null);
+    this.musicControl.set(null);
+  }
+
+  /** Stops the shared music for everybody in the call. */
+  stopMusic(): void {
+    this.music.set(null);
+    this.musicControl.set(null);
+    this.skipVotes.set([]);
+    for (const link of this.links.values()) this.sendSignal(link, { music: { stop: true } });
+  }
+
+  /** Somebody started or stopped the music: the link is checked here too (the sender is not trusted). */
+  private onMusicReceived(sender: string, data: NonNullable<SignalBody['music']>): void {
+    if (data.stop) {
+      this.music.set(null);
+      this.musicControl.set(null);
+      this.skipVotes.set([]);
+      return;
+    }
+    if (Array.isArray(data.queue)) {
+      this.takeQueue(data.queue, Number(data.qrev) || 0);
+      return;
+    }
+    if (typeof data.remove === 'string') {
+      if (this.music() && /^[\w-]{6,20}$/.test(data.remove)) {
+        this.playlistRemoval.set({ id: data.remove, seq: ++this.removalSeq });
+      }
+      return;
+    }
+    if (data.skip !== undefined) {
+      this.takeVote(sender, data.skip === true);
+      return;
+    }
+    if (typeof data.paused === 'boolean') {
+      if (this.music()) {
+        this.musicControl.set({
+          paused: data.paused,
+          pos: Math.max(0, Math.min(Number(data.pos) || 0, 86400)),
+          index:
+            typeof data.index === 'number'
+              ? Math.max(0, Math.min(Math.floor(data.index), 5000))
+              : undefined,
+          remote: true,
+          seq: ++this.controlSeq,
+        });
+      }
+      return;
+    }
+    const musicLink = data.url ? parseMusicLink(data.url) : null;
+    if (!musicLink || !data.url) return;
+    this.musicControl.set(null);
+    this.skipVotes.set([]);
+    this.playlist.set({ ids: [], index: 0 });
+    this.findTitle(data.url);
+    this.music.set({
+      url: data.url,
+      link: musicLink,
+      by: sender,
+      receivedAt: Date.now(),
+      pos: Math.max(0, Math.min(Number(data.pos) || 0, 86400)),
+      video: data.video === true && musicLink.kind === 'youtube',
+    });
+  }
+
+  /** A queue arrived: it is checked here too (links are re-parsed) and the newest one wins. */
+  private takeQueue(
+    raw: { id?: string; url?: string; by?: string; video?: boolean }[],
+    rev: number,
+  ): void {
+    if (rev < this.queueRev) return;
+    const items: QueueItem[] = [];
+    for (const entry of raw.slice(0, 50)) {
+      const link = typeof entry.url === 'string' ? parseMusicLink(entry.url) : null;
+      if (!link || !entry.url) continue;
+      items.push({
+        id: String(entry.id ?? '').slice(0, 16) || Math.random().toString(36).slice(2, 10),
+        url: entry.url,
+        link,
+        by: String(entry.by ?? '').slice(0, 64),
+        video: entry.video === true && link.kind === 'youtube',
+      });
+      this.findTitle(entry.url);
+    }
+    this.queueRev = rev;
+    this.musicQueue.set(items);
+  }
+
+  /** Somebody voted (or took the vote back). */
+  private takeVote(sender: string, voted: boolean): void {
+    const others = this.skipVotes().filter(function other(id) {
+      return id !== sender;
+    });
+    this.skipVotes.set(voted ? [...others, sender] : others);
+    this.checkSkip();
+  }
+
+  /** The person who started the music tells whoever just connected, from the point it has reached. */
+  private tellMusicTo(link: Link): void {
+    const current = this.music();
+    if (this.isQueueKeeper() && this.musicQueue().length) {
+      this.sendSignal(link, { music: { queue: this.queuePayload(), qrev: this.queueRev } });
+    }
+    if (!current || current.by !== this.auth.userId) return;
+    this.sendSignal(link, {
+      music: {
+        url: current.url,
+        pos: current.pos + (Date.now() - current.receivedAt) / 1000,
+        video: current.video,
+      },
+    });
+  }
+
+  /** Mutes or unmutes the microphone (unmuting also undeafens). */
+  toggleMute(): void {
+    const next = !this.muted();
+    this.muted.set(next);
+    if (!next && this.deafened()) this.setDeafened(false);
+    this.applyMute();
+    if (this.roomId()) this.socket.send({ t: 'call.update', muted: next });
+    this.sound.play(next ? 'mute' : 'unmute');
+  }
+
+  /** Deafens or undeafens (deafening also mutes). */
+  toggleDeafen(): void {
+    this.setDeafened(!this.deafened());
+  }
+
+  /** Applies the deafened state, the mute that goes with it, and tells the room. */
+  private setDeafened(value: boolean): void {
+    this.deafened.set(value);
+    if (value) this.muted.set(true);
+    else if (this.muted()) this.muted.set(false);
+    this.applyMute();
+    if (this.roomId()) this.socket.send({ t: 'call.update', deafened: value, muted: this.muted() });
+    this.sound.play(value ? 'deafen' : 'undeafen');
+  }
+
+  /** Turns the camera on or off and adds or removes its video for every person in the call. */
+  async toggleCamera(): Promise<void> {
+    if (this.cameraOn()) {
+      this.stopStream(this.localCamera());
+      for (const link of this.links.values()) this.removeSenders(link, 'camera');
+      this.localCamera.set(null);
+      this.cameraOn.set(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        });
+        this.localCamera.set(stream);
+        this.cameraOn.set(true);
+        for (const link of this.links.values()) this.addVideo(link, stream, 'camera');
+      } catch {
+        this.toast.error('Camera unavailable', 'Check your browser permissions.');
+        return;
+      }
+    }
+    this.socket.send({ t: 'call.update', video: this.cameraOn() });
+  }
+
+  /** Starts or stops sharing the screen. */
+  async toggleScreen(): Promise<void> {
+    if (this.screenOn()) {
+      this.stopScreen();
+      return;
+    }
+    const choice = this.settings.screenShare();
+    const sizes = {
+      standard: { width: 1280, height: 720, fps: 30 },
+      high: { width: 1920, height: 1080, fps: 30 },
+      max: { width: 1920, height: 1080, fps: 60 },
+    };
+    const size = sizes[choice.quality] ?? sizes.high;
+    const video: MediaTrackConstraints & { displaySurface?: string } = {
+      width: { ideal: size.width },
+      height: { ideal: size.height },
+      frameRate: { ideal: size.fps },
+    };
+    if (choice.surface !== 'any') {
+      video.displaySurface = choice.surface;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video, audio: choice.audio });
+      this.localScreen.set(stream);
+      this.screenOn.set(true);
+      stream.getVideoTracks()[0]?.addEventListener(
+        'ended',
+        function (this: CallService) {
+          return this.stopScreen();
+        }.bind(this),
+      );
+      for (const link of this.links.values()) {
+        link.screenStreamId = stream.id;
+        this.addVideo(link, stream, 'screen');
+      }
+      this.socket.send({ t: 'call.update', screen: true });
+    } catch {
+      /* the user cancelled the picker */
+    }
+  }
+
+  /** Stops sharing the screen and removes its video for every person in the call. */
+  private stopScreen(): void {
+    this.stopStream(this.localScreen());
+    for (const link of this.links.values()) {
+      this.removeSenders(link, 'screen');
+      link.screenStreamId = undefined;
+    }
+    this.localScreen.set(null);
+    this.screenOn.set(false);
+    this.socket.send({ t: 'call.update', screen: false });
+  }
+
+  /** The sounds of the soundboard that were already prepared to be sent (pieces of base64). */
+  private readonly preparedClips = new Map<string, string[]>();
+  /** Which sounds each person already has. */
+  private readonly clipsSentTo = new Map<string, Set<string>>();
+  /** Sounds that arrive in pieces. */
+  private readonly incomingClips = new Map<string, { parts: string[]; of: number; got: number }>();
+  /** Sounds of the others that are complete. */
+  private readonly receivedClips = new Map<string, Blob>();
+
+  /** Plays a sound of the person's soundboard here and sends it (once) and plays it for everybody in the call. */
+  async sendClip(clip: { id: string; name: string; blob: Blob }): Promise<void> {
+    void this.sound.playBlob(clip.id, clip.blob);
+    if (!this.inCall() || this.links.size === 0) return;
+    let parts = this.preparedClips.get(clip.id);
+    if (!parts) {
+      const made = await this.prepareClip(clip.blob);
+      if (!made) return;
+      parts = made;
+      this.preparedClips.set(clip.id, parts);
+    }
+    const pieces = parts;
+    for (const link of this.links.values()) {
+      let sent = this.clipsSentTo.get(link.userId);
+      if (!sent) {
+        sent = new Set<string>();
+        this.clipsSentTo.set(link.userId, sent);
+      }
+      if (!sent.has(clip.id)) {
+        sent.add(clip.id);
+        pieces.forEach(
+          function piece(this: CallService, data: string, index: number) {
+            this.sendSignal(link, {
+              clip: {
+                id: clip.id,
+                name: clip.name.slice(0, 24),
+                part: index,
+                of: pieces.length,
+                data,
+              },
+            });
+          }.bind(this),
+        );
+      }
+      this.sendSignal(link, { clip: { id: clip.id, play: true } });
+    }
+  }
+
+  /** Turns a sound into a short mono WAV (the first 8 seconds) cut into pieces small enough for the signalling. */
+  private async prepareClip(blob: Blob): Promise<string[] | null> {
+    try {
+      const decoded = await this.sound.context.decodeAudioData(await blob.arrayBuffer());
+      const rate = 16000;
+      const frames = Math.max(1, Math.min(Math.ceil(decoded.duration * rate), rate * 8));
+      const offline = new OfflineAudioContext(1, frames, rate);
+      const source = offline.createBufferSource();
+      source.buffer = decoded;
+      source.connect(offline.destination);
+      source.start();
+      const rendered = await offline.startRendering();
+      const samples = rendered.getChannelData(0);
+      const bytes = new Uint8Array(44 + frames * 2);
+      const view = new DataView(bytes.buffer);
+      const text = function writeText(offset: number, value: string): void {
+        for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+      };
+      text(0, 'RIFF');
+      view.setUint32(4, 36 + frames * 2, true);
+      text(8, 'WAVEfmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, rate, true);
+      view.setUint32(28, rate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      text(36, 'data');
+      view.setUint32(40, frames * 2, true);
+      for (let i = 0; i < frames; i++) {
+        const value = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(44 + i * 2, value < 0 ? value * 0x8000 : value * 0x7fff, true);
+      }
+      const pieces: string[] = [];
+      for (let start = 0; start < bytes.length; start += 12000) {
+        let binary = '';
+        const end = Math.min(start + 12000, bytes.length);
+        for (let i = start; i < end; i++) binary += String.fromCharCode(bytes[i]);
+        pieces.push(btoa(binary));
+      }
+      return pieces.length <= 40 ? pieces : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** A piece of a sound of somebody else arrived, or the order to play it. Everything is checked here. */
+  private onClipReceived(from: string, clip: NonNullable<SignalBody['clip']>): void {
+    if (typeof clip.id !== 'string' || clip.id.length === 0 || clip.id.length > 40) return;
+    const key = from + ':' + clip.id;
+    if (
+      typeof clip.data === 'string' &&
+      typeof clip.part === 'number' &&
+      typeof clip.of === 'number'
+    ) {
+      if (clip.of < 1 || clip.of > 40 || clip.part < 0 || clip.part >= clip.of) return;
+      if (clip.data.length > 20000 || this.receivedClips.has(key)) return;
+      let entry = this.incomingClips.get(key);
+      if (!entry) {
+        if (this.incomingClips.size >= 12) return;
+        entry = { parts: new Array<string>(clip.of).fill(''), of: clip.of, got: 0 };
+        this.incomingClips.set(key, entry);
+      }
+      if (!entry.parts[clip.part]) {
+        entry.parts[clip.part] = clip.data;
+        entry.got++;
+      }
+      if (entry.got === entry.of) {
+        this.incomingClips.delete(key);
+        this.finishClip(key, entry.parts);
+      }
+      return;
+    }
+    if (clip.play === true && !this.deafened()) {
+      const blob = this.receivedClips.get(key);
+      if (blob) void this.sound.playBlob(key, blob);
+    }
+  }
+
+  /** Puts the pieces of a sound together. */
+  private finishClip(key: string, parts: string[]): void {
+    try {
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      for (const part of parts) {
+        const binary = atob(part);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        chunks.push(bytes);
+      }
+      this.receivedClips.set(key, new Blob(chunks, { type: 'audio/wav' }));
+      if (this.receivedClips.size > 40) {
+        const oldest = this.receivedClips.keys().next().value;
+        if (oldest !== undefined) {
+          this.receivedClips.delete(oldest);
+          this.sound.forgetClip(oldest);
+        }
+      }
+    } catch {
+      // A damaged sound is ignored.
+    }
+  }
+
+  /** Plays a soundboard effect here and sends it to everybody in the call. */
+  sendSfx(id: SfxId): void {
+    this.sound.sfx(id);
+    this.socket.send({ t: 'call.sfx', sfx: id });
+  }
+
+  /** Joins the call that is ringing. */
+  acceptIncoming(): Promise<void> {
+    const call = this.incoming();
+    return call ? this.join(call.roomId) : Promise.resolve();
+  }
+
+  /** Stops the ringing and hides the incoming call notice. */
+  dismissIncoming(): void {
+    this.stopRing?.();
+    this.stopRing = null;
+    this.incoming.set(null);
+  }
+
+  /** Swaps the microphone without renegotiating (e.g. user picked another input device). */
+  async changeInputDevice(): Promise<void> {
+    if (!this.inCall() && this.status() !== 'connecting') return;
+    this.micStream?.getTracks().forEach(function (t) {
+      return t.stop();
+    });
+    this.micSource?.disconnect();
+    await this.openMic();
+  }
+
+  // ---- microphone pipeline -------------------------------------------------------------------
+
+  private async loadIce(): Promise<void> {
+    try {
+      const res = await this.api.get<{ iceServers: RTCIceServer[] }>('/api/rtc/config');
+      this.iceServers = res.iceServers;
+    } catch {
+      /* keep the STUN fallback */
+    }
+  }
+
+  /** Builds the audio graph (level meter, voice gate, outgoing track) and starts the meters and the statistics. */
+  private async startMic(): Promise<void> {
+    const ctx = this.sound.context;
+    this.sendDest = ctx.createMediaStreamDestination();
+    this.gate = ctx.createGain();
+    this.localAnalyser = ctx.createAnalyser();
+    this.localAnalyser.fftSize = 512;
+    this.gate.connect(this.sendDest);
+    await this.openMic();
+    this.sendTrack = this.sendDest.stream.getAudioTracks()[0] ?? null;
+    this.meterTimer = setInterval(
+      function (this: CallService) {
+        return this.measure();
+      }.bind(this),
+      80,
+    );
+    this.statsTimer = setInterval(
+      function (this: CallService) {
+        return void this.collectStats();
+      }.bind(this),
+      1000,
+    );
+  }
+
+  /** Opens the chosen microphone and connects it to the meter and to the outgoing track. */
+  private async openMic(): Promise<void> {
+    const deviceId = this.settings.inputDeviceId();
+    const processing = {
+      echoCancellation: this.settings.echoCancellation(),
+      noiseSuppression: this.settings.noiseSuppression(),
+      autoGainControl: this.settings.autoGain(),
+    };
+    // The chosen device may be gone (unplugged, or a different browser) and some browsers refuse some options:
+    // each try asks for less, so the call never fails only because of a preference.
+    const attempts: MediaStreamConstraints[] = [
+      {
+        audio: {
+          ...processing,
+          channelCount: 1,
+          deviceId: deviceId !== 'default' ? { exact: deviceId } : undefined,
+        },
+      },
+      { audio: { ...processing, channelCount: 1 } },
+      { audio: processing },
+      { audio: true },
+    ];
+    let lastError: unknown = null;
+    for (const constraints of attempts) {
+      try {
+        this.micStream = await navigator.mediaDevices.getUserMedia(constraints);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        const name = (error as { name?: string }).name;
+        if (name !== 'OverconstrainedError' && name !== 'NotFoundError') {
+          break;
+        }
+      }
+    }
+    if (!this.micStream || lastError) {
+      throw lastError ?? new Error('No microphone');
+    }
+    const ctx = this.sound.context;
+    this.micSource = ctx.createMediaStreamSource(this.micStream);
+    // mic → analyser (level meter) and mic → gate → outgoing track
+    this.micSource.connect(this.localAnalyser!);
+    this.micSource.connect(this.gate!);
+  }
+
+  /** Enables or disables the outgoing audio track according to the mute state. */
+  private applyMute(): void {
+    if (this.sendTrack) this.sendTrack.enabled = !this.muted();
+  }
+
+  /** Voice-activity gate + level meters for everyone (runs every 80 ms). */
+  private measure(): void {
+    const me = this.auth.user()?.id;
+    if (!me) return;
+    const levels: Record<string, number> = {};
+    const now = performance.now();
+    const speaking = new Set<string>();
+    const ownLevel = this.muted() ? 0 : this.rms(this.localAnalyser);
+    levels[me] = ownLevel;
+    const gateThreshold = (this.settings.inputGate() / 100) * 0.12;
+    const open = ownLevel > gateThreshold;
+    if (open) this.lastSpeech.set(me, now);
+    const holding = now - (this.lastSpeech.get(me) ?? 0) < 400;
+    this.gate?.gain.setTargetAtTime(
+      holding || gateThreshold === 0 ? 1 : 0,
+      this.sound.context.currentTime,
+      0.02,
+    );
+    if (holding && !this.muted()) speaking.add(me);
+
+    for (const link of this.links.values()) {
+      const level = this.deafened() ? 0 : this.rms(link.audioIn?.analyser ?? null);
+      levels[link.userId] = level;
+      if (level > 0.015) this.lastSpeech.set(link.userId, now);
+      if (now - (this.lastSpeech.get(link.userId) ?? 0) < 300) speaking.add(link.userId);
+    }
+    this.levels.set(levels);
+    const prev = this.speaking();
+    if (
+      prev.size !== speaking.size ||
+      [...speaking].some(function (id) {
+        return !prev.has(id);
+      })
+    )
+      this.speaking.set(speaking);
+  }
+
+  /** Loudness (0 to 1) of an audio analyser. */
+  private rms(analyser: AnalyserNode | null): number {
+    if (!analyser) return 0;
+    const data = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (const v of data) {
+      const x = (v - 128) / 128;
+      sum += x * x;
+    }
+    return Math.min(1, Math.sqrt(sum / data.length) * 2.2);
+  }
+
+  // ---- room state ----------------------------------------------------------------------------
+
+  private async onJoined(roomId: string, participants: CallParticipant[]): Promise<void> {
+    if (this.pendingRoom !== roomId && this.roomId() !== roomId) return;
+    this.pendingRoom = null;
+    this.roomId.set(roomId);
+    this.participants.set(participants);
+    this.previousParticipants = new Set(
+      participants.map(function (p) {
+        return p.userId;
+      }),
+    );
+    this.status.set('connected');
+    // Mute/deafen are personal and persist between calls: tell the room how we joined.
+    this.applyMute();
+    if (this.muted() || this.deafened())
+      this.socket.send({ t: 'call.update', muted: this.muted(), deafened: this.deafened() });
+    this.sound.play('connect');
+    this.dismissIncoming();
+    const me = this.auth.user()!.id;
+    await this.directory.ensure(
+      participants.map(function (p) {
+        return p.userId;
+      }),
+    );
+    // The newcomer always opens the connection to everyone already present: no glare, no ambiguity.
+    for (const participant of participants) {
+      if (participant.userId !== me) this.ensureLink(participant.userId);
+    }
+  }
+
+  /** The state of a call room changed: update the lists, play join and leave sounds and close links of people who left. */
+  private onState(roomId: string, participants: CallParticipant[]): void {
+    this.rooms.update(function (rooms) {
+      const next = { ...rooms };
+      if (participants.length) next[roomId] = participants;
+      else delete next[roomId];
+      return next;
+    });
+    if (!participants.length && this.incoming()?.roomId === roomId) this.dismissIncoming();
+    if (roomId !== this.roomId()) return;
+    this.participants.set(participants);
+    const now = new Set(
+      participants.map(function (p) {
+        return p.userId;
+      }),
+    );
+    const me = this.auth.user()?.id;
+    for (const id of now)
+      if (!this.previousParticipants.has(id) && id !== me) this.sound.play('join');
+    for (const id of this.previousParticipants) {
+      if (!now.has(id)) {
+        this.sound.play('leave');
+        this.closeLink(id);
+      }
+    }
+    this.previousParticipants = now;
+    void this.directory.ensure(now);
+  }
+
+  /** A call is ringing: show it, ring, and dismiss it after 45 seconds. */
+  private onIncoming(roomId: string, from: string): void {
+    if (this.roomId() === roomId) return;
+    this.incoming.set({ roomId, from });
+    void this.directory.ensure([from]);
+    this.stopRing?.();
+    this.stopRing = this.sound.ring();
+    setTimeout(
+      function (this: CallService) {
+        if (this.incoming()?.roomId === roomId) this.dismissIncoming();
+      }.bind(this),
+      45_000,
+    );
+  }
+
+  // ---- peer connections ----------------------------------------------------------------------
+
+  private ensureLink(userId: string): Link {
+    const existing = this.links.get(userId);
+    if (existing) return existing;
+    const me = this.auth.user()!.id;
+    const pc = new RTCPeerConnection({
+      iceServers: this.iceServers,
+      iceTransportPolicy: this.settings.relayOnly() ? 'relay' : 'all',
+      bundlePolicy: 'max-bundle',
+    });
+    const link: Link = {
+      userId,
+      pc,
+      polite: me < userId,
+      makingOffer: false,
+      ignoreOffer: false,
+      sid: crypto.randomUUID(),
+      remoteSid: null,
+      sendCounter: 0,
+      lastReceived: 0,
+      screenStreamId: this.localScreen()?.id,
+      candidates: [],
+      sendQueue: Promise.resolve(),
+      receiveQueue: Promise.resolve(),
+      senders: {},
+      lastBytes: { in: 0, out: 0, at: performance.now() },
+      lost: 0,
+      received: 0,
+      eph: null,
+      ephPub: '',
+      ephReady: Promise.resolve(),
+      remoteEph: null,
+      protectedReceivers: new WeakSet(),
+    };
+    link.ephReady = crypto.subtle
+      .generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits'])
+      .then(async function (pair) {
+        link.eph = pair;
+        link.ephPub = toB64(await crypto.subtle.exportKey('raw', pair.publicKey));
+      });
+    this.links.set(userId, link);
+    this.setPeer(userId, {
+      userId,
+      connection: 'new',
+      audio: null,
+      camera: null,
+      screen: null,
+      rttMs: null,
+      encrypted: false,
+      securityCode: null,
+      mediaStats: { encrypted: 0, decrypted: 0, failed: 0, dropped: 0 },
+    });
+
+    pc.onnegotiationneeded = async function (this: CallService) {
+      try {
+        link.makingOffer = true;
+        await pc.setLocalDescription();
+        this.sendSignal(link, { description: pc.localDescription!.toJSON() });
+      } catch (error) {
+        console.warn('negotiation failed', error);
+      } finally {
+        link.makingOffer = false;
+      }
+    }.bind(this);
+    pc.onicecandidate = function (this: CallService, { candidate }: RTCPeerConnectionIceEvent) {
+      if (candidate) this.sendSignal(link, { candidate: candidate.toJSON() });
+    }.bind(this);
+    pc.onconnectionstatechange = function (this: CallService) {
+      this.updatePeer(userId, { connection: pc.connectionState });
+      if (pc.connectionState === 'failed') pc.restartIce();
+      if (pc.connectionState === 'connected') {
+        this.tuneAudioSender(link);
+        this.tellMusicTo(link);
+        this.tellSpinlyTo(link);
+      }
+    }.bind(this);
+    pc.ontrack = function (
+      this: CallService,
+      { track, streams, receiver, transceiver }: RTCTrackEvent,
+    ) {
+      // Receivers of transceivers we created with addTrack were protected right away (see protectTrack);
+      // this covers the ones the remote offer created. Fail-closed: nothing reaches the decoder unless it
+      // authenticates under this peer's key.
+      if (!link.protectedReceivers.has(receiver))
+        this.protect(link, receiver, track.kind as 'audio' | 'video', 'recv');
+      if (track.kind === 'video') this.preferVp8(transceiver);
+      const stream = streams[0] ?? new MediaStream([track]);
+      if (track.kind === 'audio') {
+        this.attachAudio(link, stream);
+        this.updatePeer(userId, { audio: stream });
+      } else if (stream.id === link.screenStreamId) {
+        this.updatePeer(userId, { screen: stream });
+      } else {
+        this.updatePeer(userId, { camera: stream });
+      }
+    }.bind(this);
+
+    if (this.sendTrack)
+      this.protectTrack(link, pc.addTrack(this.sendTrack, this.sendDest!.stream), 'audio');
+    const camera = this.localCamera();
+    if (camera) this.addVideo(link, camera, 'camera');
+    const screen = this.localScreen();
+    if (screen) this.addVideo(link, screen, 'screen');
+    return link;
+  }
+
+  /** Sends a camera or screen stream to a person, protected with frame encryption. */
+  private addVideo(link: Link, stream: MediaStream, kind: 'camera' | 'screen'): void {
+    const senders = stream.getTracks().map(
+      function (this: CallService, track: MediaStreamTrack) {
+        const sender = link.pc.addTrack(track, stream);
+        const kind = track.kind === 'video' ? 'video' : 'audio';
+        const transceiver = this.protectTrack(link, sender, kind);
+        if (kind === 'video' && transceiver) this.preferVp8(transceiver);
+        return sender;
+      }.bind(this),
+    );
+    link.senders[kind] = [...(link.senders[kind] ?? []), ...senders];
+  }
+
+  /** Stops sending the camera or screen video to a person. */
+  private removeSenders(link: Link, kind: 'camera' | 'screen'): void {
+    for (const sender of link.senders[kind] ?? []) {
+      try {
+        link.pc.removeTrack(sender);
+      } catch {
+        /* connection already closed */
+      }
+    }
+    link.senders[kind] = [];
+  }
+
+  /** Sets the voice encoding parameters (Opus 48 kHz, priority) of the audio sent to a person. */
+  private tuneAudioSender(link: Link): void {
+    const sender = link.pc.getSenders().find(function (s) {
+      return s.track?.kind === 'audio';
+    });
+    if (!sender) return;
+    const params = sender.getParameters();
+    if (!params.encodings?.length) return;
+    params.encodings[0]!.maxBitrate = 96_000;
+    void sender.setParameters(params).catch(function () {
+      return undefined;
+    });
+  }
+
+  /** Closes the connection with a person and forgets everything about it. */
+  private closeLink(userId: string): void {
+    const link = this.links.get(userId);
+    if (!link) return;
+    this.links.delete(userId);
+    link.pc.onnegotiationneeded = null;
+    link.pc.onicecandidate = null;
+    link.pc.ontrack = null;
+    link.pc.close();
+    this.destroyChain(link);
+    this.worker?.postMessage({ type: 'drop', peerId: userId });
+    this.peers.update(function (p) {
+      const { [userId]: _gone, ...rest } = p;
+      return rest;
+    });
+  }
+
+  /** Stores the view of a person in the call. */
+  private setPeer(userId: string, view: PeerView): void {
+    this.peers.update(function (p) {
+      return { ...p, [userId]: view };
+    });
+  }
+
+  /** Changes some fields of the view of a person in the call. */
+  private updatePeer(userId: string, patch: Partial<PeerView>): void {
+    this.peers.update(function (p) {
+      return p[userId] ? { ...p, [userId]: { ...p[userId]!, ...patch } } : p;
+    });
+  }
+
+  // ---- encrypted, signed signaling -----------------------------------------------------------
+
+  private async pairKey(otherId: string, roomId: string): Promise<CryptoKey> {
+    const other = await this.directory.require(otherId);
+    return derivePairKey(
+      this.auth.identity.ecdhPrivate,
+      this.auth.identity.publicKeys.ecdh,
+      other.publicKeys.ecdh,
+      `rtc|${roomId}`,
+    );
+  }
+
+  /** Sends a signaling message to a person, encrypted with the pair key and signed with this device's identity key. */
+  private sendSignal(
+    link: Link,
+    body: Pick<SignalBody, 'description' | 'candidate' | 'music' | 'spinly' | 'clip'>,
+  ): void {
+    const roomId = this.roomId() ?? this.pendingRoom;
+    if (!roomId) return;
+    const counter = ++link.sendCounter;
+    // Serialised so descriptions/candidates keep their order despite async crypto.
+    link.sendQueue = link.sendQueue.then(
+      async function (this: CallService) {
+        try {
+          await link.ephReady;
+          const full: SignalBody = {
+            sid: link.sid,
+            n: counter,
+            screen: link.screenStreamId,
+            eph: link.ephPub,
+            ...body,
+          };
+          const me = this.auth.userId;
+          const aad = signalContext(roomId, me, link.userId);
+          const sealed = await seal(await this.pairKey(link.userId, roomId), full, aad);
+          const signature = await signSealed(this.auth.identity.ecdsaPrivate, aad, sealed);
+          this.socket.send({
+            t: 'rtc.signal',
+            roomId,
+            to: link.userId,
+            payload: { ...sealed, signature },
+          });
+        } catch (error) {
+          console.warn('could not send signal', error);
+        }
+      }.bind(this),
+    );
+  }
+
+  /** Receives a signaling message: checks the signature, decrypts it in order and applies it. */
+  private onSignal(roomId: string, from: string, payload: SignalPayload): void {
+    if (roomId !== this.roomId()) return;
+    // Decrypt strictly in arrival order per peer.
+    const gate = this.links.get(from);
+    const run = async function (this: CallService) {
+      const aad = signalContext(roomId, from, this.auth.userId);
+      const sender = await this.directory.require(from);
+      if (!(await verifySealed(sender.publicKeys.ecdsa, aad, payload, payload.signature))) {
+        console.warn('dropping signal with an invalid signature from', from);
+        return;
+      }
+      const body = await open<SignalBody>(await this.pairKey(from, roomId), payload, aad);
+      let link = this.links.get(from);
+      if (link && link.remoteSid && body.sid !== link.remoteSid) {
+        if (body.n !== 1) return; // stale traffic from a previous session
+        this.closeLink(from);
+        link = undefined;
+      }
+      link ??= this.ensureLink(from);
+      link.remoteSid ??= body.sid;
+      if (body.n <= link.lastReceived) return; // replayed or duplicated frame
+      link.lastReceived = body.n;
+      await this.applySignal(link, body);
+    }.bind(this);
+    const chain = (gate?.receiveQueue ?? Promise.resolve()).then(run).catch(function (e) {
+      return console.warn('signal error', e);
+    });
+    if (gate) gate.receiveQueue = chain;
+    else
+      void chain.then(function () {
+        return undefined;
+      });
+  }
+
+  /** "Perfect negotiation": both sides can renegotiate at any time without deadlocking. */
+  private async applySignal(link: Link, body: SignalBody): Promise<void> {
+    const { pc } = link;
+    if (body.screen !== link.screenStreamIdRemote) this.noteRemoteScreen(link, body.screen);
+    if (body.music) this.onMusicReceived(link.userId, body.music);
+    if (body.clip) this.onClipReceived(link.userId, body.clip);
+    if (body.spinly) this.onSpinlyShared?.(link.userId, body.spinly);
+    // The key agreement must finish before any media (or answer) leaves this device.
+    if (body.eph && !link.remoteEph) await this.agreeMediaKeys(link, body.eph);
+    try {
+      if (body.description) {
+        const collision =
+          body.description.type === 'offer' && (link.makingOffer || pc.signalingState !== 'stable');
+        link.ignoreOffer = !link.polite && collision;
+        if (link.ignoreOffer) return;
+        await pc.setRemoteDescription(body.description);
+        for (const candidate of link.candidates.splice(0))
+          await pc.addIceCandidate(candidate).catch(function () {
+            return undefined;
+          });
+        if (body.description.type === 'offer') {
+          await pc.setLocalDescription();
+          this.sendSignal(link, { description: pc.localDescription!.toJSON() });
+        }
+      } else if (body.candidate) {
+        if (!pc.remoteDescription) link.candidates.push(body.candidate);
+        else {
+          try {
+            await pc.addIceCandidate(body.candidate);
+          } catch (error) {
+            if (!link.ignoreOffer) throw error;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('could not apply signal', error);
+    }
+  }
+
+  /** Remembers which stream of a person is their screen share, so it can be labeled. */
+  private noteRemoteScreen(link: Link, streamId: string | undefined): void {
+    link.screenStreamIdRemote = streamId;
+    link.screenStreamId = streamId ?? link.screenStreamId;
+    if (!streamId) this.updatePeer(link.userId, { screen: null });
+  }
+
+  // ---- end-to-end media encryption ------------------------------------------------------------
+
+  private startWorker(): void {
+    this.worker?.terminate();
+    const worker = new Worker(new URL('./media-crypto.worker', import.meta.url), {
+      type: 'module',
+    });
+    worker.onmessage = function (this: CallService, event: MessageEvent) {
+      const msg = event.data as
+        | { type: 'ready'; peerId: string }
+        | { type: 'stats'; peerId: string; stats: PeerView['mediaStats'] };
+      if (msg.type === 'ready') this.updatePeer(msg.peerId, { encrypted: true });
+      else if (msg.type === 'stats') this.updatePeer(msg.peerId, { mediaStats: msg.stats });
+    }.bind(this);
+    this.worker = worker;
+  }
+
+  /** ECDH(ephemeral, ephemeral) -> directional ratcheting keys, handed to the worker. */
+  private async agreeMediaKeys(link: Link, remoteEph: string): Promise<void> {
+    try {
+      await link.ephReady;
+      const remote = await importEcdhPublic(remoteEph); // rejects points that are not on P-256
+      const shared = await crypto.subtle.deriveBits(
+        { name: 'ECDH', public: remote },
+        link.eph!.privateKey,
+        256,
+      );
+      const secrets = await deriveLinkSecrets(shared, this.auth.userId, link.userId);
+      link.remoteEph = remoteEph;
+      this.worker?.postMessage(
+        { type: 'keys', peerId: link.userId, send: secrets.send.buffer, recv: secrets.recv.buffer },
+        [secrets.send.buffer, secrets.recv.buffer],
+      );
+      this.updatePeer(link.userId, { securityCode: await securityCode(link.ephPub, remoteEph) });
+    } catch (error) {
+      console.warn('media key agreement failed', error);
+      this.toast.error(
+        'Secure call setup failed',
+        'Could not agree on media encryption keys with a participant.',
+      );
+    }
+  }
+
+  /**
+   * Chromium only feeds a receiver's transform if it is attached when the transceiver is created, so for
+   * transceivers born from addTrack() the sender AND receiver transforms are set immediately.
+   */
+  private protectTrack(
+    link: Link,
+    sender: RTCRtpSender,
+    kind: 'audio' | 'video',
+  ): RTCRtpTransceiver | undefined {
+    this.protect(link, sender, kind, 'send');
+    const transceiver = link.pc.getTransceivers().find(function (t) {
+      return t.sender === sender;
+    });
+    if (transceiver) this.protect(link, transceiver.receiver, kind, 'recv');
+    return transceiver;
+  }
+
+  /** Attaches the frame-encryption worker to a sender or receiver. */
+  private protect(
+    link: Link,
+    endpoint: RTCRtpSender | RTCRtpReceiver,
+    kind: 'audio' | 'video',
+    role: 'send' | 'recv',
+  ): void {
+    if (!this.worker) throw new Error('media encryption worker missing');
+    if (role === 'recv') link.protectedReceivers.add(endpoint as RTCRtpReceiver);
+    endpoint.transform = new RTCRtpScriptTransform(this.worker, {
+      peerId: link.userId,
+      role,
+      kind,
+    });
+  }
+
+  /** Our frame cipher keeps VP8's descriptor bytes in clear; other codecs use different layouts. */
+  private preferVp8(transceiver: RTCRtpTransceiver): void {
+    try {
+      const codecs = RTCRtpReceiver.getCapabilities('video')?.codecs ?? [];
+      const wanted = codecs.filter(function (c) {
+        return ['video/VP8', 'video/rtx', 'video/red', 'video/ulpfec'].includes(c.mimeType);
+      });
+      if (
+        wanted.some(function (c) {
+          return c.mimeType === 'video/VP8';
+        })
+      )
+        transceiver.setCodecPreferences(wanted);
+    } catch {
+      /* unsupported: negotiation falls back to the browser default */
+    }
+  }
+
+  // ---- remote audio --------------------------------------------------------------------------
+
+  private attachAudio(link: Link, stream: MediaStream): void {
+    this.destroyChain(link);
+    const ctx = this.sound.context;
+    // Chromium only delivers remote WebRTC audio to WebAudio if the stream is also attached to an element.
+    const element = new Audio();
+    element.srcObject = stream;
+    element.muted = true;
+    void element.play().catch(function () {
+      return undefined;
+    });
+    const source = ctx.createMediaStreamSource(stream);
+    const gain = ctx.createGain();
+    const panner = ctx.createPanner();
+    panner.panningModel = 'HRTF';
+    panner.distanceModel = 'inverse';
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    link.audioIn = { element, source, gain, panner, analyser, spatial: false };
+    this.configureChain(
+      link,
+      this.settings.spatialAudio(),
+      this.angles()[link.userId] ?? 0,
+      this.deafened(),
+    );
+  }
+
+  /** Sets up the audio chain of a person (gain, spatial position, analyser) for the current settings. */
+  private configureChain(link: Link, spatial: boolean, angleDeg: number, deafened: boolean): void {
+    const chain = link.audioIn;
+    if (!chain) return;
+    const ctx = this.sound.context;
+    // disconnect() throws when nothing is connected yet (first run), so each call is guarded.
+    for (const [from, to] of [
+      [chain.source, chain.gain],
+      [chain.gain, undefined],
+      [chain.panner, undefined],
+    ] as const) {
+      try {
+        if (to) from.disconnect(to);
+        else from.disconnect();
+      } catch {
+        /* not connected */
+      }
+    }
+    chain.source.connect(chain.gain);
+    if (spatial) {
+      const rad = (angleDeg * Math.PI) / 180;
+      chain.panner.positionX.value = Math.sin(rad) * 2;
+      chain.panner.positionY.value = 0;
+      chain.panner.positionZ.value = -Math.cos(rad) * 2;
+      chain.gain.connect(chain.panner).connect(ctx.destination);
+    } else {
+      chain.gain.connect(ctx.destination);
+    }
+    chain.spatial = spatial;
+    chain.gain.gain.value = deafened ? 0 : 1;
+  }
+
+  /** Disconnects and removes the audio chain of a person. */
+  private destroyChain(link: Link): void {
+    const chain = link.audioIn;
+    if (!chain) return;
+    chain.source.disconnect();
+    chain.gain.disconnect();
+    chain.panner.disconnect();
+    chain.element.srcObject = null;
+    link.audioIn = undefined;
+  }
+
+  // ---- telemetry (real numbers from getStats) -----------------------------------------------
+
+  private async collectStats(): Promise<void> {
+    if (!this.links.size) {
+      this.stats.set({ ...EMPTY_STATS });
+      return;
+    }
+    const rtts: number[] = [];
+    const jitters: number[] = [];
+    let out = 0;
+    let inn = 0;
+    let lost = 0;
+    let received = 0;
+    let cipher: string | null = null;
+    let dtls: string | null = null;
+    let connected = 0;
+
+    for (const link of this.links.values()) {
+      if (link.pc.connectionState === 'connected') connected++;
+      const report = await link.pc.getStats().catch(function () {
+        return null;
+      });
+      if (!report) continue;
+      const now = performance.now();
+      let bytesIn = 0;
+      let bytesOut = 0;
+      let selectedPair: string | undefined;
+      report.forEach(function (s) {
+        if (s.type === 'transport') {
+          selectedPair = s.selectedCandidatePairId ?? selectedPair;
+          cipher = s.srtpCipher ?? cipher;
+          dtls = s.dtlsState ?? dtls;
+        }
+      });
+      report.forEach(
+        function (this: CallService, s: any) {
+          if (
+            s.type === 'candidate-pair' &&
+            (s.id === selectedPair || (s.nominated && s.state === 'succeeded'))
+          ) {
+            if (typeof s.currentRoundTripTime === 'number') {
+              rtts.push(s.currentRoundTripTime * 1000);
+              this.updatePeer(link.userId, { rttMs: Math.round(s.currentRoundTripTime * 1000) });
+            }
+          } else if (s.type === 'inbound-rtp') {
+            bytesIn += s.bytesReceived ?? 0;
+            if (s.kind === 'audio') {
+              if (typeof s.jitter === 'number') jitters.push(s.jitter * 1000);
+              lost += s.packetsLost ?? 0;
+              received += s.packetsReceived ?? 0;
+            }
+          } else if (s.type === 'outbound-rtp') {
+            bytesOut += s.bytesSent ?? 0;
+          }
+        }.bind(this),
+      );
+      const seconds = Math.max(0.2, (now - link.lastBytes.at) / 1000);
+      inn += Math.max(0, ((bytesIn - link.lastBytes.in) * 8) / 1000 / seconds);
+      out += Math.max(0, ((bytesOut - link.lastBytes.out) * 8) / 1000 / seconds);
+      link.lastBytes = { in: bytesIn, out: bytesOut, at: now };
+    }
+
+    const avg = function (list: number[]) {
+      return list.length
+        ? list.reduce(function (a, b) {
+            return a + b;
+          }, 0) / list.length
+        : null;
+    };
+    const rtt = avg(rtts);
+    this.stats.set({
+      rttMs: rtt === null ? null : Math.round(rtt * 10) / 10,
+      jitterMs: jitters.length ? Math.round(Math.max(...jitters) * 100) / 100 : null,
+      lossPct: lost + received > 0 ? Math.round((lost / (lost + received)) * 1000) / 10 : 0,
+      outKbps: Math.round(out),
+      inKbps: Math.round(inn),
+      srtpCipher: cipher,
+      dtlsState: dtls,
+      connectedPeers: connected,
+    });
+    if (rtt !== null)
+      this.rttHistory.update(function (h) {
+        return [...h.slice(-59), Math.round(rtt * 10) / 10];
+      });
+  }
+
+  // ---- cleanup -------------------------------------------------------------------------------
+
+  private stopStream(stream: MediaStream | null): void {
+    stream?.getTracks().forEach(function (t) {
+      return t.stop();
+    });
+  }
+
+  /** Ends everything about the call: timers, connections, microphone, camera and screen. */
+  private teardown(): void {
+    this.clipsSentTo.clear();
+    this.incomingClips.clear();
+    this.receivedClips.clear();
+    this.music.set(null);
+    this.musicControl.set(null);
+    this.musicQueue.set([]);
+    this.skipVotes.set([]);
+    this.onSpinlyReset?.();
+    clearInterval(this.meterTimer);
+    clearInterval(this.statsTimer);
+    for (const id of [...this.links.keys()]) this.closeLink(id);
+    this.stopStream(this.micStream);
+    this.stopStream(this.localCamera());
+    this.stopStream(this.localScreen());
+    this.micSource?.disconnect();
+    this.gate?.disconnect();
+    this.micStream = null;
+    this.micSource = null;
+    this.gate = null;
+    this.sendDest = null;
+    this.sendTrack = null;
+    this.localAnalyser = null;
+    this.localCamera.set(null);
+    this.localScreen.set(null);
+    this.cameraOn.set(false);
+    this.screenOn.set(false);
+    this.roomId.set(null);
+    this.pendingRoom = null;
+    this.participants.set([]);
+    this.peers.set({});
+    this.levels.set({});
+    this.speaking.set(new Set());
+    this.stats.set({ ...EMPTY_STATS });
+    this.rttHistory.set([]);
+    this.previousParticipants = new Set();
+    this.status.set('idle');
+    this.worker?.terminate();
+    this.worker = null;
+  }
+}

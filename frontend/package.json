@@ -1,12 +1,13 @@
 {
-  "name": "frontend",
-  "version": "0.0.0",
+  "name": "chatterly-renewed-frontend",
+  "version": "2.1.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build && node scripts/postbuild.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "i18n:check": "node scripts/i18n.mjs --check"
   },
   "private": true,
   "packageManager": "pnpm@11.2.2",
@@ -18,9 +19,18 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/lora": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource-variable/nunito": "^5.3.0",
+    "@fontsource-variable/outfit": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@fontsource/noto-color-emoji": "^5.3.2",
+    "@fontsource/pacifico": "^5.3.0",
     "autoprefixer": "^10.4.27",
+    "emojibase-data": "^17.0.0",
     "rxjs": "~7.8.0",
-    "socket.io-client": "^4.8.3",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
@@ -28,11 +38,10 @@
     "@angular/cli": "^21.2.4",
     "@angular/compiler-cli": "^21.2.0",
     "@tailwindcss/postcss": "^4.2.2",
-    "jsdom": "^28.0.0",
     "postcss": "^8.5.9",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.2",
-    "typescript": "~5.9.2",
-    "vitest": "^4.0.8"
-  }
+    "typescript": "~5.9.2"
+  },
+  "description": "Chatterly-Renewed web client (Angular): E2EE chat, guilds and P2P WebRTC calls."
 }

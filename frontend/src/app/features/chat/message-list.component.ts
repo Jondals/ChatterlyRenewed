@@ -1,13 +1,361 @@
-import { Component } from '@angular/core';
+/**
+ * src/app/features/chat/message-list.component.ts
+ * List of messages with day separators, loading of older messages and automatic scrolling.
+ */
+import {
+  AnimationCallbackEvent,
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { AuthService } from '../../core/services/auth.service';
+import { DirectoryService } from '../../core/services/directory.service';
+import { IconComponent } from '../../shared/components/icon.component';
+import { MessageStore, type ViewMessage } from '../../store/message.store';
+import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
+import { MessageItemComponent } from './message-item.component';
+
+interface Row {
+  message: ViewMessage;
+  compact: boolean;
+  dayLabel: string | null;
+}
+
+/** The separator text of a day: "Today", "Yesterday" or the full date, in the language of the app. */
+function dayLabel(ts: number, i18n: I18nService): string {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return i18n.t('Today');
+  if (d.toDateString() === yesterday.toDateString()) return i18n.t('Yesterday');
+  return d.toLocaleDateString(i18n.locale(), { weekday: 'long', month: 'long', day: 'numeric' });
+}
 
 @Component({
   selector: 'app-message-list',
   standalone: true,
+  imports: [MessageItemComponent, IconComponent, TranslatePipe],
+  host: { class: 'relative block min-h-0 flex-1' },
   template: `
-    <div class="p-4 space-y-2 overflow-y-auto h-full">
-      <div class="text-sm">Usuario: Hola 👋</div>
-      <div class="text-sm">Usuario2: Qué tal</div>
+    <div
+      #scroller
+      class="h-full overflow-y-auto px-3 py-4"
+      (scroll)="onScroll()"
+      (wheel)="stopFollowing()"
+      (touchstart)="stopFollowing()"
+      (pointerdown)="stopFollowing()"
+    >
+      <div #content>
+        @if (state().loading() && !state().messages().length) {
+          <div class="space-y-5 p-2">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <div class="flex gap-3" [class.flex-row-reverse]="i % 2 === 0">
+                <div class="shimmer h-9 w-9 rounded-full"></div>
+                <div class="shimmer h-14 w-64 rounded-2xl"></div>
+              </div>
+            }
+          </div>
+        } @else {
+          @if (state().hasMore() && state().messages().length >= 50) {
+            <div class="mb-3 text-center">
+              <button
+                class="btn btn-sm"
+                type="button"
+                (click)="store.loadOlder(channelId())"
+                [disabled]="state().loading()"
+              >
+                {{ 'Load earlier messages' | t }}
+              </button>
+            </div>
+          }
+
+          @for (row of rows(); track row.message.id) {
+            @if (row.dayLabel) {
+              <div class="my-4 flex items-center gap-3 text-[11px] font-semibold text-dim">
+                <span class="h-px flex-1 bg-white/6"></span>{{ row.dayLabel
+                }}<span class="h-px flex-1 bg-white/6"></span>
+              </div>
+            }
+            <app-message-item
+              (animate.leave)="onLeave($event)"
+              [message]="row.message"
+              [compact]="row.compact"
+              [canModerate]="canModerate()"
+              [all]="state().messages()"
+              (replyTo)="replyTo.emit($event)"
+            />
+          } @empty {
+            @if (state().loaded()) {
+              <div
+                class="anim-fade-up flex h-full min-h-60 flex-col items-center justify-center gap-2 text-center text-muted"
+              >
+                <div class="animate-float text-5xl">👋</div>
+                <div class="text-base font-semibold text-fg">{{ 'Say hello' | t }}</div>
+                <div class="text-sm">
+                  {{ 'This is the very beginning of the conversation.' | t }}
+                </div>
+              </div>
+            }
+          }
+
+          @if (typingNames().length) {
+            <div class="anim-fade-up mt-2 flex items-center gap-2 px-3 text-xs text-muted">
+              <span class="flex gap-1">
+                @for (d of [0, 150, 300]; track d) {
+                  <span
+                    class="typing-dot h-1.5 w-1.5 rounded-full bg-accent"
+                    [style.--d]="d + 'ms'"
+                  ></span>
+                }
+              </span>
+              {{
+                (typingNames().length === 1 ? '{names} is typing…' : '{names} are typing…')
+                  | t: { names: typingNames().join(', ') }
+              }}
+            </div>
+          }
+        }
+      </div>
     </div>
-  `
+
+    @if (!atBottom()) {
+      <button
+        class="anim-pop absolute bottom-4 right-6 flex items-center gap-1.5 rounded-ui border border-white/10 bg-ink-800 px-3 py-1.5 text-xs font-semibold text-fg shadow-xl hover:border-accent/60 hover:text-accent"
+        type="button"
+        (click)="scrollToBottom(true)"
+      >
+        <app-icon name="chevron-down" [size]="14" /> {{ 'Latest' | t }}
+      </button>
+    }
+  `,
 })
-export class MessageListComponent {}
+export class MessageListComponent {
+  readonly channelId = input.required<string>();
+  readonly canModerate = input(false);
+  readonly replyTo = output<ViewMessage>();
+
+  protected readonly store = inject(MessageStore);
+  private readonly i18n = inject(I18nService);
+  private readonly auth = inject(AuthService);
+  private readonly directory = inject(DirectoryService);
+  private readonly scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
+
+  protected readonly state = computed(
+    function (this: MessageListComponent) {
+      return this.store.state(this.channelId());
+    }.bind(this),
+  );
+  protected readonly atBottom = signal(true);
+
+  protected readonly rows = computed<Row[]>(
+    function (this: MessageListComponent) {
+      const list = this.state().messages();
+      const me = this.auth.user()?.id;
+      const i18n = this.i18n;
+      let lastMine = -1;
+      list.forEach(function (m, i) {
+        if (m.senderId === me && !m.pending && !m.failed) lastMine = i;
+      });
+      return list.map(function (message, i) {
+        const prev = list[i - 1];
+        const label =
+          !prev ||
+          new Date(prev.createdAt).toDateString() !== new Date(message.createdAt).toDateString()
+            ? dayLabel(message.createdAt, i18n)
+            : null;
+        const compact =
+          !!prev &&
+          !label &&
+          prev.senderId === message.senderId &&
+          message.createdAt - prev.createdAt < 5 * 60_000;
+        return { message, compact, dayLabel: label };
+      });
+    }.bind(this),
+  );
+
+  protected readonly typingNames = computed(
+    function (this: MessageListComponent) {
+      const typing = this.state().typing();
+      const now = Date.now();
+      return Object.entries(typing)
+        .filter(function ([, until]) {
+          return until > now;
+        })
+        .map(
+          function (this: MessageListComponent, [id]: [string, number]) {
+            return this.directory.users().get(id)?.displayName ?? 'Someone';
+          }.bind(this),
+        );
+    }.bind(this),
+  );
+
+  private stick = true;
+  private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
+  private resizer: ResizeObserver | null = null;
+  private lastHeight = 0;
+  private lastMessageId = '';
+  /** Frame of the glide to the end of the conversation (0 when it is not gliding). */
+  private glide = 0;
+
+  constructor() {
+    // Follow new messages unless the reader scrolled up (always for what the reader sends or when writing).
+    effect(
+      function (this: MessageListComponent) {
+        const list = this.state().messages();
+        this.state().typing();
+        untracked(this.followNewMessage.bind(this, list));
+      }.bind(this),
+    );
+    afterNextRender(this.watchSize.bind(this));
+    inject(DestroyRef).onDestroy(this.stopWatching.bind(this));
+    effect(
+      function (this: MessageListComponent) {
+        this.channelId();
+        untracked(
+          function (this: MessageListComponent) {
+            this.stick = true;
+            setTimeout(
+              function (this: MessageListComponent) {
+                return this.scrollToBottom(false);
+              }.bind(this),
+              60,
+            );
+          }.bind(this),
+        );
+      }.bind(this),
+    );
+  }
+
+  /** A message arrived or was sent: the conversation glides to its end when it should. */
+  private followNewMessage(list: ViewMessage[]): void {
+    const last = list[list.length - 1];
+    const id = last ? last.id : '';
+    const isNew = id !== this.lastMessageId;
+    this.lastMessageId = id;
+    const mine = !!last && last.senderId === this.auth.user()?.id;
+    const writing = document.activeElement?.tagName === 'TEXTAREA';
+    if (isNew && (mine || writing)) {
+      this.stick = true;
+    }
+    if (this.stick) {
+      queueMicrotask(this.glideToEnd.bind(this));
+    }
+  }
+
+  /** Starts watching how tall the conversation is: a picture, a GIF or a block of code that loads must not leave the end out of sight. */
+  private watchSize(): void {
+    this.lastHeight = this.content().nativeElement.offsetHeight;
+    this.resizer = new ResizeObserver(this.onResize.bind(this));
+    this.resizer.observe(this.content().nativeElement);
+  }
+
+  /** The conversation changed height: when it grew and the reader is at the end, it keeps the end in sight. */
+  private onResize(): void {
+    const height = this.content().nativeElement.offsetHeight;
+    const grew = height > this.lastHeight;
+    this.lastHeight = height;
+    if (grew && this.stick) {
+      this.glideToEnd();
+    }
+  }
+
+  /** Stops watching and gliding. */
+  private stopWatching(): void {
+    this.resizer?.disconnect();
+    cancelAnimationFrame(this.glide);
+  }
+
+  /** The reader took the scroll: the glide stops. */
+  protected stopFollowing(): void {
+    cancelAnimationFrame(this.glide);
+    this.glide = 0;
+  }
+
+  /** Glides to the end: every frame covers a part of what is left, and it follows the end if the page grows meanwhile. */
+  private glideToEnd(): void {
+    if (this.glide) {
+      return;
+    }
+    if (document.documentElement.dataset['motion'] === 'reduced') {
+      this.scrollToBottom(false);
+      return;
+    }
+    this.glide = requestAnimationFrame(this.glideStep.bind(this));
+  }
+
+  /** One frame of the glide. */
+  private glideStep(): void {
+    const el = this.scroller().nativeElement;
+    const left = el.scrollHeight - el.clientHeight - el.scrollTop;
+    if (left < 1) {
+      this.glide = 0;
+      return;
+    }
+    el.scrollTop += Math.max(1, left * 0.18);
+    this.glide = requestAnimationFrame(this.glideStep.bind(this));
+  }
+
+  /** A message is deleted: it fades and folds away (its space closes smoothly) before it leaves the list. */
+  protected onLeave(event: AnimationCallbackEvent): void {
+    const el = event.target as HTMLElement;
+    if (document.documentElement.dataset['motion'] === 'reduced' || !el.animate) {
+      event.animationComplete();
+      return;
+    }
+    const height = el.offsetHeight;
+    el.style.overflow = 'hidden';
+    const run = el.animate(
+      [
+        { height: height + 'px', opacity: 1, transform: 'none' },
+        { opacity: 0, transform: 'translateX(-14px) scale(0.97)', offset: 0.45 },
+        { height: '0px', opacity: 0, transform: 'translateX(-14px) scale(0.97)' },
+      ],
+      { duration: 380, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' },
+    );
+    run.addEventListener('finish', function done(): void {
+      event.animationComplete();
+    });
+  }
+
+  /** The person scrolled: the list follows new messages only while they are at the end. */
+  protected onScroll(): void {
+    if (this.glide) {
+      return;
+    }
+    const el = this.scroller().nativeElement;
+    this.stick = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    this.atBottom.set(this.stick);
+    if (el.scrollTop < 40) void this.loadOlderKeepingPosition();
+  }
+
+  /** Loads older messages and keeps the person where they were reading. */
+  private async loadOlderKeepingPosition(): Promise<void> {
+    const el = this.scroller().nativeElement;
+    const before = el.scrollHeight;
+    await this.store.loadOlder(this.channelId());
+    requestAnimationFrame(function () {
+      return (el.scrollTop += el.scrollHeight - before);
+    });
+  }
+
+  /** Goes to the end of the conversation, gliding or at once. */
+  scrollToBottom(smooth: boolean): void {
+    this.stick = true;
+    if (smooth) {
+      this.glideToEnd();
+      return;
+    }
+    const el = this.scroller().nativeElement;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+  }
+}

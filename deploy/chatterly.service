@@ -1,0 +1,18 @@
+# /etc/systemd/system/chatterly.service
+[Unit]
+Description=Chatterly-Renewed
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ChatterlyRenewed
+Environment=NODE_ENV=production
+Environment=TRUST_PROXY=1
+Environment=DATA_DIR=/home/ubuntu/chatterly-data
+Environment=CORS_ORIGINS=https://chatterly.example.com
+ExecStart=/usr/bin/node scripts/produccion.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

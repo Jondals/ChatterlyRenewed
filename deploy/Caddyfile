@@ -1,0 +1,10 @@
+# /etc/caddy/Caddyfile: HTTPS certificates are requested and renewed by Caddy by itself.
+# Replace chatterly.example.com with your domain (a free one from duckdns.org works).
+chatterly.example.com {
+	encode zstd gzip
+
+	# The API and the WebSocket go to the backend, everything else is the web app.
+	@backend path /api/* /ws
+	reverse_proxy @backend 127.0.0.1:3000
+	reverse_proxy 127.0.0.1:4200
+}

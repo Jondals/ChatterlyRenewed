@@ -1,0 +1,1454 @@
+/**
+ * src/app/features/settings/appearance-section.component.ts
+ * Settings - Appearance: theme, background, accent, typeface, bubbles, motion and cursors.
+ */
+import { Component, computed, inject } from '@angular/core';
+import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
+import { SelectComponent, type SelectOption } from '../../shared/components/select.component';
+import type { AccentId } from '../../core/models';
+import { readCursorFile } from '../../core/cursor-files';
+import { GradientControlsComponent } from '../../shared/components/gradient-controls.component';
+import {
+  encodeMulti,
+  gradientCss,
+  parseMulti,
+  type GradientParts,
+} from '../../shared/util/gradient';
+import { FAMILIES, cursorImageToDataUrl, svgCursor } from '../../core/services/cursor-shapes';
+import { FontService } from '../../core/services/font.service';
+import { ImageService } from '../../core/services/image.service';
+import type { TrailType } from '../../core/services/cursor-trail';
+import {
+  CORNER_STEPS,
+  SettingsService,
+  type BackgroundId,
+  type BubbleStyle,
+  type CursorMode,
+  type CustomCursor,
+  type FontId,
+  type ThemeId,
+} from '../../core/services/settings.service';
+import { ToastService } from '../../core/services/toast.service';
+import { WallpaperStore } from '../../core/services/wallpaper.store';
+import { CollapseComponent } from '../../shared/components/collapse.component';
+import { ColorPickerComponent } from '../../shared/components/color-picker.component';
+import { IconComponent } from '../../shared/components/icon.component';
+import { BackgroundSceneComponent } from '../../shared/components/mesh-background.component';
+import {
+  SegmentedComponent,
+  SettingRowComponent,
+  ToggleComponent,
+} from '../../shared/components/controls.component';
+
+const ACCENTS: { id: AccentId; label: string; color: string }[] = [
+  { id: 'mint', label: 'Mint', color: '#2ef2b0' },
+  { id: 'quantum', label: 'Cyan', color: '#38e8ff' },
+  { id: 'indigo', label: 'Indigo', color: '#818cf8' },
+  { id: 'violet', label: 'Violet', color: '#b794f6' },
+  { id: 'rose', label: 'Rose', color: '#fb6f9a' },
+  { id: 'coral', label: 'Coral', color: '#ff8a7a' },
+  { id: 'amber', label: 'Amber', color: '#fbbf24' },
+  { id: 'lime', label: 'Lime', color: '#a3e635' },
+  { id: 'obsidian', label: 'Silver', color: '#d9dde8' },
+];
+const THEMES: { id: ThemeId; label: string; colors: [string, string, string] }[] = [
+  { id: 'midnight', label: 'Midnight', colors: ['#07080c', '#14171f', '#242937'] },
+  { id: 'graphite', label: 'Graphite', colors: ['#0a0a0b', '#1b1b1d', '#2d2d31'] },
+  { id: 'amoled', label: 'AMOLED black', colors: ['#000000', '#101010', '#212121'] },
+  { id: 'dusk', label: 'Dusk', colors: ['#0b0814', '#1e1730', '#342a4e'] },
+  { id: 'forest', label: 'Forest', colors: ['#060b09', '#131e19', '#24352d'] },
+  { id: 'ocean', label: 'Ocean', colors: ['#050b12', '#112336', '#223f5c'] },
+  { id: 'crimson', label: 'Crimson', colors: ['#0d0607', '#261418', '#43232b'] },
+  { id: 'mocha', label: 'Mocha', colors: ['#0c0908', '#231b17', '#3d2f27'] },
+  { id: 'nord', label: 'Nord', colors: ['#0c1016', '#1d2530', '#323d4d'] },
+  { id: 'matrix', label: 'Matrix', colors: ['#010603', '#081a0e', '#12331e'] },
+  { id: 'rose', label: 'Rose', colors: ['#0e070b', '#27141f', '#472538'] },
+  { id: 'abyss', label: 'Abyss', colors: ['#04100f', '#0e2b28', '#1c4b46'] },
+  { id: 'plum', label: 'Plum', colors: ['#0b0612', '#221433', '#3d265c'] },
+  { id: 'tangerine', label: "Tangerine's Pop", colors: ['#190a03', '#3d1c0d', '#934d27'] },
+];
+const FONTS: { id: FontId; label: string; css: string }[] = [
+  { id: 'system', label: 'System', css: 'system-ui' },
+  { id: 'inter', label: 'Inter', css: "'Inter Variable'" },
+  { id: 'outfit', label: 'Outfit', css: "'Outfit Variable'" },
+  { id: 'manrope', label: 'Manrope', css: "'Manrope Variable'" },
+  { id: 'nunito', label: 'Nunito', css: "'Nunito Variable'" },
+  { id: 'space', label: 'Space Grotesk', css: "'Space Grotesk Variable'" },
+  { id: 'lora', label: 'Lora', css: "'Lora Variable'" },
+  { id: 'mono', label: 'JetBrains Mono', css: "'JetBrains Mono Variable'" },
+];
+const BACKGROUNDS: { id: BackgroundId; label: string }[] = [
+  { id: 'aurora', label: 'Aurora' },
+  { id: 'nebula', label: 'Nebula' },
+  { id: 'cosmos', label: 'Cosmos' },
+  { id: 'stars', label: 'Stars' },
+  { id: 'network', label: 'Network' },
+  { id: 'fireflies', label: 'Fireflies' },
+  { id: 'lavalamp', label: 'Lava lamp' },
+  { id: 'prism', label: 'Prism' },
+  { id: 'orbs', label: 'Orbs' },
+  { id: 'mist', label: 'Mist' },
+  { id: 'topography', label: 'Topography' },
+  { id: 'curtains', label: 'Curtains' },
+  { id: 'synthwave', label: 'Synthwave' },
+  { id: 'waves', label: 'Waves' },
+  { id: 'rain', label: 'Rain' },
+  { id: 'snow', label: 'Snow' },
+  { id: 'bubbles', label: 'Bubbles' },
+  { id: 'beams', label: 'Beams' },
+  { id: 'ripples', label: 'Ripples' },
+  { id: 'sunset', label: 'Sunset' },
+  { id: 'grid', label: 'Grid' },
+  { id: 'shuffle', label: 'Shuffle' },
+  { id: 'solid', label: 'Solid color' },
+  { id: 'image', label: 'Wallpaper' },
+];
+const CURSORS: { id: CursorMode; label: string }[] = [
+  { id: 'classic', label: 'Default' },
+  { id: 'themed', label: 'Neon' },
+  { id: 'solid', label: 'Solid' },
+  { id: 'soft', label: 'Soft' },
+  { id: 'sleek', label: 'Sleek' },
+  { id: 'halo', label: 'Halo' },
+  { id: 'pixel', label: 'Pixel' },
+  { id: 'system', label: 'System' },
+];
+
+/** The available trails, each with a short description. */
+const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
+  { id: 'off', label: 'None', hint: 'No trail' },
+  { id: 'comet', label: 'Comet', hint: 'A glowing tail that thins out' },
+  { id: 'ribbon', label: 'Ribbon', hint: 'A soft ribbon in your theme colors' },
+  { id: 'glow', label: 'Glow', hint: 'Soft lights, like the interface' },
+  { id: 'ink', label: 'Ink', hint: 'A brush stroke that dries' },
+  { id: 'rainbow', label: 'Rainbow', hint: 'A line that changes color' },
+  { id: 'stardust', label: 'Stardust', hint: 'Little sparkling stars' },
+  { id: 'bubbles', label: 'Bubbles', hint: 'Bubbles that float up' },
+  { id: 'fire', label: 'Fire', hint: 'Flames that fade out' },
+];
+
+@Component({
+  selector: 'app-appearance-section',
+  standalone: true,
+  imports: [
+    GradientControlsComponent,
+    IconComponent,
+    TranslatePipe,
+    SegmentedComponent,
+    SettingRowComponent,
+    ToggleComponent,
+    CollapseComponent,
+    ColorPickerComponent,
+    BackgroundSceneComponent,
+    SelectComponent,
+  ],
+  template: `
+    <div class="space-y-5">
+      <app-collapse title="Theme" [summary]="currentTheme().label">
+        <span preview class="flex h-6 w-14 overflow-hidden rounded-ui border border-white/10"
+          ><span class="flex-1" [style.background]="currentTheme().colors[0]"></span
+          ><span class="flex-1" [style.background]="currentTheme().colors[1]"></span
+          ><span class="flex-1" [style.background]="currentTheme().colors[2]"></span
+        ></span>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          @for (th of themes; track th.id) {
+            <button
+              type="button"
+              class="overflow-hidden rounded-ui border text-left hover:-translate-y-0.5"
+              [class.border-accent]="s.theme() === th.id"
+              [class.border-white/10]="s.theme() !== th.id"
+              (click)="s.theme.set(th.id)"
+            >
+              <div class="flex h-12">
+                <span class="flex-1" [style.background]="th.colors[0]"></span
+                ><span class="flex-1" [style.background]="th.colors[1]"></span
+                ><span class="flex-1" [style.background]="th.colors[2]"></span>
+              </div>
+              <div class="flex items-center justify-between px-2.5 py-1.5 text-xs font-medium">
+                {{ th.label | t }}
+                @if (s.theme() === th.id) {
+                  <app-icon name="check" [size]="13" class="text-accent" />
+                }
+              </div>
+            </button>
+          }
+          <button
+            type="button"
+            class="overflow-hidden rounded-ui border text-left hover:-translate-y-0.5"
+            [class.border-accent]="s.theme() === 'custom'"
+            [class.border-white/10]="s.theme() !== 'custom'"
+            (click)="s.theme.set('custom')"
+          >
+            <div class="flex h-12 items-center justify-center" [style.background]="s.customTheme()">
+              <app-icon name="palette" [size]="18" class="text-white/70" />
+            </div>
+            <div class="flex items-center justify-between px-2.5 py-1.5 text-xs font-medium">
+              {{ 'Custom' | t }}
+              @if (s.theme() === 'custom') {
+                <app-icon name="check" [size]="13" class="text-accent" />
+              }
+            </div>
+          </button>
+        </div>
+        @if (s.theme() === 'custom') {
+          <div
+            class="mt-5 divide-y divide-white/6 overflow-hidden rounded-ui border border-white/8 bg-black/15"
+          >
+            @for (p of themeParts; track p.id) {
+              <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <span
+                  ><span class="block text-sm font-medium">{{ p.label | t }}</span
+                  ><span class="block text-xs text-muted">{{ p.hint | t }}</span></span
+                >
+                <span class="flex items-center gap-2">
+                  @if (p.id !== 'base' && partValue(p.id)) {
+                    <button
+                      type="button"
+                      class="text-xs text-muted underline hover:text-fg"
+                      (click)="setPart(p.id, '')"
+                    >
+                      {{ 'Reset' | t }}
+                    </button>
+                  }
+                  <app-color-picker
+                    [value]="partValue(p.id) || p.fallback"
+                    [size]="32"
+                    [label]="p.label"
+                    (valueChange)="setPart(p.id, $event)"
+                  />
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </app-collapse>
+
+      <app-collapse title="Background" [summary]="currentBackground()">
+        <span preview class="relative h-8 w-14 overflow-hidden rounded-ui border border-white/10"
+          ><app-bg-scene [kind]="s.background()"
+        /></span>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          @for (b of backgrounds; track b.id) {
+            <button
+              type="button"
+              class="overflow-hidden rounded-ui border text-left hover:-translate-y-0.5"
+              [class.border-accent]="s.background() === b.id"
+              [class.border-white/10]="s.background() !== b.id"
+              (click)="s.background.set(b.id)"
+            >
+              <span class="relative block h-16 overflow-hidden"
+                ><app-bg-scene [kind]="b.id" />
+                @if (b.id === 'shuffle') {
+                  <span class="absolute inset-0 flex items-center justify-center text-white/90"
+                    ><app-icon name="shuffle" [size]="22"
+                  /></span>
+                }
+              </span>
+              <span class="flex items-center justify-between px-2.5 py-1.5 text-xs font-medium"
+                >{{ b.label | t }}
+                @if (s.background() === b.id) {
+                  <app-icon name="check" [size]="13" class="text-accent" />
+                }
+              </span>
+            </button>
+          }
+        </div>
+        @if (s.background() === 'shuffle') {
+          <div class="mt-6 space-y-5 rounded-ui border border-white/8 bg-black/15 p-5">
+            <p class="text-xs text-muted">
+              {{ 'A different background is picked at random. Choose when it changes.' | t }}
+            </p>
+            <app-segmented
+              [options]="shuffleModes"
+              [value]="s.bgShuffleMode()"
+              (valueChange)="setShuffle($event)"
+            />
+            @if (s.bgShuffleMode() === 'interval') {
+              <label class="flex items-center gap-3 pt-1 text-xs text-muted"
+                >{{ 'Change every' | t }}
+                <input
+                  type="range"
+                  min="1"
+                  max="120"
+                  class="w-44 accent-[var(--accent)]"
+                  [value]="s.bgShuffleMinutes()"
+                  (input)="s.bgShuffleMinutes.set(+$any($event.target).value)"
+                />
+                <b class="w-16 text-fg">{{ s.bgShuffleMinutes() }} min</b>
+              </label>
+            }
+          </div>
+        }
+        @if (s.background() === 'solid') {
+          <div
+            class="mt-6 flex flex-wrap items-center gap-4 rounded-ui border border-white/8 bg-black/15 p-4"
+          >
+            <span class="text-sm font-medium">{{ 'Background color' | t }}</span>
+            <app-color-picker
+              [value]="s.bgSolidColor()"
+              [size]="36"
+              label="Background color"
+              (valueChange)="s.bgSolidColor.set($event)"
+            />
+          </div>
+        }
+        @if (s.background() === 'image') {
+          <div
+            class="mt-6 flex flex-wrap items-center gap-4 rounded-ui border border-white/8 bg-black/15 p-4"
+          >
+            <button class="btn btn-sm btn-primary" type="button" (click)="pickWallpaper()">
+              <app-icon name="upload" [size]="14" /> {{ 'Choose wallpaper' | t }}
+            </button>
+            @if (wallpaper.url() || s.wallpaper()) {
+              <button class="btn btn-sm" type="button" (click)="removeWallpaper()">
+                {{ 'Remove' | t }}
+              </button>
+            }
+            <span class="text-xs text-muted">{{
+              'A picture, a GIF or a short video (up to 12 MB for pictures and 25 MB for videos). It moves if it is animated. Stored only on this device.'
+                | t
+            }}</span>
+          </div>
+        }
+      </app-collapse>
+
+      <app-collapse title="Accent color" [summary]="currentAccent()">
+        <span
+          preview
+          class="h-6 w-6 rounded-full border border-white/20"
+          style="background: var(--accent)"
+        ></span>
+        <div class="flex flex-wrap items-center gap-2.5">
+          @for (a of accents; track a.id) {
+            <button
+              type="button"
+              class="relative h-9 w-9 rounded-full ring-offset-2 ring-offset-ink-850 hover:scale-110"
+              [class.ring-2]="s.accent() === a.id"
+              [style.--tw-ring-color]="a.color"
+              [style.background]="a.color"
+              (click)="s.accent.set(a.id)"
+              [attr.aria-label]="a.label | t"
+              [attr.title]="a.label | t"
+            >
+              @if (s.accent() === a.id) {
+                <app-icon
+                  name="check"
+                  [size]="16"
+                  [stroke]="3"
+                  class="absolute inset-0 m-auto text-ink-950"
+                />
+              }
+            </button>
+          }
+          <span class="mx-1 h-6 w-px bg-white/10"></span>
+          <app-color-picker
+            [value]="s.customAccent()"
+            [size]="36"
+            shape="round"
+            [rainbow]="true"
+            label="Custom color"
+            (valueChange)="s.customAccent.set($event); s.accent.set('custom')"
+          />
+          <span
+            class="text-xs"
+            [class.text-accent]="s.accent() === 'custom'"
+            [class.text-muted]="s.accent() !== 'custom'"
+            >{{ 'Custom color' | t }}</span
+          >
+        </div>
+      </app-collapse>
+
+      <app-collapse title="Typeface" [summary]="currentFont().label">
+        <span preview class="text-lg" [style.font-family]="currentFont().css + ', sans-serif'"
+          >Aa</span
+        >
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          @for (f of fonts; track f.id) {
+            <button
+              type="button"
+              class="choice-card"
+              [class.is-on]="s.font() === f.id"
+              (click)="s.font.set(f.id)"
+            >
+              <span class="text-lg leading-tight" [style.font-family]="f.css + ', sans-serif'">
+                Aa Bb 123
+              </span>
+              <span class="text-[11px] text-muted">{{ f.label | t }}</span>
+            </button>
+          }
+          <button
+            type="button"
+            class="choice-card"
+            [class.is-on]="s.font() === 'custom'"
+            [class.is-dashed]="!s.customFontName()"
+            (click)="chooseCustomFont()"
+          >
+            @if (s.customFontName()) {
+              <span
+                class="text-lg leading-tight"
+                style="font-family: 'Chatterly Custom UI', sans-serif"
+                >Aa Bb 123</span
+              >
+              <span class="flex w-full items-center justify-between gap-2 text-[11px] text-muted"
+                ><span class="truncate">{{ s.customFontName() }}</span
+                ><span
+                  class="cursor-pointer underline hover:text-fg"
+                  role="button"
+                  tabindex="0"
+                  (click)="removeCustomFont($event)"
+                  (keydown.enter)="removeCustomFont($event)"
+                  >{{ 'Remove' | t }}</span
+                ></span
+              >
+            } @else {
+              <span class="flex items-center gap-2 text-sm font-medium text-muted"
+                ><app-icon name="upload" [size]="16" /> {{ 'Upload font' | t }}</span
+              >
+              <span class="text-[11px] text-dim">.ttf .otf .woff2</span>
+            }
+          </button>
+        </div>
+      </app-collapse>
+    </div>
+
+    <section class="mb-10 mt-12">
+      <h2 class="mb-2 text-sm font-semibold">{{ 'Motion' | t }}</h2>
+      <app-setting-row
+        title="Background visibility"
+        hint="How much of the animated background shows through the panels."
+      >
+        <div class="w-64 max-w-full">
+          <input
+            type="range"
+            min="0"
+            max="4"
+            step="1"
+            class="corner-range w-full accent-[var(--accent)]"
+            [value]="s.bgVisibility()"
+            (input)="s.bgVisibility.set(+$any($event.target).value)"
+            [attr.aria-label]="'Background visibility' | t"
+          />
+          <div class="corner-guide" aria-hidden="true">
+            @for (level of visibilityLevels; track level.id; let i = $index) {
+              <span
+                class="corner-guide-name"
+                [class.is-on]="s.bgVisibility() === i"
+                [style.left.%]="(i / (visibilityLevels.length - 1)) * 100"
+                >{{ level.label | t }}</span
+              >
+            }
+          </div>
+        </div>
+      </app-setting-row>
+      <app-setting-row
+        title="Background blur"
+        hint="Softens the edges of the animated shapes behind the interface."
+      >
+        <div class="w-64 max-w-full">
+          <input
+            type="range"
+            min="0"
+            max="120"
+            class="corner-range w-full accent-[var(--accent)]"
+            [value]="s.bgBlur()"
+            (input)="s.bgBlur.set(+$any($event.target).value)"
+            [attr.aria-label]="'Background blur' | t"
+          />
+          <div class="corner-guide" aria-hidden="true">
+            <span class="corner-guide-name is-on" [style.left.%]="s.bgBlur() / 1.2">{{
+              s.bgBlur()
+            }}</span>
+          </div>
+        </div>
+      </app-setting-row>
+      <app-setting-row title="Background motion">
+        <div class="w-64 max-w-full">
+          <input
+            type="range"
+            min="0"
+            [max]="motionLevels.length - 1"
+            step="1"
+            class="corner-range w-full accent-[var(--accent)]"
+            [value]="motionIndex()"
+            (input)="setMotion(motionLevels[+$any($event.target).value].id)"
+            [attr.aria-label]="'Background motion' | t"
+          />
+          <div class="corner-guide" aria-hidden="true">
+            @for (level of motionLevels; track level.id; let i = $index) {
+              <span
+                class="corner-guide-name"
+                [class.is-on]="motionIndex() === i"
+                [style.left.%]="(i / (motionLevels.length - 1)) * 100"
+                >{{ level.label | t }}</span
+              >
+            }
+          </div>
+        </div>
+      </app-setting-row>
+      <app-setting-row
+        title="Animations"
+        hint="Transitions and movement of the interface (not the background)."
+      >
+        <div class="w-64 max-w-full">
+          <input
+            type="range"
+            min="0"
+            [max]="animationLevels.length - 1"
+            step="1"
+            class="corner-range w-full accent-[var(--accent)]"
+            [value]="animationIndex()"
+            (input)="s.animations.set(animationLevels[+$any($event.target).value].id)"
+            [attr.aria-label]="'Animations' | t"
+          />
+          <div class="corner-guide" aria-hidden="true">
+            @for (level of animationLevels; track level.id; let i = $index) {
+              <span
+                class="corner-guide-name"
+                [class.is-on]="animationIndex() === i"
+                [style.left.%]="(i / (animationLevels.length - 1)) * 100"
+                >{{ level.label | t }}</span
+              >
+            }
+          </div>
+        </div>
+      </app-setting-row>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="mb-2 text-sm font-semibold">{{ 'Interface' | t }}</h2>
+      <app-collapse class="mb-3" title="Corner style" [summary]="corners[s.cornerStep()].name">
+        <span
+          preview
+          class="h-7 w-7 border-l-2 border-t-2 border-accent transition-[border-radius] duration-300"
+          [style.border-top-left-radius.px]="corners[s.cornerStep()].large"
+        ></span>
+        <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <!-- A small piece of the app that follows the slider -->
+          <div
+            class="flex flex-col gap-3 border border-white/10 bg-ink-900/70 p-3.5 transition-[border-radius] duration-300"
+            [style.border-radius.px]="corners[s.cornerStep()].large"
+            aria-hidden="true"
+          >
+            <div class="flex items-center gap-2.5">
+              <span
+                class="flex h-9 w-9 items-center justify-center bg-accent/25 text-sm font-bold text-accent transition-[border-radius] duration-300"
+                [style.border-radius.px]="corners[s.cornerStep()].large"
+                >A</span
+              >
+              <span class="flex-1 space-y-1.5">
+                <span class="block h-2 w-20 rounded-full bg-white/25"></span>
+                <span class="block h-2 w-14 rounded-full bg-white/10"></span>
+              </span>
+            </div>
+            <span
+              class="block max-w-[80%] self-start bg-white/[.08] px-3 py-2 text-xs transition-[border-radius] duration-300"
+              [style.border-radius.px]="corners[s.cornerStep()].large"
+              >{{ 'Hello! How do the corners look?' | t }}</span
+            >
+            <span
+              class="block max-w-[80%] self-end bg-accent px-3 py-2 text-xs text-[var(--accent-ink)] transition-[border-radius] duration-300"
+              [style.border-radius.px]="corners[s.cornerStep()].large"
+              >{{ 'Great!' | t }}</span
+            >
+            <div class="flex items-center gap-2">
+              <span
+                class="h-9 flex-1 border border-white/15 bg-white/[.04] transition-[border-radius] duration-300"
+                [style.border-radius.px]="corners[s.cornerStep()].small"
+              ></span>
+              <span
+                class="flex h-9 items-center bg-accent px-3.5 text-xs font-semibold text-[var(--accent-ink)] transition-[border-radius] duration-300"
+                [style.border-radius.px]="corners[s.cornerStep()].small"
+                >{{ 'Button' | t }}</span
+              >
+            </div>
+          </div>
+
+          <div class="flex min-w-0 flex-col justify-center gap-4">
+            <div class="flex items-baseline justify-between gap-3">
+              <b class="text-lg text-accent">{{ corners[s.cornerStep()].name | t }}</b>
+              <span class="font-mono text-[11px] text-muted"
+                >{{ corners[s.cornerStep()].small }} / {{ corners[s.cornerStep()].large }} px</span
+              >
+            </div>
+            <div class="grid grid-cols-7 gap-1.5">
+              @for (c of corners; track c.name; let i = $index) {
+                <button
+                  type="button"
+                  class="flex aspect-square items-center justify-center rounded-ui border p-1.5 transition-colors"
+                  [class]="
+                    i === s.cornerStep()
+                      ? 'border-accent bg-accent/15'
+                      : 'border-white/10 hover:border-white/25 hover:bg-white/[.05]'
+                  "
+                  [attr.aria-label]="c.name | t"
+                  [attr.title]="c.name | t"
+                  (click)="s.cornerStep.set(i)"
+                >
+                  <span
+                    class="block h-full w-full border-l-2 border-t-2 transition-colors"
+                    [class]="i === s.cornerStep() ? 'border-accent' : 'border-white/40'"
+                    [style.border-top-left-radius.px]="c.large"
+                  ></span>
+                </button>
+              }
+            </div>
+            <div>
+              <input
+                type="range"
+                min="0"
+                [max]="corners.length - 1"
+                step="1"
+                class="corner-range w-full accent-[var(--accent)]"
+                [value]="s.cornerStep()"
+                (input)="s.cornerStep.set(+$any($event.target).value)"
+                [attr.aria-label]="'Corner style' | t"
+              />
+              <div class="corner-guide" aria-hidden="true">
+                @for (g of cornerGuides; track g.index) {
+                  <span
+                    class="corner-guide-name"
+                    [class.is-on]="s.cornerStep() === g.index"
+                    [style.left.%]="(g.index / (corners.length - 1)) * 100"
+                    >{{ g.name | t }}</span
+                  >
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </app-collapse>
+      <app-setting-row title="Text size">
+        <div class="w-64 max-w-full">
+          <input
+            type="range"
+            min="12"
+            max="18"
+            step="1"
+            class="corner-range w-full accent-[var(--accent)]"
+            [value]="s.fontSize()"
+            (input)="s.fontSize.set(+$any($event.target).value)"
+            [attr.aria-label]="'Text size' | t"
+          />
+          <div class="corner-guide" aria-hidden="true">
+            <span class="corner-guide-name is-on" [style.left.%]="((s.fontSize() - 12) / 6) * 100"
+              >{{ s.fontSize() }}px</span
+            >
+          </div>
+        </div>
+      </app-setting-row>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="mb-2 text-sm font-semibold">{{ 'Chat' | t }}</h2>
+      <app-setting-row title="Message style" hint="Chat bubbles or a flat, IRC-like list.">
+        <app-segmented
+          [options]="chatStyles"
+          [value]="s.chatStyle()"
+          (valueChange)="setChat($event)"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Actions over a message"
+        hint="The bar with reactions and options that shows when you point at a message."
+      >
+        <app-toggle
+          [checked]="s.messageActions()"
+          (checkedChange)="s.messageActions.set($event)"
+          [label]="'Actions over a message' | t"
+        />
+      </app-setting-row>
+      <div class="mt-3">
+        <app-collapse title="Chat bubbles" [summary]="s.bubbleOwn() ? 'Custom' : 'Accent color'">
+          <span preview class="flex gap-1">
+            <span
+              class="h-5 w-8 rounded-ui"
+              [style.background]="
+                s.bubbleStyle() === 'neon' ? s.bubbleOwn() || accentHex() : ownCss()
+              "
+            ></span>
+            <span
+              class="h-5 w-8 rounded-ui"
+              [style.background]="s.bubbleOther() || 'rgba(255,255,255,.1)'"
+            ></span>
+          </span>
+          <div class="space-y-4">
+            <div>
+              <div class="mb-2 text-xs text-muted">{{ 'Bubble style' | t }}</div>
+              <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                @for (b of bubbles; track b.id) {
+                  <button
+                    type="button"
+                    class="rounded-ui border p-2 text-center text-[11px] hover:bg-white/5"
+                    [class.border-accent]="s.bubbleStyle() === b.id"
+                    [class.bg-accent/10]="s.bubbleStyle() === b.id"
+                    [class.border-white/10]="s.bubbleStyle() !== b.id"
+                    (click)="s.bubbleStyle.set(b.id)"
+                  >
+                    <span class="mb-1.5 flex flex-col gap-1" [class]="'bs-preview bs-' + b.id">
+                      <span class="bubble-in self-start px-2 py-1 text-[10px]">Hi</span>
+                      <span class="bubble-out self-end px-2 py-1 text-[10px]">Hey</span>
+                    </span>
+                    {{ b.label | t }}
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="w-28 text-xs text-muted">{{ 'Your messages' | t }}</span>
+              @if (!ownGradient()) {
+                <app-color-picker
+                  [value]="s.bubbleOwn() || accentHex()"
+                  [size]="30"
+                  label="Your messages"
+                  (valueChange)="s.bubbleOwn.set($event)"
+                />
+              }
+              <label
+                class="flex items-center gap-1.5 text-xs text-muted"
+                [class.cursor-pointer]="s.bubbleStyle() !== 'neon'"
+                [class.opacity-50]="s.bubbleStyle() === 'neon'"
+                [attr.title]="
+                  s.bubbleStyle() === 'neon' ? ('Neon bubbles use a single color.' | t) : null
+                "
+                ><input
+                  type="checkbox"
+                  class="accent-[var(--accent)]"
+                  [checked]="!!ownGradient() && s.bubbleStyle() !== 'neon'"
+                  [disabled]="s.bubbleStyle() === 'neon'"
+                  (change)="toggleOwnGradient($any($event.target).checked)"
+                />
+                {{ 'Gradient' | t }}</label
+              >
+            </div>
+            @if (ownGradient(); as grad) {
+              @if (s.bubbleStyle() !== 'neon') {
+                <app-gradient-controls [parts]="grad" (changed)="changeOwnGradient($event)" />
+              }
+            }
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="w-28 text-xs text-muted">{{ 'Their messages' | t }}</span>
+              <app-color-picker
+                [value]="s.bubbleOther() || '#2a2f3c'"
+                [size]="30"
+                label="Their messages"
+                (valueChange)="s.bubbleOther.set($event)"
+              />
+            </div>
+            <div class="flex flex-col gap-2 rounded-ui border border-white/8 bg-black/20 p-3">
+              <span class="bubble-in self-start px-3 py-1.5 text-sm">{{
+                'Hello! How are you?' | t
+              }}</span>
+              <span class="bubble-out self-end px-3 py-1.5 text-sm">{{
+                'Great, thanks!' | t
+              }}</span>
+            </div>
+            <button
+              type="button"
+              class="text-xs text-muted underline hover:text-fg"
+              (click)="resetBubbles()"
+            >
+              {{ 'Reset' | t }}
+            </button>
+          </div>
+        </app-collapse>
+      </div>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="mb-2 text-sm font-semibold">{{ 'Cursor' | t }}</h2>
+      <app-collapse title="Mouse cursor" [summary]="currentCursor()">
+        <span preview class="flex gap-1">
+          <span
+            class="h-7 w-7"
+            [style.background-image]="previewUrl('default', s.cursor())"
+            style="background-size: contain; background-repeat: no-repeat; background-position: center"
+          ></span>
+          <span
+            class="h-7 w-7"
+            [style.background-image]="previewUrl('pointer', s.cursor())"
+            style="background-size: contain; background-repeat: no-repeat; background-position: center"
+          ></span>
+        </span>
+        <h4 class="label mb-2.5">{{ 'Shape' | t }}</h4>
+        <div class="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          @for (c of cursors; track c.id) {
+            <button
+              type="button"
+              class="flex flex-col items-center gap-1.5 rounded-ui border px-2 py-3 text-xs hover:bg-white/5"
+              [class.border-accent]="s.cursor() === c.id"
+              [class.bg-accent/10]="s.cursor() === c.id"
+              [class.border-white/10]="s.cursor() !== c.id"
+              (click)="s.cursor.set(c.id)"
+            >
+              @if (c.id === 'system') {
+                <app-icon name="cursor" [size]="26" class="text-muted" />
+              } @else {
+                <span class="flex gap-1.5">
+                  <span
+                    class="h-8 w-8"
+                    [style.background-image]="previewUrl('default', c.id)"
+                    style="background-size: contain; background-repeat: no-repeat; background-position: center"
+                  ></span>
+                  <span
+                    class="h-8 w-8"
+                    [style.background-image]="previewUrl('pointer', c.id)"
+                    style="background-size: contain; background-repeat: no-repeat; background-position: center"
+                  ></span>
+                </span>
+              }
+              {{ c.label | t }}
+            </button>
+          }
+        </div>
+
+        <h4 class="label mb-2.5">{{ 'Behavior' | t }}</h4>
+        <div
+          class="mb-7 divide-y divide-white/6 overflow-hidden rounded-ui-lg border border-white/8 bg-black/15"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <div>
+              <div class="text-sm font-medium">{{ 'Animation' | t }}</div>
+              <div class="text-xs text-muted">
+                {{ 'The cursor pulses with an outline around its shape.' | t }}
+              </div>
+            </div>
+            <app-segmented
+              [options]="animations"
+              [value]="s.cursorAnimated() ? 'on' : 'off'"
+              (valueChange)="s.cursorAnimated.set($event === 'on')"
+            />
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <div>
+              <div class="text-sm font-medium">{{ 'Trail' | t }}</div>
+              <div class="text-xs text-muted">{{ trailHint() | t }}</div>
+            </div>
+            <app-select
+              class="w-44"
+              label="Trail"
+              [options]="trailOptions()"
+              [value]="s.cursorTrail()"
+              (valueChange)="s.cursorTrail.set($any($event))"
+            />
+          </div>
+          @if (s.cursorTrail() !== 'off') {
+            <label class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+              <span
+                ><span class="block text-sm font-medium">{{ 'Trail thickness' | t }}</span
+                ><span class="block text-xs text-muted">{{
+                  'How wide the trail is' | t
+                }}</span></span
+              >
+              <span class="flex items-center gap-3"
+                ><input
+                  type="range"
+                  min="0.4"
+                  max="2.5"
+                  step="0.1"
+                  class="w-44 accent-[var(--accent)]"
+                  [value]="s.cursorTrailSize()"
+                  (input)="s.cursorTrailSize.set(+$any($event.target).value)"
+                /><b
+                  class="w-14 rounded-ui bg-white/[.06] px-2 py-0.5 text-center font-mono text-xs"
+                  >{{ s.cursorTrailSize().toFixed(1) }}x</b
+                ></span
+              >
+            </label>
+            <label class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+              <span
+                ><span class="block text-sm font-medium">{{ 'Trail length' | t }}</span
+                ><span class="block text-xs text-muted">{{
+                  'How long it takes to fade' | t
+                }}</span></span
+              >
+              <span class="flex items-center gap-3"
+                ><input
+                  type="range"
+                  min="0.3"
+                  max="1.5"
+                  step="0.1"
+                  class="w-44 accent-[var(--accent)]"
+                  [value]="s.cursorTrailLength()"
+                  (input)="s.cursorTrailLength.set(+$any($event.target).value)"
+                /><b
+                  class="w-14 rounded-ui bg-white/[.06] px-2 py-0.5 text-center font-mono text-xs"
+                  >{{ s.cursorTrailLength().toFixed(1) }}x</b
+                ></span
+              >
+            </label>
+          }
+          <label class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <span
+              ><span class="block text-sm font-medium">{{ 'Cursor size' | t }}</span
+              ><span class="block text-xs text-muted">{{ 'From small to large' | t }}</span></span
+            >
+            <span class="flex items-center gap-3"
+              ><input
+                type="range"
+                min="16"
+                max="56"
+                step="2"
+                class="w-44 accent-[var(--accent)]"
+                [value]="s.cursorSize()"
+                (input)="s.cursorSize.set(+$any($event.target).value)"
+              /><b class="w-14 rounded-ui bg-white/[.06] px-2 py-0.5 text-center font-mono text-xs"
+                >{{ s.cursorSize() }}px</b
+              ></span
+            >
+          </label>
+          <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <span
+              ><span class="block text-sm font-medium">{{ 'Cursor color' | t }}</span
+              ><span class="block text-xs text-muted">{{
+                'Also colors the trail. Empty follows the theme.' | t
+              }}</span></span
+            >
+            <span class="flex items-center gap-2">
+              @if (s.cursorColor()) {
+                <button type="button" class="btn btn-sm btn-ghost" (click)="s.cursorColor.set('')">
+                  {{ 'Use theme color' | t }}
+                </button>
+              }
+              <app-color-picker
+                [value]="s.cursorColor() || accentHex()"
+                [size]="32"
+                shape="round"
+                label="Cursor color"
+                (valueChange)="s.cursorColor.set($event)"
+              />
+            </span>
+          </div>
+        </div>
+        <h4 class="label mb-2.5">{{ 'Your cursors' | t }}</h4>
+        <div class="space-y-2">
+          @for (c of s.customCursors(); track c.id) {
+            <div
+              class="flex flex-wrap items-center gap-3 rounded-ui border p-2"
+              [class.border-accent]="s.cursor() === 'custom:' + c.id"
+              [class.border-white/10]="s.cursor() !== 'custom:' + c.id"
+            >
+              <button
+                type="button"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-ui bg-black/30 hover:bg-white/10"
+                (click)="s.cursor.set('custom:' + c.id)"
+                [attr.aria-label]="'Use this cursor' | t"
+              >
+                <img [src]="c.data" alt="" class="max-h-8 max-w-8 object-contain" />
+              </button>
+              <input
+                class="input selectable !h-9 min-w-0 flex-1"
+                maxlength="24"
+                [value]="c.name"
+                (change)="renameCursor(c.id, $any($event.target).value)"
+                [attr.aria-label]="'Cursor name' | t"
+              />
+              @if (c.kind !== 'cur' && !c.hot) {
+                <app-select
+                  class="w-48"
+                  label="Click point"
+                  [options]="clickPointOptions()"
+                  [value]="c.point"
+                  (valueChange)="setClickPoint(c.id, $event)"
+                />
+              }
+              @if (c.kind === 'animated') {
+                <span class="chip chip-accent">{{ 'Animated' | t }}</span>
+              }
+              <button
+                type="button"
+                class="btn btn-icon btn-sm btn-soft-danger"
+                (click)="removeCursor(c.id)"
+                [attr.aria-label]="'Delete' | t"
+              >
+                <app-icon name="trash" [size]="14" />
+              </button>
+            </div>
+          } @empty {
+            <p class="text-xs text-muted">
+              {{ 'Upload a cursor file and it appears here, ready to name and use.' | t }}
+            </p>
+          }
+        </div>
+        <div class="mt-3 flex flex-wrap items-center gap-3">
+          <button class="btn btn-sm btn-primary" type="button" (click)="uploadCursor()">
+            <app-icon name="upload" [size]="14" /> {{ 'Upload your cursor' | t }}
+          </button>
+          <span class="text-xs text-muted">{{
+            'Works with .cur, .ani (animated), PNG, GIF and WebP, up to 1 MB. Stored only on this device.'
+              | t
+          }}</span>
+        </div>
+      </app-collapse>
+    </section>
+  `,
+})
+export class AppearanceSectionComponent {
+  protected readonly s = inject(SettingsService);
+  private readonly images = inject(ImageService);
+  private readonly fontFiles = inject(FontService);
+  private readonly toast = inject(ToastService);
+  private readonly i18n = inject(I18nService);
+
+  protected readonly accents = ACCENTS;
+  protected readonly themes = THEMES;
+  protected readonly fonts = FONTS;
+  protected readonly backgrounds = BACKGROUNDS;
+  protected readonly cursors = CURSORS;
+  protected readonly bubbles: { id: BubbleStyle; label: string }[] = [
+    { id: 'tail', label: 'Tail' },
+    { id: 'round', label: 'Round' },
+    { id: 'square', label: 'Square' },
+    { id: 'gloss', label: 'Gloss' },
+    { id: 'outline', label: 'Outline' },
+    { id: 'minimal', label: 'Minimal' },
+    { id: 'glass', label: 'Glass' },
+    { id: 'neon', label: 'Neon' },
+    { id: 'leaf', label: 'Leaf' },
+    { id: 'ticket', label: 'Ticket' },
+    { id: 'block', label: 'Block' },
+    { id: 'dashed', label: 'Dashed' },
+  ];
+  protected readonly corners = CORNER_STEPS;
+  /** The names of the old three corner styles, shown under the slider at their steps. */
+  protected readonly cornerGuides = [
+    { index: 1, name: 'Sharp' },
+    { index: 3, name: 'Soft' },
+    { index: 5, name: 'Round' },
+  ];
+  protected readonly chatStyles = [
+    { id: 'bubbles', label: 'Bubbles' },
+    { id: 'flat', label: 'Flat' },
+  ];
+  protected readonly shuffleModes = [
+    { id: 'reload', label: 'On every reload' },
+    { id: 'interval', label: 'Every few minutes' },
+  ];
+  protected readonly animations = [
+    { id: 'off', label: 'Static' },
+    { id: 'on', label: 'Animated' },
+  ];
+  protected readonly trails = TRAILS;
+  /** The trails as the options of a drop-down list. */
+  protected readonly trailOptions = computed(this.buildTrailOptions.bind(this));
+  /** Where a cursor file clicks. */
+  protected readonly clickPointOptions = computed(this.buildClickPointOptions.bind(this));
+
+  /** The trails with their names in the language in use. */
+  private buildTrailOptions(): SelectOption[] {
+    return TRAILS.map(
+      function toOption(this: AppearanceSectionComponent, trail: { id: string; label: string }) {
+        return { value: trail.id, label: this.i18n.t(trail.label) };
+      }.bind(this),
+    );
+  }
+
+  /** The two places a cursor file can click. */
+  private buildClickPointOptions(): SelectOption[] {
+    return [
+      { value: 'center', label: this.i18n.t('Center') },
+      { value: 'corner', label: this.i18n.t('Top-left corner') },
+    ];
+  }
+  protected readonly motionLevels = [
+    { id: 'off', label: 'Off' },
+    { id: 'calm', label: 'Slow' },
+    { id: 'normal', label: 'Normal' },
+    { id: 'lively', label: 'Fast' },
+  ];
+  protected readonly animationLevels: { id: 'off' | 'quick' | 'full'; label: string }[] = [
+    { id: 'off', label: 'Off' },
+    { id: 'quick', label: 'Quick' },
+    { id: 'full', label: 'Full' },
+  ];
+  /** The steps of "background visibility", from the one that shows the least. */
+  protected readonly visibilityLevels = [
+    { id: 'solid', label: 'Solid' },
+    { id: 'soft', label: 'Soft' },
+    { id: 'medium', label: 'Medium' },
+    { id: 'clear', label: 'Clear' },
+    { id: 'open', label: 'Open' },
+  ];
+  /** Place of the chosen animations in the slider. */
+  protected readonly animationIndex = computed(this.findAnimationIndex.bind(this));
+
+  /** The step of the slider that matches the animations setting. */
+  private findAnimationIndex(): number {
+    return Math.max(
+      0,
+      this.animationLevels.findIndex(
+        function same(this: AppearanceSectionComponent, level: { id: string }) {
+          return level.id === this.s.animations();
+        }.bind(this),
+      ),
+    );
+  }
+
+  /** Place of the chosen motion in the slider. */
+  protected readonly motionIndex = computed(this.findMotionIndex.bind(this));
+
+  /** The step of the slider that matches the motion of the background. */
+  private findMotionIndex(): number {
+    const index = this.motionLevels.findIndex(
+      function same(this: AppearanceSectionComponent, level: { id: string }) {
+        return level.id === this.s.bgMotion();
+      }.bind(this),
+    );
+    return Math.max(0, index);
+  }
+
+  protected readonly currentTheme = computed(
+    function (this: AppearanceSectionComponent) {
+      return (
+        THEMES.find(
+          function (
+            this: AppearanceSectionComponent,
+            t: { id: ThemeId; label: string; colors: [string, string, string] },
+          ) {
+            return t.id === this.s.theme();
+          }.bind(this),
+        ) ?? THEMES[0]!
+      );
+    }.bind(this),
+  );
+  protected readonly currentFont = computed(
+    function (this: AppearanceSectionComponent) {
+      return (
+        FONTS.find(
+          function (
+            this: AppearanceSectionComponent,
+            f: { id: FontId; label: string; css: string },
+          ) {
+            return f.id === this.s.font();
+          }.bind(this),
+        ) ?? FONTS[0]!
+      );
+    }.bind(this),
+  );
+  protected readonly currentAccent = computed(
+    function (this: AppearanceSectionComponent) {
+      return this.s.accent() === 'custom'
+        ? 'Custom color'
+        : (ACCENTS.find(
+            function (
+              this: AppearanceSectionComponent,
+              a: { id: AccentId; label: string; color: string },
+            ) {
+              return a.id === this.s.accent();
+            }.bind(this),
+          )?.label ?? 'Mint');
+    }.bind(this),
+  );
+  protected readonly currentBackground = computed(
+    function (this: AppearanceSectionComponent) {
+      return (
+        BACKGROUNDS.find(
+          function (this: AppearanceSectionComponent, b: { id: BackgroundId; label: string }) {
+            return b.id === this.s.background();
+          }.bind(this),
+        )?.label ?? 'Aurora'
+      );
+    }.bind(this),
+  );
+  /** Parts of the custom theme that can be chosen: the base color and four more. */
+  protected readonly themeParts = [
+    {
+      id: 'base',
+      label: 'Base color',
+      hint: 'Everything else is calculated from this one. Pick a dark one.',
+      fallback: '#1b1530',
+    },
+    { id: 'panel', label: 'Panels', hint: 'Cards, menus and the chat area', fallback: '#1b1530' },
+    { id: 'text', label: 'Text', hint: 'Main text color', fallback: '#e8ecf4' },
+    {
+      id: 'muted',
+      label: 'Soft text',
+      hint: 'Descriptions and secondary text',
+      fallback: '#98a2b3',
+    },
+    {
+      id: 'accent2',
+      label: 'Second accent',
+      hint: 'Used in gradients, channels and trails',
+      fallback: '#8b5cf6',
+    },
+  ];
+
+  /** The color of a part of the custom theme (the base or one of the pieces). */
+  protected partValue(id: string): string {
+    return id === 'base'
+      ? this.s.customTheme()
+      : ((this.s.customThemeParts() as unknown as Record<string, string>)[id] ?? '');
+  }
+
+  /** Changes the color of a part of the custom theme. */
+  protected setPart(id: string, value: string): void {
+    if (id === 'base') this.s.customTheme.set(value);
+    else
+      this.s.customThemeParts.update(function (p) {
+        return { ...p, [id]: value };
+      });
+  }
+
+  protected readonly trailHint = computed(
+    function (this: AppearanceSectionComponent) {
+      return (
+        TRAILS.find(
+          function (
+            this: AppearanceSectionComponent,
+            e: { id: TrailType | 'off'; label: string; hint: string },
+          ) {
+            return e.id === this.s.cursorTrail();
+          }.bind(this),
+        )?.hint ?? 'No trail'
+      );
+    }.bind(this),
+  );
+  protected readonly trailName = computed(
+    function (this: AppearanceSectionComponent) {
+      return (
+        TRAILS.find(
+          function (
+            this: AppearanceSectionComponent,
+            e: { id: TrailType | 'off'; label: string; hint: string },
+          ) {
+            return e.id === this.s.cursorTrail();
+          }.bind(this),
+        )?.label ?? 'None'
+      );
+    }.bind(this),
+  );
+  protected readonly currentCursor = computed(this.cursorName.bind(this));
+  protected readonly ownCss = computed(this.computeOwnBubble.bind(this));
+
+  /** The name of the cursor chosen, for the summary of its section. */
+  private cursorName(): string {
+    const mode = this.s.cursor();
+    const own = this.s.customCursors().find(function (c) {
+      return 'custom:' + c.id === mode;
+    });
+    return own
+      ? own.name
+      : (CURSORS.find(function (c) {
+          return c.id === mode;
+        })?.label ?? 'Themed');
+  }
+
+  /** The color or gradient of the own bubbles, for the preview. */
+  private computeOwnBubble(): string {
+    const grad = this.ownGradient();
+    return grad ? gradientCss(grad) : this.s.bubbleOwn() || this.accentHex();
+  }
+
+  /** The accent color as #rrggbb (the custom one or the one of the chosen name). */
+  protected accentHex(): string {
+    return this.s.accent() === 'custom'
+      ? this.s.customAccent()
+      : (ACCENTS.find(
+          function (
+            this: AppearanceSectionComponent,
+            a: { id: AccentId; label: string; color: string },
+          ) {
+            return a.id === this.s.accent();
+          }.bind(this),
+        )?.color ?? '#2ef2b0');
+  }
+
+  /** CSS `url(...)` of a cursor shape for the previews (animated when animation is on). */
+  /** The cursor previews already drawn (they are the same until the accent color changes). */
+  private readonly previewCache = new Map<string, string>();
+
+  /** The picture of a cursor for the previews of the cards (made once per family, state and color). */
+  protected previewUrl(name: string, mode: CursorMode): string | null {
+    if (mode === 'system') return null;
+    const own = this.s.customCursors().find(function (c) {
+      return 'custom:' + c.id === mode;
+    });
+    if (own) return `url("${own.data}")`;
+    const family = FAMILIES.includes(mode) ? mode : 'classic';
+    const key = family + '|' + name + '|' + this.accentHex();
+    let url = this.previewCache.get(key);
+    if (!url) {
+      url = `url("data:image/svg+xml,${encodeURIComponent(svgCursor(family, name, this.accentHex(), 32, false))}")`;
+      this.previewCache.set(key, url);
+    }
+    return url;
+  }
+
+  /** Sets how messages are drawn: bubbles or a flat list. */
+  protected setChat(v: string): void {
+    this.s.chatStyle.set(v as 'bubbles' | 'flat');
+  }
+  /** Sets how the background changes: when the page loads or every few minutes. */
+  protected setShuffle(v: string): void {
+    this.s.bgShuffleMode.set(v === 'interval' ? 'interval' : 'reload');
+  }
+  /** Sets how fast the animated background moves. */
+  protected setMotion(v: string): void {
+    this.s.bgMotion.set(v as 'lively' | 'normal' | 'calm' | 'off');
+  }
+
+  /** The gradient of the own bubbles, or null when they are one color. */
+  protected readonly ownGradient = computed(
+    function (this: AppearanceSectionComponent) {
+      const grad = parseMulti(this.s.bubbleOwnGrad());
+      if (grad) {
+        return { angle: grad.angle, stops: grad.stops };
+      }
+      const second = this.s.bubbleOwnTo();
+      if (second) {
+        return {
+          angle: 135,
+          stops: [
+            { color: this.s.bubbleOwn() || this.accentHex(), pos: 0 },
+            { color: second, pos: 100 },
+          ],
+        };
+      }
+      return null;
+    }.bind(this),
+  );
+
+  /** Turns the gradient of the own bubbles on or off. */
+  protected toggleOwnGradient(active: boolean): void {
+    this.s.bubbleOwnTo.set('');
+    if (!active) {
+      this.s.bubbleOwnGrad.set('');
+      return;
+    }
+    const first = this.s.bubbleOwn() || this.accentHex();
+    this.s.bubbleOwnGrad.set(
+      encodeMulti(135, 100, [
+        { color: first, pos: 0 },
+        { color: '#818cf8', pos: 100 },
+      ]),
+    );
+  }
+
+  /** A change in the controls of the gradient of the own bubbles. */
+  protected changeOwnGradient(change: Partial<GradientParts>): void {
+    const current = this.ownGradient();
+    if (!current) {
+      return;
+    }
+    const next = { ...current, ...change };
+    this.s.bubbleOwnTo.set('');
+    this.s.bubbleOwnGrad.set(encodeMulti(next.angle, 100, next.stops));
+  }
+
+  /** Goes back to the colors of the bubbles that follow the accent. */
+  protected resetBubbles(): void {
+    this.s.bubbleOwn.set('');
+    this.s.bubbleOwnTo.set('');
+    this.s.bubbleOwnGrad.set('');
+    this.s.bubbleOther.set('');
+  }
+
+  /** Uploads a cursor file (.cur, .ani, PNG, GIF, WebP), converts it and adds it to the list with an editable name. */
+  protected async uploadCursor(): Promise<void> {
+    const file = await this.images.pickFile(
+      'image/png,image/gif,image/webp,image/svg+xml,image/jpeg,.cur,.ani,.ico',
+    );
+    if (!file) return;
+    try {
+      const parsed = await readCursorFile(file);
+      const data = parsed.kind === 'image' ? await cursorImageToDataUrl(file) : parsed.data;
+      const created: CustomCursor = {
+        id: crypto.randomUUID(),
+        name: file.name.replace(/\.[^.]+$/, '').slice(0, 24) || this.i18n.t('My cursor'),
+        data,
+        kind: parsed.kind,
+        frames: parsed.frames,
+        point: 'center',
+        hot: parsed.hot,
+        width: parsed.width,
+        height: parsed.height,
+      };
+      this.s.customCursors.update(function (list) {
+        return [...list, created];
+      });
+      this.s.cursor.set('custom:' + created.id);
+    } catch (e) {
+      this.toast.error(
+        this.i18n.t('That image could not be read'),
+        this.i18n.t(e instanceof Error ? e.message : 'Unknown error'),
+      );
+    }
+  }
+
+  /** Renames an uploaded cursor (up to 24 letters). */
+  protected renameCursor(id: string, name: string): void {
+    const clean = name.trim().slice(0, 24);
+    if (!clean) return;
+    this.changeCursor(id, { name: clean });
+  }
+
+  /** Says whether the point of an uploaded cursor is its center or its corner. */
+  protected setClickPoint(id: string, point: string): void {
+    this.changeCursor(id, { point: point === 'corner' ? 'corner' : 'center' });
+  }
+
+  /** Changes part of an uploaded cursor. */
+  private changeCursor(id: string, change: Partial<CustomCursor>): void {
+    this.s.customCursors.update(function (list) {
+      return list.map(function (c) {
+        return c.id === id ? { ...c, ...change } : c;
+      });
+    });
+  }
+
+  /** Deletes an uploaded cursor. */
+  protected removeCursor(id: string): void {
+    this.s.customCursors.update(function (list) {
+      return list.filter(function (c) {
+        return c.id !== id;
+      });
+    });
+    if (this.s.cursor() === 'custom:' + id) this.s.cursor.set('classic');
+  }
+
+  /** Uses the uploaded font, or asks for the file first when there is none. */
+  protected async chooseCustomFont(): Promise<void> {
+    if (this.s.customFontName()) {
+      this.s.font.set('custom');
+      return;
+    }
+    try {
+      await this.fontFiles.upload('ui');
+      if (this.s.customFontName()) {
+        this.s.font.set('custom');
+      }
+    } catch (e) {
+      this.toast.error(
+        this.i18n.t('Could not load the font'),
+        this.i18n.t(e instanceof Error ? e.message : 'Unknown error'),
+      );
+    }
+  }
+
+  /** Deletes the uploaded font. */
+  protected async removeCustomFont(event: Event): Promise<void> {
+    event.stopPropagation();
+    await this.fontFiles.remove('ui');
+  }
+
+  protected readonly wallpaper = inject(WallpaperStore);
+
+  /** Lets the person choose a picture, a GIF or a video for the background. */
+  protected async pickWallpaper(): Promise<void> {
+    try {
+      await this.wallpaper.choose();
+      this.s.wallpaper.set('');
+    } catch (e) {
+      this.toast.error(
+        this.i18n.t('That file could not be used'),
+        this.i18n.t(e instanceof Error ? e.message : 'Unknown error'),
+      );
+    }
+  }
+
+  /** Removes the wallpaper. */
+  protected async removeWallpaper(): Promise<void> {
+    await this.wallpaper.remove();
+    this.s.wallpaper.set('');
+  }
+}

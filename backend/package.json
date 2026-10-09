@@ -1,26 +1,39 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "chatterly-renewed-backend",
+  "version": "2.1.0",
+  "description": "Chatterly-Renewed backend: zero-knowledge auth, E2EE message relay and WebRTC signaling.",
+  "main": "dist/index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "webrtc",
+    "e2ee",
+    "chat",
+    "fastify"
+  ],
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.1.1",
     "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^11.2.0",
     "@fastify/websocket": "^11.2.0",
     "better-sqlite3": "^12.8.0",
     "fastify": "^5.8.4"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^6.0.2"
-  }
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.2",
+    "ws": "^8.22.0"
+  },
+  "packageManager": "pnpm@11.2.2"
 }

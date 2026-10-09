@@ -1,1 +1,3592 @@
-@import "tailwindcss";
+/* Self-hosted fonts (bundled by the build — nothing is fetched from a CDN). */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/manrope';
+
+@import 'tailwindcss';
+
+/* ───────────────────────── Design tokens ───────────────────────── */
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-mono: 'JetBrains Mono Variable', 'Cascadia Code', ui-monospace, Consolas, monospace;
+
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-violet: #a78bfa;
+  --color-violet-deep: #7c3aed;
+  --color-coral: #fb7185;
+  --color-amber: #fbbf24;
+  --color-emerald: #34d399;
+  --color-sky: #38bdf8;
+
+  --radius-ui: var(--r);
+  --radius-ui-lg: var(--r-lg);
+}
+
+:root {
+  /* theme: midnight (default) */
+  --ink-950: #07080c;
+  --ink-900: #0b0d12;
+  --ink-850: #0f1218;
+  --ink-800: #14171f;
+  --ink-700: #1a1e28;
+  --ink-600: #242937;
+  --ink-500: #313849;
+  --fg: #e8ecf4;
+  --muted: #8d95a9;
+  --dim: #5d6679;
+  --line: rgba(255, 255, 255, 0.07);
+
+  --accent: #2ef2b0;
+  --accent-ink: #03150d;
+  --accent-2: #8b5cf6;
+
+  --r: 8px;
+  --r-lg: 12px;
+  --font-ui: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-size: 14px;
+  --bg-blur: 46px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Curve for the hovers: it starts and ends slowly, without the jolt at the beginning. */
+  --ease-suave: cubic-bezier(0.4, 0, 0.2, 1);
+  color-scheme: dark;
+}
+
+[data-theme='graphite'] {
+  --ink-950: #0a0a0b;
+  --ink-900: #101011;
+  --ink-850: #151516;
+  --ink-800: #1b1b1d;
+  --ink-700: #232326;
+  --ink-600: #2d2d31;
+  --ink-500: #3a3a40;
+  --accent-2: #94a3b8;
+}
+[data-theme='amoled'] {
+  --ink-950: #000000;
+  --ink-900: #050505;
+  --ink-850: #0a0a0a;
+  --ink-800: #101010;
+  --ink-700: #171717;
+  --ink-600: #212121;
+  --ink-500: #2c2c2c;
+}
+[data-theme='dusk'] {
+  --ink-950: #0b0814;
+  --ink-900: #110c1d;
+  --ink-850: #171126;
+  --ink-800: #1e1730;
+  --ink-700: #281f3d;
+  --ink-600: #342a4e;
+  --ink-500: #443861;
+  --accent-2: #f472b6;
+}
+[data-theme='forest'] {
+  --ink-950: #060b09;
+  --ink-900: #0a110e;
+  --ink-850: #0e1713;
+  --ink-800: #131e19;
+  --ink-700: #1a2822;
+  --ink-600: #24352d;
+  --ink-500: #314540;
+  --accent-2: #38bdf8;
+}
+
+[data-theme='ocean'] {
+  --ink-950: #050b12;
+  --ink-900: #08121c;
+  --ink-850: #0c1a28;
+  --ink-800: #112336;
+  --ink-700: #182f46;
+  --ink-600: #223f5c;
+  --ink-500: #2f536f;
+  --accent-2: #38bdf8;
+}
+[data-theme='crimson'] {
+  --ink-950: #0d0607;
+  --ink-900: #150a0c;
+  --ink-850: #1c0f12;
+  --ink-800: #261418;
+  --ink-700: #331a20;
+  --ink-600: #43232b;
+  --ink-500: #5a303a;
+  --accent-2: #fb7185;
+}
+[data-theme='mocha'] {
+  --ink-950: #0c0908;
+  --ink-900: #130e0c;
+  --ink-850: #1a1411;
+  --ink-800: #231b17;
+  --ink-700: #2e231e;
+  --ink-600: #3d2f27;
+  --ink-500: #52413a;
+  --accent-2: #fbbf24;
+}
+[data-theme='nord'] {
+  --ink-950: #0c1016;
+  --ink-900: #11161e;
+  --ink-850: #161d27;
+  --ink-800: #1d2530;
+  --ink-700: #262f3c;
+  --ink-600: #323d4d;
+  --ink-500: #435064;
+  --accent-2: #88c0d0;
+}
+[data-theme='matrix'] {
+  --ink-950: #010603;
+  --ink-900: #030c06;
+  --ink-850: #05120a;
+  --ink-800: #081a0e;
+  --ink-700: #0c2515;
+  --ink-600: #12331e;
+  --ink-500: #1b472b;
+  --accent-2: #a3e635;
+}
+
+[data-theme='rose'] {
+  --ink-950: #0e070b;
+  --ink-900: #160b11;
+  --ink-850: #1d0f17;
+  --ink-800: #27141f;
+  --ink-700: #351b2a;
+  --ink-600: #472538;
+  --ink-500: #5e3249;
+  --accent-2: #fb7185;
+}
+[data-theme='tangerine'] {
+  --ink-950: #190a03;
+  --ink-900: #241006;
+  --ink-850: #2e150a;
+  --ink-800: #3d1c0d;
+  --ink-700: #55280f;
+  --ink-600: #70361a;
+  --ink-500: #934d27;
+  --accent-2: #fb923c;
+}
+[data-theme='abyss'] {
+  --ink-950: #04100f;
+  --ink-900: #071917;
+  --ink-850: #0a211f;
+  --ink-800: #0e2b28;
+  --ink-700: #143a36;
+  --ink-600: #1c4b46;
+  --ink-500: #276059;
+  --accent-2: #2dd4bf;
+}
+[data-theme='plum'] {
+  --ink-950: #0b0612;
+  --ink-900: #120a1c;
+  --ink-850: #190e26;
+  --ink-800: #221433;
+  --ink-700: #2e1c45;
+  --ink-600: #3d265c;
+  --ink-500: #53357c;
+  --accent-2: #c084fc;
+}
+
+[data-accent='violet'] {
+  --accent: #b794f6;
+  --accent-ink: #12061f;
+  --accent-2: #38bdf8;
+}
+[data-accent='coral'] {
+  --accent: #ff8a7a;
+  --accent-ink: #220804;
+  --accent-2: #fbbf24;
+}
+[data-accent='quantum'] {
+  --accent: #38e8ff;
+  --accent-ink: #021318;
+  --accent-2: #2ef2b0;
+}
+[data-accent='obsidian'] {
+  --accent: #d9dde8;
+  --accent-ink: #0b0d12;
+  --accent-2: #8d95a9;
+}
+[data-accent='rose'] {
+  --accent: #fb6f9a;
+  --accent-ink: #230613;
+  --accent-2: #a78bfa;
+}
+[data-accent='amber'] {
+  --accent: #fbbf24;
+  --accent-ink: #1f1502;
+  --accent-2: #fb7185;
+}
+[data-accent='lime'] {
+  --accent: #a3e635;
+  --accent-ink: #101c02;
+  --accent-2: #2ef2b0;
+}
+[data-accent='indigo'] {
+  --accent: #818cf8;
+  --accent-ink: #0b0d28;
+  --accent-2: #f472b6;
+}
+
+[data-font='outfit'] {
+  --font-ui: 'Outfit Variable', 'Inter Variable', system-ui, sans-serif;
+}
+[data-font='space'] {
+  --font-ui: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+}
+[data-font='mono'] {
+  --font-ui: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+}
+[data-font='manrope'] {
+  --font-ui: 'Manrope Variable', 'Inter Variable', system-ui, sans-serif;
+}
+[data-font='nunito'] {
+  --font-ui: 'Nunito Variable', 'Inter Variable', system-ui, sans-serif;
+}
+[data-font='lora'] {
+  --font-ui: 'Lora Variable', Georgia, serif;
+}
+[data-font='custom'] {
+  --font-ui: 'Chatterly Custom UI', 'Inter Variable', system-ui, sans-serif;
+}
+[data-font='system'] {
+  --font-ui: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Backdrop blur over an animated background re-renders every frame and made menus stutter: it is off everywhere. */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ───────────────────────── Base ───────────────────────── */
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+/* Flags as pictures where the system has none (Windows draws two letters): Twemoji flags, only for flag characters. */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  src: url('/fonts/TwemojiCountryFlags.woff2') format('woff2');
+  unicode-range:
+    U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074,
+    U+E0077, U+E007F;
+  font-display: swap;
+}
+html.flag-polyfill {
+  --flag-font: 'Twemoji Country Flags';
+}
+body {
+  margin: 0;
+  background: var(--ink-950);
+  color: var(--fg);
+  font-family:
+    var(--flag-font,) var(--font-ui),
+    'Noto Color Emoji',
+    sans-serif;
+  font-size: var(--font-size);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+button {
+  font: inherit;
+}
+input,
+textarea,
+select {
+  font: inherit;
+}
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 80%, white);
+  outline-offset: 2px;
+}
+textarea:focus-visible,
+input:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  cursor: var(--cur-default, auto);
+}
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-corner {
+  cursor: var(--cur-default, auto);
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* Everything interactive eases in and out — hovers never "snap". */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+label,
+[role='button'],
+[role='switch'],
+[role='link'],
+[class*='hover:'],
+.nav-item,
+.btn {
+  transition:
+    background-color 0.34s var(--ease-suave),
+    color 0.34s var(--ease-suave),
+    border-color 0.34s var(--ease-suave),
+    box-shadow 0.38s var(--ease-suave),
+    opacity 0.34s var(--ease-suave),
+    transform 0.34s var(--ease-suave),
+    filter 0.34s var(--ease-suave);
+}
+
+/* ───────────────────────── Themed cursors (set from JS, see CursorService) ───────────────────────── */
+html {
+  cursor: var(--cur-default, auto);
+}
+a[href],
+button,
+[role='button'],
+[role='link'],
+[role='switch'],
+[role='tab'],
+[role='menuitem'],
+[role='option'],
+[role='checkbox'],
+[role='radio'],
+[role='slider'],
+[tabindex='0']:not(input, textarea, select, [contenteditable='true']),
+label:has(input[type='checkbox'], input[type='radio'], input[type='file']),
+select,
+summary,
+label[for],
+.clickable,
+.nav-item,
+.choice-card,
+.ring-card,
+.seg-tab,
+.friend-act,
+.menu-card,
+.chan-item,
+.emoji-cell,
+.msg-name,
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'],
+input[type='file'],
+input[type='color'] {
+  cursor: var(--cur-pointer, pointer);
+}
+input:not(
+  [type='checkbox'],
+  [type='radio'],
+  [type='range'],
+  [type='file'],
+  [type='color'],
+  [type='button'],
+  [type='submit']
+),
+textarea,
+[contenteditable='true'],
+.selectable {
+  cursor: var(--cur-text, text);
+}
+button:disabled,
+[disabled],
+.is-disabled {
+  cursor: var(--cur-forbidden, not-allowed);
+}
+.cursor-pointer {
+  cursor: var(--cur-pointer, pointer);
+}
+.cursor-default {
+  cursor: var(--cur-default, default);
+}
+.cursor-text {
+  cursor: var(--cur-text, text);
+}
+.cursor-not-allowed {
+  cursor: var(--cur-forbidden, not-allowed);
+}
+.cursor-grab {
+  cursor: var(--cur-grab, grab);
+}
+.cursor-grabbing,
+.cursor-grab:active {
+  cursor: var(--cur-grabbing, grabbing);
+}
+.cursor-zoom-in {
+  cursor: var(--cur-zoom, zoom-in);
+}
+.cursor-zoom-out {
+  cursor: var(--cur-zoom, zoom-out);
+}
+.cursor-help {
+  cursor: var(--cur-help, help);
+}
+.cursor-wait {
+  cursor: var(--cur-wait, wait);
+}
+.cursor-move {
+  cursor: var(--cur-move, move);
+}
+.cursor-crosshair {
+  cursor: var(--cur-crosshair, crosshair);
+}
+.cursor-ew-resize {
+  cursor: var(--cur-resize-h, ew-resize);
+}
+.cursor-ns-resize {
+  cursor: var(--cur-resize-v, ns-resize);
+}
+body.is-busy,
+body.is-busy * {
+  cursor: var(--cur-wait, progress) !important;
+}
+
+/* ───────────────────────── Components ───────────────────────── */
+@layer components {
+  .panel {
+    background: color-mix(in oklab, var(--ink-850) 92%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 30px -16px rgba(0, 0, 0, 0.6);
+  }
+  .panel-flat {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+  }
+  /* the big blocks of the interface let the animated background show through */
+  .surface,
+  .panel-glass {
+    background: color-mix(in oklab, var(--ink-900) var(--glass, 64%), transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+    backdrop-filter: blur(14px) saturate(1.25);
+  }
+  .panel-glass {
+    background: color-mix(in oklab, var(--ink-850) var(--glass, 64%), transparent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.95rem;
+    border-radius: var(--r);
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--fg);
+    white-space: nowrap;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .btn:active {
+    transform: scale(0.96);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    filter: brightness(1.1);
+    box-shadow: 0 6px 22px -8px var(--accent);
+  }
+  .btn-primary:active {
+    transform: translateY(0) scale(0.97);
+  }
+  .btn-danger {
+    background: #dc2626;
+    color: #fff;
+  }
+  .btn-danger:hover {
+    background: #ef4444;
+    box-shadow: 0 6px 22px -8px #ef4444;
+  }
+  .btn-soft-accent {
+    background: color-mix(in oklab, var(--accent) 13%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 38%, transparent);
+    color: var(--accent);
+  }
+  .btn-soft-accent:hover {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  }
+  .btn-soft-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+  }
+  .btn-soft-danger:hover {
+    background: rgba(239, 68, 68, 0.24);
+  }
+  .btn-ghost {
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+  .btn-sm {
+    height: 1.9rem;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+  }
+  .btn-icon {
+    width: 2.25rem;
+    padding: 0;
+  }
+  /* a closed section of the Spinly window that opens smoothly */
+  .fold {
+    overflow: hidden;
+    border-radius: var(--r);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .fold-head {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    text-align: left;
+    transition: background-color 0.25s var(--ease-suave);
+  }
+  .fold-head:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .fold-chevron {
+    transition: transform 0.3s var(--ease-suave);
+  }
+  .fold.is-open .fold-chevron {
+    transform: rotate(180deg);
+  }
+  .fold-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s var(--ease-suave);
+  }
+  .fold.is-open .fold-body {
+    grid-template-rows: 1fr;
+  }
+  .fold-body > div {
+    overflow: hidden;
+    min-height: 0;
+  }
+  /* theme cards of the Spinly window: a strip of the theme's colors and its name */
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.4rem;
+    border-radius: calc(var(--r) * 0.5);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: left;
+    transition:
+      border-color 0.3s var(--ease-suave),
+      background-color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      color 0.3s var(--ease-suave);
+  }
+  .theme-card:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--fg);
+  }
+  .theme-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+  .theme-strip {
+    display: flex;
+    height: 0.9rem;
+    overflow: hidden;
+    border-radius: calc(var(--r) * 0.3);
+  }
+  .theme-strip > span {
+    flex: 1;
+  }
+  /* tabs of the friends page: a pill with a tinted active tab */
+  .seg-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 2rem;
+    padding: 0 0.9rem;
+    border-radius: calc(var(--r) * 0.75);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition:
+      background-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.25s var(--ease);
+  }
+  .seg-tab:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .seg-tab:active {
+    transform: scale(0.96);
+  }
+  .seg-tab.is-on {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+  /* search box and cards of the friends page */
+  .friend-search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2.6rem;
+    padding: 0 0.4rem;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    transition:
+      border-color 0.3s var(--ease-suave),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .friend-search:focus-within {
+    border-bottom-color: var(--accent);
+    box-shadow: 0 1px 0 0 var(--accent);
+  }
+  /* a small title for a list: the name, a count in a pill and a hairline that fills the rest of the row */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.5rem;
+    padding: 0 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .count-pill {
+    min-width: 1.5rem;
+    padding: 0.08rem 0.5rem;
+    border-radius: calc(var(--r) * 0.35);
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-align: center;
+    letter-spacing: 0;
+  }
+  /* items of a list in a side bar breathe a little */
+  section > .nav-item + .nav-item {
+    margin-top: 0.25rem;
+  }
+  /* the two cards of the pending page */
+  .pending-card {
+    overflow: hidden;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.18);
+  }
+  .pending-head {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+  .pending-icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--r) * 0.8);
+  }
+  .pending-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 2.4rem 1.2rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .pending-empty b {
+    font-size: 0.9rem;
+    color: var(--fg);
+  }
+  .pending-empty-icon {
+    display: inline-flex;
+    width: 3.2rem;
+    height: 3.2rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--dim);
+  }
+  .friend-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .friend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    border-top: 1px solid var(--line);
+    border-radius: var(--r);
+    transition:
+      background-color 0.25s var(--ease-suave),
+      border-color 0.25s var(--ease-suave),
+      transform 0.3s var(--ease);
+  }
+  .friend-row:first-child {
+    border-top-color: transparent;
+  }
+  .friend-row {
+    background: rgba(0, 0, 0, 0.2);
+    border-top-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+    margin-bottom: 0.35rem;
+  }
+  .friend-row:hover,
+  .friend-row:focus-within {
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+    border-top-color: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .friend-row:active {
+    background: color-mix(in oklab, var(--accent) 13%, transparent);
+    transform: scale(0.995);
+  }
+  .friend-row:hover + .friend-row {
+    border-top-color: transparent;
+  }
+  .friend-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .friend-act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: calc(var(--r) * 0.7);
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--fg);
+    transition:
+      background-color 0.25s var(--ease-suave),
+      color 0.25s var(--ease-suave),
+      transform 0.25s var(--ease);
+  }
+  .friend-act:hover {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+  .friend-act-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+  .friend-act-ok {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    color: var(--accent);
+  }
+  .friend-act-ok:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  /* tabs of the friends page: pills that lift on hover and fill with the accent when chosen */
+  .friend-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .friend-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.4rem;
+    padding: 0 0.55rem 0 0.95rem;
+    border-radius: calc(var(--r) * 0.6);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition:
+      background-color 0.3s var(--ease-suave),
+      border-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .friend-tab:hover {
+    color: var(--fg);
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  .friend-tab:active {
+    transform: scale(0.97);
+  }
+  .friend-tab.is-on {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 8px 22px -12px var(--accent);
+  }
+  .friend-tab-count {
+    min-width: 1.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: calc(var(--r) * 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-align: center;
+    transition: background-color 0.3s var(--ease-suave);
+  }
+  .friend-tab.is-on .friend-tab-count {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+  @media (max-width: 480px) {
+    .friend-tabs {
+      flex-wrap: nowrap;
+      gap: 0.35rem;
+    }
+    .friend-tab {
+      flex: 1;
+      justify-content: center;
+      padding: 0 0.45rem;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+    }
+    .friend-tab > app-icon {
+      display: none;
+    }
+  }
+  .friend-tab-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+  }
+  .lang-card {
+    align-items: center;
+    text-align: center;
+    gap: 0.3rem;
+    padding: 1.2rem 0.8rem;
+  }
+  .lang-flag {
+    font-size: 2.2rem;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+    transition: transform 0.35s var(--ease);
+  }
+  .lang-card:hover .lang-flag {
+    transform: translateY(-4px) scale(1.14);
+    filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
+  }
+  .lang-flag {
+    transition:
+      transform 0.35s var(--ease),
+      filter 0.35s var(--ease);
+  }
+  /* corner style slider: tick marks that fill up to the thumb and the names of the old styles as guides */
+  .corner-guide {
+    position: relative;
+    height: 1.2rem;
+    margin: 6px 6px 0;
+  }
+  .corner-guide-name {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    color: var(--dim);
+    transition: color 0.3s var(--ease-suave);
+    white-space: nowrap;
+  }
+  .corner-guide-name.is-on {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  /* selectable option cards (fonts...): lift on hover, accent when chosen */
+  .choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 4rem;
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+    border-radius: var(--r);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      transform 0.3s var(--ease),
+      border-color 0.3s var(--ease-suave),
+      background-color 0.3s var(--ease-suave),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .choice-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .choice-card:active {
+    transform: scale(0.97);
+  }
+  .choice-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    box-shadow: 0 8px 24px -14px var(--accent);
+  }
+  .choice-card.is-dashed {
+    border-style: dashed;
+  }
+  /* option cards with an emoji, a title and a hint (ringtones): lift on hover, accent when chosen */
+  .ring-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    padding: 0.8rem;
+    text-align: left;
+    border-radius: var(--r);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      transform 0.3s var(--ease),
+      border-color 0.3s var(--ease-suave),
+      background-color 0.3s var(--ease-suave),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .ring-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .ring-card:active {
+    transform: scale(0.97);
+  }
+  /* the 16:9 player of a shared video, as big as the tile allows without cropping */
+  .player-box {
+    container-type: size;
+  }
+  .player-frame {
+    width: min(100cqw, 100cqh * 16 / 9);
+    height: min(100cqh, 100cqw * 9 / 16);
+  }
+  .timeline input[type='range'] {
+    accent-color: var(--accent);
+    height: 1rem;
+    cursor: pointer;
+  }
+  /* the player of shared music: invisible and out of the way (Spotify keeps its small one) */
+  .music-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 200px;
+    height: 113px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .music-frame.is-spotify {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: 80px;
+    border: 0;
+    border-radius: calc(var(--r) * 0.6);
+  }
+  .ring-bars.is-paused i {
+    animation-play-state: paused;
+    transform: scaleY(0.25);
+  }
+  .ring-card.is-playing {
+    border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  }
+  /* four bars that dance while a ringtone plays */
+  .ring-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 1rem;
+  }
+  .ring-bars i {
+    width: 3px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform-origin: bottom;
+    animation: ring-dance 0.8s ease-in-out infinite;
+  }
+  .ring-bars i:nth-child(2) {
+    animation-delay: -0.2s;
+  }
+  .ring-bars i:nth-child(3) {
+    animation-delay: -0.45s;
+  }
+  .ring-bars i:nth-child(4) {
+    animation-delay: -0.1s;
+  }
+  @keyframes ring-dance {
+    0%,
+    100% {
+      transform: scaleY(0.25);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  .ring-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    box-shadow: 0 8px 24px -14px var(--accent);
+  }
+  /* the three buttons under the user panel: accent tint, small lift and a soft press */
+  .dock-btn {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    transition:
+      background-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .dock-btn:hover {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+    box-shadow: 0 8px 18px -10px var(--accent);
+  }
+  .dock-btn:active {
+    transform: translateY(0) scale(0.95);
+  }
+  .dock-btn.btn-soft-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+  }
+  .dock-btn.btn-soft-danger:hover {
+    background: rgba(239, 68, 68, 0.24);
+    color: #fecaca;
+    box-shadow: 0 8px 18px -10px #ef4444;
+  }
+  .btn-icon.btn-sm {
+    width: 1.9rem;
+  }
+  .btn-active {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+
+  .input {
+    width: 100%;
+    height: 2.5rem;
+    padding: 0 0.85rem;
+    border-radius: var(--r);
+    color: var(--fg);
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--line);
+    outline: none;
+  }
+  .input::placeholder {
+    color: var(--dim);
+  }
+  .input:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .input:focus {
+    border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent);
+    background: rgba(0, 0, 0, 0.38);
+  }
+  textarea.input {
+    height: auto;
+    padding: 0.6rem 0.85rem;
+    resize: none;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: calc(var(--r) * 0.6);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .chip-accent {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+  .chip-violet {
+    background: rgba(124, 58, 237, 0.2);
+    color: #c4b5fd;
+  }
+  .chip-red {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+  }
+  .chip-amber {
+    background: rgba(251, 191, 36, 0.14);
+    color: #fcd34d;
+  }
+
+  .label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* sidebar rows: calm hover, soft active state, accent bar that grows in */
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--r);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-align: left;
+  }
+  .nav-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    width: 3px;
+    height: 60%;
+    border-radius: 3px;
+    background: var(--accent);
+    transform: translateY(-50%) scaleY(0);
+    opacity: 0;
+    transition:
+      transform 0.3s var(--ease),
+      opacity 0.2s var(--ease);
+  }
+  .nav-sep {
+    display: block;
+    height: 1px;
+    margin: 0.35rem 0.6rem;
+    background: var(--line);
+  }
+  .nav-tile {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--r) * 0.8);
+    transition:
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  /* hover: the tile lifts, glows in its own color and a band of light sweeps across it */
+  .nav-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 70%
+    );
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
+  .nav-item:hover .nav-tile {
+    box-shadow: 0 0 0 1px color-mix(in oklab, currentColor 35%, transparent);
+  }
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--fg);
+  }
+  .nav-item:active {
+    background: rgba(255, 255, 255, 0.09);
+  }
+  .nav-item.active {
+    background: color-mix(in oklab, var(--accent) 11%, transparent);
+    color: var(--fg);
+  }
+  .nav-item.active::before {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+  }
+  .nav-item .nav-icon {
+    color: var(--dim);
+    transition:
+      color 0.22s var(--ease),
+      transform 0.3s var(--ease);
+  }
+  .nav-item:hover .nav-icon {
+    color: var(--fg);
+  }
+  .nav-item.active .nav-icon {
+    color: var(--accent);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .badge-red {
+    background: #ef4444;
+    color: #fff;
+  }
+  /* Chat bubbles are defined with variables (--bi-* received, --bo-* sent) that change with the chosen style. */
+  .bubble-in {
+    background: var(--bi-bg, var(--bubble-other, rgba(255, 255, 255, 0.06)));
+    color: var(--bi-ink, var(--bubble-other-ink, inherit));
+    border-radius: var(--bi-r);
+    border: var(--bi-border, 0);
+    box-shadow: var(--bi-shadow, none);
+  }
+  .bubble-out {
+    background: var(--bo-bg, var(--bubble-own, var(--accent)));
+    color: var(--bo-ink, var(--bubble-own-ink, var(--accent-ink)));
+    border-radius: var(--bo-r);
+    border: var(--bo-border, 0);
+    box-shadow: var(--bo-shadow, none);
+  }
+  .code-block {
+    background: #07090d;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  /* tooltip: <button class="tip" data-tip="Label" data-tip-pos="right"> is drawn by TooltipService outside the interface */
+  .tip {
+    position: relative;
+  }
+}
+
+.app-tooltip {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  max-width: 18rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: calc(var(--r) * 0.8);
+  background: var(--ink-600);
+  color: var(--fg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+.app-tooltip.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ───────────────────────── Avatars & auras ───────────────────────── */
+.aura {
+  position: relative;
+  border-radius: 50%;
+  --c1: var(--a1, var(--accent));
+  --c2: var(--a2, var(--accent-2));
+}
+.aura::before,
+.aura::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.aura::before {
+  inset: calc(var(--ring, 6px) * -1);
+  z-index: 0;
+  background: conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1));
+  animation: spin 6s linear infinite;
+}
+/* Pulse: a breathing ring with a ripple that fades outwards */
+.aura-pulse::before {
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  animation: aura-breathe 2.6s ease-in-out infinite;
+}
+.aura-pulse::after {
+  inset: calc(var(--ring, 6px) * -1);
+  border: 2px solid var(--c1);
+  animation: aura-ripple 2.6s ease-out infinite;
+}
+/* Orbit: a thin ring with two small lights circling around the picture */
+.aura-orbit::before {
+  inset: calc(var(--ring, 6px) * -0.833);
+  background: none;
+  border: 2px solid color-mix(in oklab, var(--c1) 40%, transparent);
+  animation: none;
+}
+.aura-orbit::after {
+  inset: calc(var(--ring, 6px) * -1.5);
+  z-index: 2;
+  background:
+    radial-gradient(circle at 50% 3%, var(--c1) 0 3.2px, transparent 3.6px),
+    radial-gradient(circle at 50% 97%, var(--c2) 0 3.2px, transparent 3.6px);
+  filter: drop-shadow(0 0 4px var(--c1));
+  animation: spin 4.5s linear infinite;
+}
+/* Dashed: long dashes that turn slowly */
+.aura-dashed::before {
+  inset: calc(var(--ring, 6px) * -1);
+  background: repeating-conic-gradient(from 0deg, var(--c1) 0 22deg, transparent 22deg 40deg);
+  animation: spin 16s linear infinite;
+}
+/* Double: two thin rings turning in opposite directions */
+.aura-double::before {
+  inset: calc(var(--ring, 6px) * -1.333);
+  background: conic-gradient(
+    from 0deg,
+    var(--c1),
+    transparent 45%,
+    var(--c1) 55%,
+    transparent 95%,
+    var(--c1)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: spin 5s linear infinite;
+}
+.aura-double::after {
+  inset: calc(var(--ring, 6px) * -0.667);
+  z-index: 0;
+  background: conic-gradient(
+    from 90deg,
+    var(--c2),
+    transparent 40%,
+    var(--c2) 60%,
+    transparent 90%,
+    var(--c2)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: spin 7s linear infinite reverse;
+}
+/* Glow: a steady soft light that flickers a little, like a neon sign */
+.aura-glow::before {
+  inset: calc(var(--ring, 6px) * -0.667);
+  background: var(--c1);
+  box-shadow:
+    0 0 10px var(--c1),
+    0 0 24px var(--c2);
+  animation: aura-flicker 3.4s ease-in-out infinite;
+}
+/* Ticks: fine marks around the picture, like a dial */
+.aura-ticks::before {
+  inset: calc(var(--ring, 6px) * -1.167);
+  background: repeating-conic-gradient(from 0deg, var(--c1) 0 3deg, transparent 3deg 10deg);
+  animation: spin 24s linear infinite reverse;
+}
+.aura-ticks::after {
+  inset: calc(var(--ring, 6px) * -0.667);
+  z-index: 0;
+  border: 1px solid color-mix(in oklab, var(--c2) 55%, transparent);
+}
+/* Glitch: a ring that jumps in steps */
+.aura-glitch::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--c1),
+    #0b0d12 30%,
+    var(--c2) 55%,
+    #0b0d12 80%,
+    var(--c1)
+  );
+  animation: spin 2.4s steps(24) infinite;
+}
+/* Rainbow: all colors, turning and shifting */
+.aura-rainbow::before {
+  background: conic-gradient(
+    from 0deg,
+    #f43f5e,
+    #f59e0b,
+    #84cc16,
+    #06b6d4,
+    #6366f1,
+    #d946ef,
+    #f43f5e
+  );
+  animation:
+    spin 3.5s linear infinite,
+    aura-hue 6s linear infinite;
+}
+.aura > .aura-core {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 3px var(--ink-900);
+}
+.speaking-ring {
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--accent) 75%, transparent),
+    0 0 12px -3px var(--accent);
+  transition: box-shadow 0.2s var(--ease);
+}
+
+/* ───────────────────────── Animations ───────────────────────── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes aura-breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+@keyframes aura-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes aura-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  46% {
+    opacity: 0.85;
+  }
+  48% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  52% {
+    opacity: 0.7;
+  }
+}
+@keyframes aura-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+@keyframes menu-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(9vw, 7vh) scale(1.25);
+  }
+}
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-10vw, -6vh) scale(0.9);
+  }
+}
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-6vw, 9vh) scale(1.3);
+  }
+}
+@keyframes drift-d {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(7vw, -8vh) scale(1.15);
+  }
+}
+@keyframes gradient-pan {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+@keyframes ring-out {
+  from {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+@keyframes ring-shake {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30%,
+  50% {
+    transform: rotate(-14deg);
+  }
+  20%,
+  40%,
+  60% {
+    transform: rotate(14deg);
+  }
+  70% {
+    transform: rotate(0);
+  }
+}
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+@keyframes wave-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) rotate(6deg) scale(0.8);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes shine {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
+}
+@keyframes stars-fall {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(var(--tile) * -1), 0);
+  }
+}
+@keyframes bubble-up {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(30px, -115vh, 0) scale(1.15);
+    opacity: 0;
+  }
+}
+@keyframes beam-sweep {
+  from {
+    transform: translate3d(-18vw, 0, 0) rotate(18deg);
+    opacity: 0.3;
+  }
+  to {
+    transform: translate3d(22vw, 0, 0) rotate(18deg);
+    opacity: 1;
+  }
+}
+
+@keyframes firefly {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.15;
+  }
+  20% {
+    opacity: 1;
+  }
+  35% {
+    transform: translate3d(var(--dx), var(--dy), 0);
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.2;
+  }
+  70% {
+    transform: translate3d(calc(var(--dx) * -0.7), calc(var(--dy) * 0.6), 0);
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.3;
+  }
+}
+@keyframes rain-fall {
+  from {
+    transform: translate3d(0, -20vh, 0) rotate(12deg);
+  }
+  to {
+    transform: translate3d(-12vh, 125vh, 0) rotate(12deg);
+  }
+}
+@keyframes snow-fall {
+  from {
+    transform: translate3d(0, -6vh, 0);
+  }
+  to {
+    transform: translate3d(var(--sway), 112vh, 0);
+  }
+}
+@keyframes grid-run {
+  from {
+    transform: rotateX(62deg) translateY(0);
+  }
+  to {
+    transform: rotateX(62deg) translateY(70px);
+  }
+}
+@keyframes curtain-sway {
+  from {
+    transform: translateX(-4vw) skewX(-6deg) scaleY(0.85);
+  }
+  to {
+    transform: translateX(5vw) skewX(7deg) scaleY(1.1);
+  }
+}
+@keyframes cloud-spin {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.12);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+@keyframes meteor {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(32deg);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  14% {
+    transform: translate3d(34vw, 22vw, 0) rotate(32deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(34vw, 22vw, 0) rotate(32deg);
+    opacity: 0;
+  }
+}
+@keyframes fog-drift {
+  from {
+    transform: translate3d(-9%, 0, 0);
+  }
+  to {
+    transform: translate3d(9%, 3%, 0);
+  }
+}
+
+@keyframes wave-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-14px);
+  }
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.45s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+.anim-fade-in {
+  animation: fade-in 0.35s ease both;
+  animation-delay: var(--d, 0ms);
+}
+.menu-down {
+  transform-origin: top center;
+  animation: menu-down 0.24s var(--ease) both;
+}
+.menu-up {
+  transform-origin: bottom left;
+  animation: menu-up 0.24s var(--ease) both;
+}
+.anim-pop {
+  animation: pop-in 0.32s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+.anim-slide-right {
+  animation: slide-right 0.4s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+.anim-slide-left {
+  animation: slide-left 0.35s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+.anim-shake {
+  animation: shake 0.4s ease;
+}
+.page-enter {
+  animation: fade-up 0.4s var(--ease) both;
+}
+.eq-bar {
+  transform-origin: bottom;
+  animation: eq 1s ease-in-out infinite;
+  animation-delay: var(--d, 0ms);
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.gradient-pan {
+  background-size: 220% 220%;
+  animation: gradient-pan 16s ease infinite;
+}
+.ring-shake {
+  animation: ring-shake 1.4s ease-in-out infinite;
+  transform-origin: 50% 20%;
+}
+.typing-dot {
+  animation: typing-dot 1s ease-in-out infinite;
+  animation-delay: var(--d, 0ms);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* profile name fonts (also used in chat) */
+.font-name-display {
+  font-family: 'Outfit Variable', var(--font-ui), sans-serif;
+  letter-spacing: -0.01em;
+}
+.font-name-serif {
+  font-family: 'Lora Variable', Georgia, serif;
+  font-style: italic;
+}
+.font-name-custom {
+  font-family: 'Chatterly Custom Name', var(--font-ui), sans-serif;
+}
+.font-name-mono {
+  font-family: var(--font-mono);
+}
+.font-name-script {
+  font-family: 'Pacifico', cursive;
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+/* "Quick": the interface still animates, but briefly. */
+[data-motion='quick'] :not(.scene, .scene *) {
+  transition-duration: 0.12s !important;
+}
+[data-motion='quick'] [class*='anim-'] {
+  animation-duration: 0.16s !important;
+}
+/* A still background: its scenes stop where they are (the rest of the interface keeps its animations). */
+[data-bg='still'] .scene,
+[data-bg='still'] .scene * {
+  animation-play-state: paused !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* The tiles of a call: each one sits in the box the layout gives it and glides there when the layout changes. */
+.call-tile {
+  position: absolute;
+  transition:
+    left 0.45s var(--ease),
+    top 0.45s var(--ease),
+    width 0.45s var(--ease),
+    height 0.45s var(--ease),
+    opacity 0.3s var(--ease-suave);
+}
+.is-resizing .call-tile {
+  transition: opacity 0.3s var(--ease-suave);
+}
+.call-tile.is-focus {
+  z-index: 1;
+}
+/* full screen of the stage: the big tile fills it and the others float over it */
+.stage-host:fullscreen {
+  background: #05060a;
+}
+.call-tile.is-floating {
+  z-index: 5;
+  cursor: var(--cur-grab, grab);
+  touch-action: none;
+  border-radius: var(--r-lg, 14px);
+  box-shadow:
+    0 10px 30px -8px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.call-tile.is-dragging {
+  transition: opacity 0.3s var(--ease-suave);
+  cursor: var(--cur-grabbing, grabbing);
+}
+.float-handle {
+  position: absolute;
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-suave);
+}
+.call-tile.is-floating:hover .float-handle,
+.call-tile.is-dragging .float-handle {
+  opacity: 1;
+}
+.float-handle::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.float-handle[data-corner='nw'] {
+  left: -4px;
+  top: -4px;
+  cursor: var(--cur-move, move);
+}
+.float-handle[data-corner='ne'] {
+  right: -4px;
+  top: -4px;
+  cursor: var(--cur-move, move);
+}
+.float-handle[data-corner='sw'] {
+  left: -4px;
+  bottom: -4px;
+  cursor: var(--cur-move, move);
+}
+.float-handle[data-corner='se'] {
+  right: -4px;
+  bottom: -4px;
+  cursor: var(--cur-move, move);
+}
+.float-handle[data-corner='nw']::after {
+  left: 4px;
+  top: 4px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.float-handle[data-corner='ne']::after {
+  right: 4px;
+  top: 4px;
+  border-left: 0;
+  border-bottom: 0;
+}
+.float-handle[data-corner='sw']::after {
+  left: 4px;
+  bottom: 4px;
+  border-right: 0;
+  border-top: 0;
+}
+.float-handle[data-corner='se']::after {
+  right: 4px;
+  bottom: 4px;
+  border-left: 0;
+  border-top: 0;
+}
+@media (hover: none) {
+  .float-handle {
+    opacity: 1;
+    width: 28px;
+    height: 28px;
+  }
+}
+.tile-card:fullscreen {
+  border-radius: 0;
+  border: 0;
+  background: #000;
+}
+.tile-actions {
+  opacity: 0;
+  transition: opacity 0.25s var(--ease-suave);
+  z-index: 2;
+}
+.tile-card:hover .tile-actions,
+.tile-card:focus-within .tile-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .tile-actions {
+    opacity: 1;
+  }
+}
+.tile-btn {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.7);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+.tile-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+/* the state of a person in a tile: a small red icon, no words */
+.state-badge {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.7);
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  backdrop-filter: blur(6px);
+}
+/* the buttons of the call stay still: only their color changes */
+.call-bar .btn {
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave),
+    box-shadow 0.2s var(--ease-suave);
+  transform: translateZ(0);
+}
+.call-bar .btn:active {
+  transform: translateZ(0) scale(0.96);
+}
+.volume-range {
+  accent-color: var(--accent);
+  height: 1.1rem;
+}
+.volume-ticks {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0.45rem;
+  bottom: -0.1rem;
+  height: 0.4rem;
+}
+.volume-ticks span {
+  position: absolute;
+  width: 2px;
+  height: 0.35rem;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(-1px);
+}
+/* the drop-down list drawn by the page (see SelectComponent) */
+.select-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.35rem;
+  overflow-y: auto;
+  border-radius: var(--r);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ink-800, #12151d);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+  color: var(--fg);
+}
+.select-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--r) * 0.7);
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    background-color 0.15s var(--ease-suave),
+    color 0.15s var(--ease-suave);
+}
+.select-option.is-active {
+  background: rgba(255, 255, 255, 0.08);
+}
+.select-option.is-on {
+  color: var(--accent);
+}
+/* the diagnostics drawer of a call opens and closes smoothly */
+.drawer-wrap {
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 0;
+  transition: width 0.35s var(--ease);
+}
+.drawer-wrap.is-open {
+  width: 20rem;
+}
+.drawer-wrap > aside {
+  width: 20rem;
+}
+@media (max-width: 1023px) {
+  .drawer-wrap {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    z-index: 20;
+    width: min(24rem, 100%);
+    visibility: hidden;
+    transform: translateX(100%);
+    transition:
+      transform 0.35s var(--ease),
+      visibility 0s linear 0.35s;
+  }
+  .drawer-wrap.is-open {
+    width: min(24rem, 100%);
+    visibility: visible;
+    transform: none;
+    transition: transform 0.35s var(--ease);
+  }
+  .drawer-wrap > aside {
+    width: 100%;
+  }
+}
+/* the color picker */
+.picker-panel {
+  pointer-events: auto;
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 18.5rem;
+  overflow: hidden;
+  border-radius: calc(var(--r) * 1.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: color-mix(in oklab, var(--ink-800) 96%, black);
+  box-shadow:
+    0 24px 60px -16px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+  transform-origin: top left;
+}
+.picker-panel.pick-closing {
+  pointer-events: none;
+  animation: pick-out 0.16s var(--ease) forwards;
+}
+@keyframes pick-out {
+  to {
+    opacity: 0;
+    transform: scale(0.94) translateY(-4px);
+  }
+}
+.picker-bar {
+  display: flex;
+  cursor: var(--cur-grab, grab);
+  touch-action: none;
+  user-select: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.6rem 0.55rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+}
+.sv-area {
+  position: relative;
+  height: 10.5rem;
+  touch-action: none;
+  cursor: var(--cur-crosshair, crosshair);
+  overflow: hidden;
+  border-radius: calc(var(--r) * 0.9);
+}
+.hue-bar {
+  position: relative;
+  height: 0.8rem;
+  touch-action: none;
+  cursor: var(--cur-pointer, pointer);
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.picker-thumb {
+  position: absolute;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 3px 8px rgba(0, 0, 0, 0.5);
+}
+.picker-preview {
+  height: 2.25rem;
+  min-width: 0;
+  flex: 1;
+  border-radius: calc(var(--r) * 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: background-color 0.15s var(--ease-suave);
+}
+.picker-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  border-radius: calc(var(--r) * 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s var(--ease-suave);
+}
+.picker-field:focus-within {
+  border-color: var(--accent);
+}
+.picker-field > span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--dim, var(--muted));
+}
+.picker-field > input {
+  width: 100%;
+  min-width: 0;
+  height: 2.1rem;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+/* a button of the soundboard */
+.sb-tile {
+  display: flex;
+  min-height: 4.2rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.4rem;
+  border-radius: var(--r);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    border-color 0.2s var(--ease-suave),
+    box-shadow 0.35s var(--ease-suave);
+}
+.sb-tile:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.sb-tile:active {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.sb-tile.is-hit {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.sb-add {
+  border-style: dashed;
+  color: var(--muted);
+}
+/* the lit grid background */
+.grid-lines {
+  --gl: color-mix(in oklab, var(--accent) 24%, transparent);
+  background-image:
+    linear-gradient(var(--gl) 1px, transparent 1px),
+    linear-gradient(90deg, var(--gl) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+.grid-lit {
+  --gl: color-mix(in oklab, var(--accent) 85%, white);
+  mask-image: linear-gradient(115deg, transparent 38%, #000 50%, transparent 62%);
+  mask-size: 260% 100%;
+  mask-repeat: no-repeat;
+  filter: drop-shadow(0 0 3px var(--accent));
+  animation: grid-wave calc(var(--bg-speed, 1) * 9s) linear infinite;
+}
+.grid-lit-2 {
+  --gl: color-mix(in oklab, var(--accent-2) 85%, white);
+  mask-image: linear-gradient(65deg, transparent 40%, #000 50%, transparent 60%);
+  animation-duration: calc(var(--bg-speed, 1) * 14s);
+  animation-direction: reverse;
+}
+@keyframes grid-wave {
+  from {
+    mask-position: 130% 0;
+  }
+  to {
+    mask-position: -130% 0;
+  }
+}
+/* leaving animations (the element stays until they end) */
+.leave-fade {
+  animation: leave-fade 0.2s var(--ease-suave) forwards;
+}
+.leave-pop {
+  animation: leave-pop 0.18s var(--ease) forwards;
+}
+@keyframes leave-fade {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes leave-pop {
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+.popover-reset[popover]:not(:popover-open) {
+  display: none;
+}
+.popover-reset.fixed {
+  inset: 0;
+}
+
+/* Section title of the side bars: normal sentence, not tiny capitals. */
+.side-head {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--accent) 20%, transparent),
+    color-mix(in oklab, var(--accent-2) 8%, transparent) 70%,
+    transparent
+  );
+}
+.section-text {
+  color: color-mix(in oklab, var(--accent) 80%, var(--fg));
+}
+.section-voice {
+  color: color-mix(in oklab, var(--accent-2) 80%, var(--fg));
+}
+.chan-text .nav-icon {
+  color: color-mix(in oklab, var(--accent) 65%, var(--dim));
+}
+.chan-voice .nav-icon {
+  color: color-mix(in oklab, var(--accent-2) 70%, var(--dim));
+}
+.chan-voice.active::before {
+  background: var(--accent-2);
+}
+.chan-voice.active .nav-icon {
+  color: var(--accent-2);
+}
+.chan-item[draggable='true'] {
+  cursor: var(--cur-grab, grab);
+}
+.chan-item.chan-drag {
+  opacity: 0.4;
+}
+.chan-item.chan-drop {
+  box-shadow: 0 2px 0 0 var(--accent);
+}
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+/* Own animated cursor: the system one is hidden except over text fields. */
+/* While the page draws the cursor (see CursorOverlay), every element asks for a cursor STATE through --cur-*
+   variables that carry a marker; the :where() rule keeps the browser's own cursors out of the way. */
+:where(html.cursor-js *) {
+  cursor: var(--cur-default);
+}
+/* What is inside something clickable shows the cursor of the clickable thing, not the default one. */
+:where(
+  html.cursor-js a[href] *,
+  html.cursor-js button *,
+  html.cursor-js [role='button'] *,
+  html.cursor-js .clickable *,
+  html.cursor-js [draggable='true'] *
+) {
+  cursor: inherit;
+}
+html.cursor-js.cursor-native,
+html.cursor-js.cursor-native * {
+  cursor: auto !important;
+}
+.cursor-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  width: auto;
+  height: auto;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s linear;
+  will-change: transform;
+}
+.cursor-overlay .cs-in {
+  position: relative;
+  transition: transform 0.2s var(--ease);
+}
+.cursor-overlay .cs-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+.cursor-overlay .cs-layer.cs-active {
+  opacity: 1;
+}
+.cursor-overlay svg {
+  display: block;
+}
+.cursor-overlay img {
+  display: block;
+  max-width: none;
+  image-rendering: auto;
+}
+.cursor-trail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  z-index: 2147482999;
+  pointer-events: none;
+}
+/* Tailwind's important cursor utilities would bypass the themed cursors. */
+.\!cursor-pointer {
+  cursor: var(--cur-pointer, pointer) !important;
+}
+.\!cursor-default {
+  cursor: var(--cur-default, default) !important;
+}
+
+/* Settings: soft entrance and exit (the panel rises a little and brightens; on close it fades). */
+.settings-overlay {
+  animation: settings-in 0.32s var(--ease) both;
+}
+.settings-overlay.settings-out {
+  animation: settings-out 0.19s ease-in both;
+  pointer-events: none;
+}
+/* Emoji grid: the glyph is sized from the grid width (about 70% of a cell) and only the glyph grows on hover. */
+.emoji-grid {
+  container-type: inline-size;
+}
+.emoji-cell {
+  transition: background-color 0.2s var(--ease-suave);
+}
+.emoji-cell .emoji-glyph {
+  display: block;
+  font-size: clamp(22px, 9.6cqw, 44px);
+  line-height: 1;
+  transition: transform 0.2s var(--ease);
+}
+.emoji-cell:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.emoji-cell:hover .emoji-glyph {
+  transform: scale(1.14);
+}
+.emoji-cell:active .emoji-glyph {
+  transform: scale(0.94);
+}
+@keyframes settings-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes settings-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.99) translateY(6px);
+  }
+}
+
+/* Bubble styles: they apply to the whole app with data-bubble and to the previews with the bs-* classes.
+   A preview starts from clean variables, so the chosen style never leaks into the other previews. */
+.bs-preview {
+  --bi-bg: initial;
+  --bi-ink: initial;
+  --bi-border: initial;
+  --bi-shadow: initial;
+  --bo-bg: initial;
+  --bo-ink: initial;
+  --bo-border: initial;
+  --bo-shadow: initial;
+}
+:root,
+[data-bubble='tail'],
+.bs-tail {
+  --bi-r: var(--r-lg) var(--r-lg) var(--r-lg) 3px;
+  --bo-r: var(--r-lg) var(--r-lg) 3px var(--r-lg);
+}
+[data-bubble='round'],
+.bs-round {
+  --bi-r: calc(var(--r) * 0.4) var(--r-lg) var(--r-lg) var(--r-lg);
+  --bo-r: var(--r-lg) calc(var(--r) * 0.4) var(--r-lg) var(--r-lg);
+}
+[data-bubble='square'],
+.bs-square {
+  --bi-r: calc(var(--r) * 0.45);
+  --bo-r: calc(var(--r) * 0.45);
+}
+[data-bubble='gloss'],
+.bs-gloss {
+  --bi-r: var(--r-lg);
+  --bo-r: var(--r-lg);
+  --bi-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  --bi-ink: var(--fg);
+  --bi-border: 1px solid rgba(255, 255, 255, 0.14);
+  --bi-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 3px 0 rgba(0, 0, 0, 0.4);
+  --bo-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--bubble-own-solid, var(--accent)) 78%, white),
+    var(--bubble-own-solid, var(--accent))
+  );
+  --bo-ink: var(--accent-ink);
+  --bo-border: 1px solid color-mix(in oklab, var(--bubble-own-solid, var(--accent)) 70%, black);
+  --bo-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 color-mix(in oklab, var(--bubble-own-solid, var(--accent)) 55%, black);
+}
+[data-bubble='outline'],
+.bs-outline {
+  --bi-r: var(--r-lg) var(--r-lg) var(--r-lg) 3px;
+  --bo-r: var(--r-lg) var(--r-lg) 3px var(--r-lg);
+  --bi-bg: transparent;
+  --bi-ink: var(--fg);
+  --bi-border: 1px solid rgba(255, 255, 255, 0.2);
+  --bo-bg: transparent;
+  --bo-ink: var(--fg);
+  --bo-border: 1px solid var(--accent);
+}
+[data-bubble='minimal'],
+.bs-minimal {
+  --bi-r: 2px;
+  --bo-r: 2px;
+  --bi-bg: transparent;
+  --bi-ink: var(--fg);
+  --bi-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.22);
+  --bo-bg: transparent;
+  --bo-ink: var(--fg);
+  --bo-shadow: inset -3px 0 0 var(--accent);
+}
+
+[data-bubble='glass'],
+.bs-glass {
+  --bi-r: var(--r-lg);
+  --bo-r: var(--r-lg);
+  --bi-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  --bi-ink: var(--fg);
+  --bi-border: 1px solid rgba(255, 255, 255, 0.2);
+  --bo-bg: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--accent) 38%, transparent),
+    color-mix(in oklab, var(--accent) 12%, transparent)
+  );
+  --bo-ink: var(--fg);
+  --bo-border: 1px solid color-mix(in oklab, var(--accent) 55%, white 10%);
+}
+[data-bubble='neon'],
+.bs-neon {
+  --bi-r: var(--r-lg);
+  --bo-r: var(--r-lg);
+  --bi-bg: transparent;
+  --bi-ink: var(--fg);
+  --bi-border: 1px solid var(--accent-2);
+  --bi-shadow: 0 0 12px -3px var(--accent-2), inset 0 0 10px -6px var(--accent-2);
+  --bo-bg: transparent;
+  --bo-ink: var(--fg);
+  --bo-border: 1px solid var(--bubble-own-solid, var(--accent));
+  --bo-shadow:
+    0 0 12px -3px var(--bubble-own-solid, var(--accent)),
+    inset 0 0 10px -6px var(--bubble-own-solid, var(--accent));
+}
+[data-bubble='leaf'],
+.bs-leaf {
+  --bi-r: var(--r-lg) 4px var(--r-lg) 4px;
+  --bo-r: 4px var(--r-lg) 4px var(--r-lg);
+}
+[data-bubble='ticket'],
+.bs-ticket {
+  --bi-r: 4px var(--r-lg) var(--r-lg) 4px;
+  --bo-r: var(--r-lg) 4px 4px var(--r-lg);
+}
+[data-bubble='block'],
+.bs-block {
+  --bi-r: 4px;
+  --bo-r: 4px;
+  --bi-border: 2px solid rgba(255, 255, 255, 0.5);
+  --bi-shadow: 4px 4px 0 rgba(255, 255, 255, 0.22);
+  --bo-border: 2px solid color-mix(in oklab, var(--bubble-own-solid, var(--accent)) 35%, black);
+  --bo-ink: var(--accent-ink);
+  --bo-shadow: 4px 4px 0 color-mix(in oklab, var(--bubble-own-solid, var(--accent)) 45%, black);
+}
+[data-bubble='dashed'],
+.bs-dashed {
+  --bi-r: var(--r-lg);
+  --bo-r: var(--r-lg);
+  --bi-bg: transparent;
+  --bi-ink: var(--fg);
+  --bi-border: 1.5px dashed rgba(255, 255, 255, 0.3);
+  --bo-bg: color-mix(in oklab, var(--accent) 10%, transparent);
+  --bo-ink: var(--fg);
+  --bo-border: 1.5px dashed var(--accent);
+}
+
+/* The bar of actions over a message: it springs in from its corner and the quick reactions grow under the pointer. */
+.msg-actions {
+  transform-origin: right bottom;
+  animation: msg-actions-in 0.2s var(--ease) both;
+}
+.msg-quick {
+  transition:
+    transform 0.2s var(--ease),
+    background-color 0.2s var(--ease-suave);
+}
+.msg-quick:hover {
+}
+@keyframes msg-actions-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Big options of the pop-up menus: colored icon, title and description. */
+.menu-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: calc(var(--r) * 0.9);
+  text-align: left;
+  color: var(--fg);
+}
+.menu-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.menu-icon {
+  display: flex;
+  height: 2.4rem;
+  width: 2.4rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.9);
+  transition: transform 0.25s var(--ease);
+}
+.menu-card:hover .menu-icon {
+  transform: scale(1.06);
+}
+
+/* GitHub link of "About": a padlock that opens on hover (the app is end-to-end encrypted). */
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1.05rem;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--accent) 14%, transparent),
+    color-mix(in oklab, var(--accent-2) 12%, transparent)
+  );
+  color: var(--fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+.gh-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: gh-brillo 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.gh-link:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 28px -12px var(--accent);
+}
+.gh-lock {
+  display: inline-flex;
+  color: var(--accent);
+}
+.gh-arco {
+  transform-origin: 8px 11px;
+  transition: transform 0.45s var(--ease-suave);
+}
+.gh-link:hover .gh-arco {
+  transform: translateY(-3px);
+}
+.gh-flecha {
+  transition: transform 0.3s var(--ease-suave);
+  color: var(--muted);
+}
+.gh-link:hover .gh-flecha {
+  transform: translate(2px, -2px);
+  color: var(--accent);
+}
+@keyframes gh-brillo {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Name in the chat: on hover it just gets a little brighter (nothing that moves or underlines). */
+.msg-name {
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    filter 0.25s var(--ease-suave),
+    opacity 0.25s var(--ease-suave);
+}
+.msg-name:hover {
+  filter: brightness(1.18);
+}
+/* A message that is only a few emoji: big, no bubble, and one of six entrances (picked per message). It does not
+   move on hover: the emoji only brightens a little, so it never trembles under the pointer. */
+.bubble-emoji,
+.bubble-emoji.bubble-in,
+.bubble-emoji.bubble-out {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 3.2rem !important;
+  line-height: 1.15 !important;
+  padding: 0.1rem 0.25rem !important;
+  animation: emoji-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: bottom left;
+  transition: filter 0.25s var(--ease-suave);
+}
+.bubble-emoji[data-pop='1'] {
+  animation-name: emoji-drop;
+}
+.bubble-emoji[data-pop='2'] {
+  animation-name: emoji-spin;
+}
+.bubble-emoji:hover {
+  filter: brightness(1.15) saturate(1.1);
+}
+@keyframes emoji-pop {
+  0% {
+    transform: scale(0.2) rotate(-12deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes emoji-drop {
+  0% {
+    transform: translateY(-1.6rem) scale(0.8);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(0.25rem) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes emoji-spin {
+  0% {
+    transform: rotate(-200deg) scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* Links to the security section from the encryption labels */
+/* Spinly wheel: a conic-gradient disc, labels along the radius and a fixed pointer on top. */
+.sp-wheel {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  container-type: inline-size;
+}
+.sp-disc {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.1),
+    0 0 0 8px rgba(0, 0, 0, 0.35),
+    0 14px 40px -12px rgba(0, 0, 0, 0.75);
+  will-change: transform;
+}
+/* Sent / delivered / read mark under your messages: rings, calmer than ticks. */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transition:
+    background-color 0.4s var(--ease-suave),
+    border-color 0.4s var(--ease-suave),
+    box-shadow 0.4s var(--ease-suave);
+}
+.status-sent {
+  border: 1.5px solid var(--dim);
+}
+.status-delivered {
+  background: var(--dim);
+}
+.status-read {
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* The sign-in snapshot stored in index.html is not shown to people who are already signed in. */
+.boot-snapshot {
+  display: none;
+}
+html[data-snap='en'][data-page='login'] .boot-snapshot[lang='en'][data-page='login'],
+html[data-snap='es'][data-page='login'] .boot-snapshot[lang='es'][data-page='login'],
+html[data-snap='en'][data-page='register'] .boot-snapshot[lang='en'][data-page='register'],
+html[data-snap='es'][data-page='register'] .boot-snapshot[lang='es'][data-page='register'] {
+  display: block;
+}
+html.has-session .boot-snapshot {
+  display: none !important;
+}
+
+/* The shield button of a conversation whose safety number was verified: it lights up in the accent color. */
+.shield-verified {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+/* Link form of the activities. */
+.act-form {
+  padding: 0.5rem 0.4rem 0.3rem;
+}
+.act-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 2.9rem;
+  padding: 0 0.85rem;
+  border-radius: var(--r-lg);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: var(--cur-text, text);
+  transition:
+    border-color 0.2s var(--ease-suave),
+    box-shadow 0.2s var(--ease-suave);
+}
+.act-link:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+
+/* Soundboard: the categories are a row of pills on top and what is in the chosen one opens below. */
+.sb-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  scrollbar-width: none;
+}
+.sb-tabs::-webkit-scrollbar {
+  display: none;
+}
+.sb-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+.sb-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+.sb-pill.is-on {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+/* "Add friend": at the end of the row of tabs of the friends page, the same height as the tabs. */
+.friend-add {
+  height: 2.4rem;
+  margin-left: auto;
+  flex: none;
+  padding: 0 0.95rem;
+}
+
+/* Topography: lines of height that breathe slowly, faded out toward the edges. */
+.topo {
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 35%, transparent 92%);
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 35%, transparent 92%);
+}
+@keyframes topo-breathe {
+  from {
+    transform: scale(0.94) rotate(-2deg);
+  }
+  to {
+    transform: scale(1.07) rotate(2deg);
+  }
+}
+/* Sunset: a sky from the dark to the warm horizon, a low sun, slow clouds and the dark line of the hills. */
+.sunset-sky {
+  background: linear-gradient(
+    180deg,
+    var(--ink-950) 0%,
+    color-mix(in oklab, var(--accent-2) 38%, var(--ink-950)) 38%,
+    color-mix(in oklab, #ff5e7e 52%, var(--ink-900)) 66%,
+    color-mix(in oklab, #ffb36b 70%, var(--ink-900)) 86%
+  );
+}
+.sunset-sun {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: min(34vmin, 18rem);
+  aspect-ratio: 1;
+  margin-left: calc(min(34vmin, 18rem) / -2);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 45%,
+    #fff6d6 0%,
+    #ffd08a 40%,
+    #ff8f6b 78%,
+    #ff5e7e 100%
+  );
+  box-shadow:
+    0 0 6rem 2rem rgba(255, 150, 100, 0.45),
+    0 0 18rem 8rem rgba(255, 94, 126, 0.22);
+  animation: sun-bob calc(var(--bg-speed, 1) * 18s) ease-in-out infinite alternate;
+}
+@keyframes sun-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5%);
+  }
+}
+.sunset-hills {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 30%;
+  background:
+    radial-gradient(ellipse 70% 100% at 22% 100%, var(--ink-950) 62%, transparent 63%),
+    radial-gradient(ellipse 80% 90% at 78% 100%, var(--ink-950) 64%, transparent 65%),
+    linear-gradient(0deg, var(--ink-950) 20%, transparent);
+}
+
+/* Tags of a group. */
+.guild-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.05rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--tag);
+  background: color-mix(in oklab, var(--tag) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--tag) 40%, transparent);
+}
+/* On a phone a block of code never makes its message wider than the screen: it scrolls inside. */
+@media (max-width: 640px) {
+  .code-block {
+    width: calc(100vw - 7rem);
+    max-width: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .friend-add {
+    width: 2.4rem;
+    padding: 0;
+  }
+}
+@media (max-width: 640px) {
+  html .friend-tab .friend-tab-count {
+    display: none;
+  }
+}
+
+/* Spinly surfaces: a grid of lines that drifts by itself, like the real Spinly. */
+.sp-glow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.sp-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  pointer-events: none;
+  background-color: rgba(2, 4, 8, 0.5);
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size: 36px 36px;
+  filter: blur(1.1px);
+  animation: grid-drift 16s linear infinite;
+}
+@keyframes grid-drift {
+  to {
+    background-position: 36px 36px;
+  }
+}
+/* Friends page: the tabs live in one dark bar, "Add friend" is a dark tinted button and the search is a field. */
+.friend-tabs {
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: calc(var(--r) * 0.9);
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--line);
+}
+.friend-tabs .friend-tab {
+  height: 2.1rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.friend-tabs .friend-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: transparent;
+}
+.friend-tabs .friend-tab.is-on {
+  background: color-mix(in oklab, var(--accent) 20%, rgba(0, 0, 0, 0.35));
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  box-shadow: none;
+}
+.friend-tabs .friend-add {
+  height: 2.1rem;
+  margin-left: auto;
+  border: 1px solid color-mix(in oklab, var(--accent) 38%, transparent);
+  background: color-mix(in oklab, var(--accent) 22%, rgba(0, 0, 0, 0.5));
+  color: var(--accent);
+  box-shadow: none;
+}
+.friend-tabs .friend-add:hover {
+  background: color-mix(in oklab, var(--accent) 32%, rgba(0, 0, 0, 0.45));
+}
+.friend-search {
+  height: 2.8rem;
+  padding: 0 1rem;
+  border-radius: calc(var(--r) * 0.9);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.friend-search:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* Name of an encryption system inside a text: a link to its document. */
+.crypto-inline {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: var(--cur-pointer, pointer);
+}
+.crypto-inline:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* A big card to choose files (the stickers import). */
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.6rem 1.2rem;
+  text-align: center;
+  border-radius: var(--r-lg);
+  border: 1.5px dashed color-mix(in oklab, var(--accent) 35%, transparent);
+  background: color-mix(in oklab, var(--accent) 5%, rgba(0, 0, 0, 0.25));
+  transition:
+    background-color 0.25s var(--ease-suave),
+    border-color 0.25s var(--ease-suave);
+}
+.drop-card:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, rgba(0, 0, 0, 0.25));
+}
+.drop-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* The soundboard opening upward from its button: it grows from there. */
+.sb-pop {
+  transform-origin: 50% 100%;
+}
+.sb-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+/* Targets shown while a floating card (the call bar, the music card) is dragged. */
+.dock-zone {
+  width: 9rem;
+  height: 4.5rem;
+  border-radius: var(--r-lg);
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    border-color 0.2s var(--ease-suave);
+}
+.dock-zone.is-on {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.music-grip {
+  cursor: var(--cur-grab, grab);
+}
+
+/* The cards of the "+" menu of the chat and of the Activities menu of the call. */
+.menu-card {
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background-color 0.22s var(--ease-suave),
+    border-color 0.22s var(--ease-suave);
+}
+.menu-card:last-child {
+  margin-bottom: 0;
+}
+.menu-card:hover {
+  background: color-mix(in oklab, var(--accent) 9%, rgba(255, 255, 255, 0.03));
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.menu-card .menu-icon {
+  height: 2.7rem;
+  width: 2.7rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.menu-card:hover .menu-icon {
+  transform: none;
+}
+
+/* The color picker: squarer corners. */
+.picker-panel {
+  border-radius: calc(var(--r) * 0.55);
+}
+.picker-panel .sv-area,
+.picker-panel .hue-bar {
+  border-radius: 4px;
+}
+.picker-panel .picker-preview,
+.picker-panel .picker-field {
+  border-radius: 5px;
+}
+
+/* Sections of the members of a group, one for each tag. */
+.member-section {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.9rem 0.6rem 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tag, var(--dim));
+}
+.member-section-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--tag, var(--dim));
+}
+
+/* The members of a group breathe a little more. */
+.member-list > * + * {
+  margin-top: 0.3rem;
+}
+
+/* The targets of the music card are as big as the card. */
+.stage-host .dock-zone {
+  width: 22rem;
+  height: 6.25rem;
+}
+
+/* The icons of the settings menu: on hover the tile turns a little, glows and a band of light crosses it. */
+.nav-item[role='link'] .nav-tile {
+  transition:
+    transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease-suave);
+}
+.nav-item[role='link']:hover .nav-tile {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, currentColor 40%, transparent),
+    0 6px 16px -6px currentColor;
+}
+.nav-item[role='link']:hover .nav-tile::after {
+  animation: tile-sweep 0.75s var(--ease) both;
+}
+@keyframes tile-sweep {
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(130%);
+  }
+}
+
+/* The stickers card: smaller, and it keeps its size when the help beside it opens. */
+.drop-card {
+  gap: 0.4rem;
+  padding: 1rem 1rem;
+  font-size: 0.85rem;
+}
+.drop-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+/* The rows of the voice channels: calmer. */
+/* The window of the tags of a group. */
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  border-radius: calc(var(--r) * 0.6);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.tag-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.35rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.tag-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+/* The soundboard keeps its size when the category changes, and its sounds are bigger. */
+.sb-grid {
+  min-height: 14rem;
+  align-content: start;
+}
+.sb-grid .sb-tile {
+  padding-block: 0.9rem;
+}
+.sb-tabs {
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+}
+
+/* The menus of activities: compact, with room to breathe. */
+.menu-card {
+  padding: 0.5rem 0.7rem;
+  gap: 0.7rem;
+  margin-bottom: 0.3rem;
+}
+.menu-card .menu-icon {
+  height: 2.3rem;
+  width: 2.3rem;
+}
+.act-form {
+  padding: 0.3rem 0.25rem 0.15rem;
+}
+.act-link {
+  height: 2.5rem;
+  border-radius: calc(var(--r) * 0.7);
+}
+
+/* The heads of the Spinly cards (chat and call): a soft band of the accent color. */
+.sp-head {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 16%, transparent),
+    transparent 75%
+  );
+}
+
+/* The channels of a group: calmer rows, the mark of the chosen one stays inside the row. */
+.chan-item::before {
+  left: 4px;
+}
+.chan-text,
+.chan-voice {
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+.chan-text:hover,
+.chan-voice:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+}
+.chan-text.active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 16%, transparent),
+    color-mix(in oklab, var(--accent) 4%, transparent)
+  );
+}
+.chan-voice.active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent-2) 16%, transparent),
+    color-mix(in oklab, var(--accent-2) 4%, transparent)
+  );
+}
+
+/* Folds that open and close smoothly (the bracket of a finished tournament). */
+.bracket-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.45s var(--ease),
+    opacity 0.3s var(--ease-suave);
+}
+.bracket-fold.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}

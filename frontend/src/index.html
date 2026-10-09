@@ -1,13 +1,29 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>ChatterlyRenewed</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+<html lang="en" data-accent="mint">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chatterly-Renewed</title>
+    <base href="/" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta
+      name="description"
+      content="Chatterly-Renewed — end-to-end encrypted chat, groups and peer-to-peer voice calls."
+    />
+    <meta name="theme-color" content="#06070b" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- Everything is self-hosted: no third-party scripts, fonts or trackers. API/WS may live on another origin. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: mediastream: https:; connect-src 'self' http: https: ws: wss:; frame-src https://embed.bsky.app https://embed.reddit.com https://clips.twitch.tv https://player.twitch.tv https://w.soundcloud.com https://geo.dailymotion.com https://streamable.com https://spinly-psi.vercel.app http://localhost:* http://127.0.0.1:* https://www.youtube-nocookie.com https://open.spotify.com https://player.vimeo.com https://www.instagram.com https://platform.twitter.com https://www.tiktok.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Not render-blocking (media="print"): the app switches it on when idle. The build rewrites the file name. -->
+    <link href="lazy-fonts.css" rel="stylesheet" media="print" id="lazy-fonts" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
 </html>

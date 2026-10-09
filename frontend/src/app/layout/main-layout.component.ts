@@ -1,43 +1,129 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { SidebarLayoutComponent } from './sidebar-layout.component';
-import { UserbarLayoutComponent } from './userbar-layout.component';
-import { SocialbarLayoutComponent } from './socialbar-layout.component';
+/**
+ * src/app/layout/main-layout.component.ts
+ * Structure of the private area: side bars, content and the realtime services.
+ */
+import { Component, OnInit, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
+import { I18nService } from '../core/i18n/i18n.service';
+import { CallService } from '../core/services/call.service';
+import { ShortcutsService } from '../core/services/shortcuts.service';
+import { SocketService } from '../core/services/socket.service';
+import { UiService } from '../core/services/ui.service';
+import { SpinlyPanelComponent } from '../features/spinly/spinly-panel.component';
+import { VoiceStageComponent } from '../features/voice/voice-stage.component';
+import { GuildModalsComponent } from '../features/guild/guild-modals.component';
+import { preloadEmojiData } from '../shared/util/emoji-data';
+import { GuildStore } from '../store/guild.store';
+import { MessageStore } from '../store/message.store';
+import { SocialStore } from '../store/social.store';
+import { CallDockComponent } from './call-dock.component';
+import { ContextMenuComponent } from './context-menu.component';
+import { ContextSidebarComponent } from './context-sidebar.component';
+import { IncomingCallComponent } from './incoming-call.component';
+import { ProfileModalComponent } from './profile-modal.component';
+import { RailComponent } from './rail.component';
+import { SoundboardDockComponent } from './soundboard-dock.component';
 
+/**
+ * The signed-in shell: group rail, context sidebar and the routed page. It also boots the realtime
+ * layer (socket + stores) exactly once per session.
+ */
 @Component({
   selector: 'app-main-layout',
   standalone: true,
   imports: [
     RouterOutlet,
-    SidebarLayoutComponent,
-    SocialbarLayoutComponent,
-    UserbarLayoutComponent
+    RailComponent,
+    ContextSidebarComponent,
+    IncomingCallComponent,
+    CallDockComponent,
+    GuildModalsComponent,
+    SoundboardDockComponent,
+    ContextMenuComponent,
+    ProfileModalComponent,
+    SpinlyPanelComponent,
+    VoiceStageComponent,
   ],
   template: `
-    <div class="flex h-screen overflow-hidden bg-[#1e1f22] text-white">
-
-      <!-- Sidebar -->
-      <app-sidebar-layout></app-sidebar-layout>
-
-      <!-- Contenedor izquierda -->
-      <div class="relative w-[260px] h-full">
-
-        <!-- Socialbar -->
-        <app-socialbar-layout></app-socialbar-layout>
-
-        <!-- Userbar flotante -->
-        <div class="absolute bottom-0 left-0 w-full">
-          <app-userbar-layout></app-userbar-layout>
-        </div>
-
+    <div class="flex h-dvh gap-2 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <!-- On narrow screens the navigation becomes a slide-in drawer -->
+      @if (ui.sidebarOpen()) {
+        <div
+          class="anim-fade-in fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          (click)="ui.sidebarOpen.set(false)"
+        ></div>
+      }
+      <div
+        class="z-40 flex gap-2 transition-transform duration-300 max-lg:fixed max-lg:inset-y-2 max-lg:left-2"
+        [class.max-lg:-translate-x-[120%]]="!ui.sidebarOpen()"
+      >
+        <app-rail />
+        <app-context-sidebar />
       </div>
-
-      <!-- Main -->
-      <div class="flex-1 h-full">
-        <router-outlet></router-outlet>
-      </div>
-
+      <!-- The panel surface lives here, so there is never a moment without it while one page replaces another. -->
+      <main class="panel panel-glass relative min-w-0 flex-1 overflow-hidden">
+        <router-outlet />
+        <!-- The call stays alive while its page is hidden, so the music, the video and Spinly never stop. -->
+        @if (call.roomId() || onVoice()) {
+          <app-voice-stage class="absolute inset-0" [style.display]="onVoice() ? null : 'none'" />
+        }
+      </main>
     </div>
-  `
+    <router-outlet name="settings" />
+    <app-call-dock />
+    <app-incoming-call />
+    <app-guild-modals />
+    <app-soundboard-dock />
+    <app-context-menu />
+    <app-profile-modal />
+    <app-spinly-panel />
+  `,
 })
-export class MainLayoutComponent {}
+export class MainLayoutComponent implements OnInit {
+  /** The keyboard shortcuts of the call work everywhere in the private area. */
+  private readonly shortcuts = inject(ShortcutsService);
+
+  private readonly router = inject(Router);
+  /** True while the page of the call is the one on screen. */
+  protected readonly onVoice = toSignal(
+    this.router.events.pipe(
+      filter(function ended(event) {
+        return event instanceof NavigationEnd;
+      }),
+      map(
+        function isVoice(this: MainLayoutComponent) {
+          return this.router.url.startsWith('/voice');
+        }.bind(this),
+      ),
+    ),
+    { initialValue: this.router.url.startsWith('/voice') },
+  );
+
+  protected readonly ui = inject(UiService);
+  private readonly socket = inject(SocketService);
+  private readonly social = inject(SocialStore);
+  private readonly guilds = inject(GuildStore);
+  private readonly messages = inject(MessageStore);
+  protected readonly call = inject(CallService);
+  private readonly i18n = inject(I18nService);
+
+  /**
+   * Starts everything the signed-in app needs: friends, groups, messages, calls, shortcuts and the connection, and warms up the emoji list.
+   */
+  ngOnInit(): void {
+    this.social.start();
+    this.guilds.start();
+    this.messages.start();
+    this.call.start();
+    this.shortcuts.start();
+    preloadEmojiData(this.i18n.lang());
+    this.socket.connect();
+    // Initial data in parallel with the socket handshake.
+    void this.social.refresh().catch(function () {
+      return undefined;
+    });
+    void this.guilds.refresh();
+  }
+}

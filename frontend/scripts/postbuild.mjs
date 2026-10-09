@@ -1,0 +1,243 @@
+/**
+ * frontend/scripts/postbuild.mjs
+ * Runs after `ng build` and makes the first paint of the sign-in page instant:
+ *   1. Inlines the stylesheet into index.html, so the first paint does not wait for a second request (the
+ *      lazy fonts stylesheet stays a separate file and is switched on when the page is idle).
+ *   2. Renders the sign-in page once in a real browser and stores its HTML inside <app-root>, so the page is
+ *      visible as soon as the HTML arrives (Angular replaces it with the live page when it starts).
+ *      One snapshot is made for each language; a tiny script picks the one that matches the person.
+ *   3. The same script hides the snapshot for people who are already signed in (they would otherwise see the
+ *      sign-in page for a moment). Its hash is added to the Content-Security-Policy.
+ *
+ *   node scripts/postbuild.mjs [distFolder]
+ */
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { chromium } from 'playwright';
+
+/** Folder with the built web app (the first argument, or Angular's default output folder). */
+const DIST = path.resolve(
+  process.argv[2] ?? path.join(import.meta.dirname, '..', 'dist', 'frontend', 'browser'),
+);
+
+/** Content types needed to serve the build to the browser that takes the snapshot. */
+const TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+  '.json': 'application/json',
+};
+
+/** Pages that get a snapshot: the sign-in and the registration pages (the root address shows sign-in). */
+const PAGES = ['login', 'register'];
+
+/** Languages the app is translated into: one snapshot is stored for each. */
+const LANGUAGES = [
+  { id: 'en', locale: 'en-US' },
+  { id: 'es', locale: 'es-ES' },
+];
+
+/**
+ * Which files each public page needs: the chunk of the page and everything that chunk imports, found by reading the
+ * build. Asking for them from the first moment (modulepreload) saves the browser from finding them one by one
+ * after each file arrives, which is what made the first paint of the sign-in page wait.
+ * @param {string} selector Selector of the component of the page (for example "app-login").
+ * @returns {string[]} File names, without the ones index.html already preloads.
+ */
+function chunksOf(selector, already) {
+  const files = fs.readdirSync(DIST).filter(function isScript(name) {
+    return name.endsWith('.js');
+  });
+  const start = files.find(function hasPage(name) {
+    return (
+      fs.readFileSync(path.join(DIST, name), 'utf8').includes('selector:"' + selector + '"') ||
+      fs.readFileSync(path.join(DIST, name), 'utf8').includes('"' + selector + '"')
+    );
+  });
+  const found = new Set();
+  /** Follows the static imports of a file. */
+  function visit(name) {
+    if (found.has(name) || !fs.existsSync(path.join(DIST, name))) {
+      return;
+    }
+    found.add(name);
+    const text = fs.readFileSync(path.join(DIST, name), 'utf8');
+    for (const match of text.matchAll(/(?:from|import)\s*"\.\/(chunk-[A-Z0-9]+\.js)"/g)) {
+      visit(match[1]);
+    }
+  }
+  if (start) {
+    visit(start);
+  }
+  return [...found].filter(function isNew(name) {
+    return !already.includes(name) && !name.startsWith('main-');
+  });
+}
+
+/**
+ * Script placed in index.html. It tells the CSS which snapshot matches the page and the language of the person
+ * and hides the snapshot when a session is stored (the live app opens straight into the chat then).
+ */
+let SESSION_SCRIPT =
+  "try{var p=JSON.parse(localStorage.getItem('chatterly.pref.language')||'\"auto\"');" +
+  "var l=p==='auto'?(navigator.language||'en').slice(0,2).toLowerCase():p;" +
+  "var q=location.pathname;document.documentElement.dataset.snap=l==='es'?'es':'en';" +
+  "document.documentElement.dataset.page=q==='/register'?'register':(q==='/'||q==='/login')?'login':'';" +
+  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session')}catch(e){}";
+
+/**
+ * Serves the build folder, answering index.html for unknown paths (the routes of the app).
+ * @param {http.IncomingMessage} request
+ * @param {http.ServerResponse} response
+ */
+function serveBuild(request, response) {
+  const route = decodeURIComponent(new URL(request.url, 'http://x').pathname);
+  let file = path.join(DIST, route);
+  if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    file = path.join(DIST, 'index.html');
+  }
+  response.writeHead(200, {
+    'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream',
+  });
+  fs.createReadStream(file).pipe(response);
+}
+
+/**
+ * Opens a page of the build in a browser set to a language and returns the HTML Angular rendered inside
+ * <app-root>.
+ * @param {string} page Name of the page: "login" or "register".
+ * @param {string} locale Browser language, for example "en-US".
+ * @returns {Promise<string>}
+ */
+async function takeSnapshot(page, locale) {
+  const server = http.createServer(serveBuild);
+  await new Promise(function listen(resolve) {
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const port = server.address().port;
+  const browser = await chromium.launch();
+  try {
+    const tab = await browser.newPage({ viewport: { width: 1280, height: 800 }, locale: locale });
+    await tab.goto('http://127.0.0.1:' + port + '/' + page);
+    await tab.waitForSelector('form');
+    await tab.evaluate(function waitForFonts() {
+      return document.fonts.ready;
+    });
+    await tab.waitForTimeout(400);
+    return await tab.evaluate(function readRoot() {
+      const root = document.querySelector('app-root');
+      // Canvases cannot be saved as HTML; the live page draws them again.
+      for (const canvas of root.querySelectorAll('canvas')) {
+        canvas.removeAttribute('style');
+      }
+      return root.innerHTML;
+    });
+  } finally {
+    await browser.close();
+    server.close();
+  }
+}
+
+/** Replaces the stylesheet link of index.html by the stylesheet itself. */
+function inlineStylesheet(html) {
+  const link = /<link rel="stylesheet" href="([^"]+\.css)"[^>]*>/.exec(html);
+  if (!link) {
+    return html;
+  }
+  const cssFile = path.join(DIST, link[1]);
+  const css = fs.readFileSync(cssFile, 'utf8');
+  fs.rmSync(cssFile);
+  return html.replace(link[0], '<style>' + css + '</style>');
+}
+
+/** Points the lazy fonts link of index.html at the hashed file Angular built (lazy-fonts-XXXX.css). */
+function pointLazyFonts(html) {
+  const built = fs.readdirSync(DIST).find(function isLazyFonts(name) {
+    return /^lazy-fonts.*\.css$/.test(name);
+  });
+  return built ? html.replace('href="lazy-fonts.css"', 'href="' + built + '"') : html;
+}
+
+/** Adds the "has-session" script before the stylesheet and allows exactly that script in the CSP. */
+function addSessionScript(html) {
+  // People who are not signed in will see the sign-in or the registration page: their chunks load in parallel.
+  const asked = Array.from(html.matchAll(/rel="modulepreload" href="([^"]+)"/g)).map(
+    function name(m) {
+      return m[1];
+    },
+  );
+  const lists = {
+    login: chunksOf('app-login', asked),
+    register: chunksOf('app-register', asked),
+  };
+  SESSION_SCRIPT = SESSION_SCRIPT.replace(
+    '}catch(e){}',
+    ";if(!localStorage.getItem('chatterly.session')){var L=" +
+      JSON.stringify(lists) +
+      "[document.documentElement.dataset.page]||[];for(var i=0;i<L.length;i++){var k=document.createElement('link');k.rel='modulepreload';k.href='/'+L[i];document.head.appendChild(k)}}}catch(e){}",
+  );
+  const hash = createHash('sha256').update(SESSION_SCRIPT).digest('base64');
+  const withPolicy = html.replace("script-src 'self'", "script-src 'self' 'sha256-" + hash + "'");
+  return withPolicy.replace('<style>', '<script>' + SESSION_SCRIPT + '</script><style>');
+}
+
+/** Asks for the main font (Inter) right away: the text of the first paint is drawn with it and does not change afterwards. */
+function preloadFont(html) {
+  const media = path.join(DIST, 'media');
+  const font = fs.existsSync(media)
+    ? fs.readdirSync(media).find(function isInter(name) {
+        return /^inter-latin-wght-normal.*\.woff2$/.test(name);
+      })
+    : null;
+  return font
+    ? html.replace(
+        '<style>',
+        '<link rel="preload" as="font" type="font/woff2" crossorigin href="/media/' +
+          font +
+          '"/><style>',
+      )
+    : html;
+}
+
+/** Builds the final index.html. */
+async function main() {
+  const indexPath = path.join(DIST, 'index.html');
+  let html = fs.readFileSync(indexPath, 'utf8');
+  if (html.includes('data-snapshot')) {
+    console.log('index.html already has a snapshot');
+    return;
+  }
+  let snapshots = '';
+  for (const page of PAGES) {
+    for (const language of LANGUAGES) {
+      const body = await takeSnapshot(page, language.locale);
+      snapshots +=
+        '<div class="boot-snapshot" lang="' +
+        language.id +
+        '" data-page="' +
+        page +
+        '">' +
+        body +
+        '</div>';
+    }
+  }
+  html = pointLazyFonts(html);
+  html = inlineStylesheet(html);
+  html = addSessionScript(html);
+  html = preloadFont(html);
+  html = html.replace(
+    /<app-root([^>]*)>\s*<\/app-root>/,
+    '<app-root$1 data-snapshot>' + snapshots.replace(/\$/g, '$$$$') + '</app-root>',
+  );
+  fs.writeFileSync(indexPath, html);
+  console.log('Sign-in snapshot and inline stylesheet added to ' + indexPath);
+}
+
+main().catch(function onError(error) {
+  console.error(error);
+  process.exit(1);
+});

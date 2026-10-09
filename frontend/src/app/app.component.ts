@@ -1,10 +1,234 @@
-import { Component } from '@angular/core';
+/**
+ * src/app/app.component.ts
+ * Root component: the animated background, the routed pages, the notices, the sound under every press, the
+ * block on the browser's own context menu, the mouse wheel on sliders and the late start of cursors and tooltips.
+ */
+import { Component, HostListener, Injector, effect, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { I18nService } from './core/i18n/i18n.service';
+import { ArrivalService } from './core/services/arrival.service';
+import { SettingsService } from './core/services/settings.service';
+import { SoundService } from './core/services/sound.service';
+import { ArrivalComponent } from './shared/components/arrival.component';
+import { MeshBackgroundComponent } from './shared/components/mesh-background.component';
+import { ToastHostComponent } from './shared/components/toast-host.component';
 
+/** Things that make a press feel like a press: tiny sounds under controls. */
+const PRESSABLE =
+  'button, a[href], [role="button"], [role="link"], [role="switch"], [role="tab"], [role="radio"], summary, select, input[type="checkbox"], input[type="radio"], .clickable, .nav-item, .choice-card, .ring-card, .seg-tab, .menu-card';
+
+/** How much a press matters, from the look of the control: the sound keeps its style but changes pitch and level. */
+interface PressWeight {
+  pitch: number;
+  level: number;
+}
+
+/** Picks the weight of a press: main actions ring brighter, destructive ones lower, quiet icon buttons softer. */
+function weightOf(target: HTMLElement): PressWeight {
+  const classes = target.classList;
+  if (classes.contains('btn-primary')) {
+    return { pitch: 1.22, level: 1.25 };
+  }
+  if (
+    classes.contains('btn-danger') ||
+    classes.contains('btn-soft-danger') ||
+    classes.contains('friend-act-danger')
+  ) {
+    return { pitch: 0.8, level: 1.05 };
+  }
+  if (
+    classes.contains('nav-item') ||
+    classes.contains('seg-tab') ||
+    classes.contains('choice-card') ||
+    classes.contains('ring-card') ||
+    classes.contains('menu-card')
+  ) {
+    return { pitch: 1, level: 0.85 };
+  }
+  if (
+    classes.contains('btn-ghost') ||
+    classes.contains('btn-icon') ||
+    classes.contains('dock-btn')
+  ) {
+    return { pitch: 1.1, level: 0.7 };
+  }
+  return { pitch: 1, level: 1 };
+}
+
+/** The application shell. */
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: `<router-outlet></router-outlet>`
+  imports: [RouterOutlet, ArrivalComponent, MeshBackgroundComponent, ToastHostComponent],
+  template: `
+    @defer (on idle) {
+      <app-mesh-background />
+    }
+    <router-outlet />
+    <app-toast-host />
+    @if (arrival.current(); as a) {
+      @defer (on immediate) {
+        <app-arrival [kind]="a.kind" [name]="a.name" />
+      }
+    }
+  `,
 })
-export class AppComponent {}
+export class AppComponent {
+  protected readonly arrival = inject(ArrivalService);
+  private readonly settings = inject(SettingsService);
+  private readonly sound = inject(SoundService);
+  private readonly i18n = inject(I18nService);
+  private readonly injector = inject(Injector);
+  private readonly wheelHandler = this.onWheel.bind(this);
+  /** The pending long press of a finger, and where it started. */
+  private press: { timer: ReturnType<typeof setTimeout>; x: number; y: number } | null = null;
+
+  constructor() {
+    // The cursor engine, the tooltips and the uploaded fonts are not needed for the first paint: they load right after it.
+    window.setTimeout(this.loadExtras.bind(this), 0);
+    // The very first visit opens with a short animation (nothing is shown to people who are already signed in).
+    window.setTimeout(this.arrival.maybeIntro.bind(this.arrival), 250);
+    // Not passive: the page must not scroll while the wheel turns over a slider.
+    document.addEventListener('wheel', this.wheelHandler, { passive: false });
+    document.addEventListener('pointerdown', this.onFingerDown.bind(this), { passive: true });
+    document.addEventListener('pointermove', this.onFingerMove.bind(this), { passive: true });
+    document.addEventListener('pointerup', this.cancelPress.bind(this), { passive: true });
+    document.addEventListener('pointercancel', this.cancelPress.bind(this), { passive: true });
+    effect(this.applyAccent.bind(this));
+    effect(this.applyLanguage.bind(this));
+  }
+
+  /** The chosen accent color re-themes the whole interface. */
+  private applyAccent(): void {
+    this.settings.applyAccent(this.settings.accent(), this.settings.customAccent());
+  }
+
+  /** Keeps the lang attribute of the page equal to the language of the interface. */
+  private applyLanguage(): void {
+    document.documentElement.lang = this.i18n.lang();
+  }
+
+  /** Loads and starts the themed cursors and the global tooltips (separate chunks, after the first paint). */
+  private async loadExtras(): Promise<void> {
+    const cursor = await import('./core/services/cursor.service');
+    const tooltip = await import('./core/services/tooltip.service');
+    this.injector.get(cursor.CursorService);
+    this.injector.get(tooltip.TooltipService);
+    // The emoji, script and serif fonts are a separate stylesheet that does not block the first paint.
+    const lazyFonts = document.getElementById('lazy-fonts');
+    if (lazyFonts) {
+      (lazyFonts as HTMLLinkElement).media = 'all';
+    }
+    const fonts = await import('./core/services/font.service');
+    this.injector.get(fonts.FontService);
+  }
+
+  /** The browser's own context menu is blocked everywhere (the app has its own menus). */
+  @HostListener('document:contextmenu', ['$event'])
+  onContextMenu(event: Event): void {
+    event.preventDefault();
+    // A phone that sent the event by itself (Android) does not need ours.
+    if (event.isTrusted) {
+      this.cancelPress();
+    }
+  }
+
+  /** A finger went down: if it stays still for a moment it counts as a right click. */
+  private onFingerDown(event: PointerEvent): void {
+    this.cancelPress();
+    if (event.pointerType !== 'touch') {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    this.press = {
+      x: event.clientX,
+      y: event.clientY,
+      timer: setTimeout(this.longPress.bind(this, target), 600),
+    };
+  }
+
+  /** The finger moved: it is a scroll, not a long press. */
+  private onFingerMove(event: PointerEvent): void {
+    if (this.press && Math.hypot(event.clientX - this.press.x, event.clientY - this.press.y) > 10) {
+      this.cancelPress();
+    }
+  }
+
+  /** Forgets the pending long press. */
+  private cancelPress(): void {
+    if (this.press) {
+      clearTimeout(this.press.timer);
+      this.press = null;
+    }
+  }
+
+  /** The finger stayed: the element gets the event a right click would have sent. */
+  private longPress(target: Element): void {
+    const press = this.press;
+    this.press = null;
+    if (!press || !target.isConnected) {
+      return;
+    }
+    target.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: press.x,
+        clientY: press.y,
+      }),
+    );
+  }
+
+  /**
+   * The mouse wheel over a slider moves it one step (up raises it, down lowers it) instead of scrolling the
+   * page. The step is the slider's own (1 when it has none).
+   */
+  private onWheel(event: WheelEvent): void {
+    const slider = event.target;
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range' || slider.disabled) {
+      return;
+    }
+    event.preventDefault();
+    const step = Number(slider.step) > 0 ? Number(slider.step) : 1;
+    const min = slider.min === '' ? 0 : Number(slider.min);
+    const max = slider.max === '' ? 100 : Number(slider.max);
+    const current = Number(slider.value);
+    const next = Math.min(max, Math.max(min, current + (event.deltaY < 0 ? step : -step)));
+    if (next === current) {
+      return;
+    }
+    // Rounded to the decimals of the step, to avoid values like 0.30000000000000004.
+    const decimals = (String(step).split('.')[1] ?? '').length;
+    slider.value = next.toFixed(decimals);
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    slider.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  /** Plays the click sound under every control that is pressed (a different one for switches). */
+  @HostListener('document:click', ['$event'])
+  onPress(event: MouseEvent): void {
+    const target = (event.target as Element | null)?.closest(PRESSABLE) as HTMLElement | null;
+    if (!target || target.hasAttribute('disabled') || target.dataset['silent'] !== undefined) {
+      return;
+    }
+    const isSwitch =
+      target.getAttribute('role') === 'switch' ||
+      (target instanceof HTMLInputElement && ['checkbox', 'radio'].includes(target.type));
+    this.sound.play(isSwitch ? 'toggle' : 'click', isSwitch ? undefined : weightOf(target));
+  }
+
+  /** A soft tick under every step of a slider; the pitch rises with the value. */
+  @HostListener('document:input', ['$event'])
+  onSlide(event: Event): void {
+    const slider = event.target;
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range') {
+      return;
+    }
+    const min = Number(slider.min || 0);
+    const max = Number(slider.max || 100);
+    this.sound.slide(max > min ? (Number(slider.value) - min) / (max - min) : 0);
+  }
+}

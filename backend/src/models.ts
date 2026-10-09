@@ -1,0 +1,166 @@
+/**
+ * src/models.ts
+ * Types of the database rows and the functions that turn them into public objects for the client.
+ */
+import type { Db } from './db';
+
+export interface UserRow {
+  id: string;
+  username: string;
+  display_name: string;
+  auth_hash: string;
+  kdf_salt: string;
+  kdf_iterations: number;
+  pub_ecdh: string;
+  pub_ecdsa: string;
+  wrapped_ecdh: string;
+  wrapped_ecdsa: string;
+  bio: string;
+  status_text: string;
+  accent: string;
+  aura: string;
+  aura_color: string;
+  pronouns: string;
+  avatar_image: string | null;
+  banner_image: string | null;
+  banner_color: string;
+  profile_color: string;
+  name_font: string;
+  avatar_color: string;
+  created_at: number;
+}
+
+export interface PublicUser {
+  id: string;
+  username: string;
+  displayName: string;
+  bio: string;
+  statusText: string;
+  accent: string;
+  aura: string;
+  auraColor: string;
+  pronouns: string;
+  avatarImage: string | null;
+  bannerImage: string | null;
+  bannerColor: string;
+  profileColor: string;
+  nameFont: string;
+  avatarColor: string;
+  publicKeys: { ecdh: string; ecdsa: string };
+  createdAt: number;
+}
+
+/** The part of a user that other people may see (never the secrets). */
+export function toPublicUser(row: UserRow): PublicUser {
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    bio: row.bio,
+    statusText: row.status_text,
+    accent: row.accent,
+    aura: row.aura,
+    auraColor: row.aura_color,
+    pronouns: row.pronouns,
+    avatarImage: row.avatar_image,
+    bannerImage: row.banner_image,
+    bannerColor: row.banner_color,
+    profileColor: row.profile_color,
+    nameFont: row.name_font,
+    avatarColor: row.avatar_color,
+    publicKeys: { ecdh: row.pub_ecdh, ecdsa: row.pub_ecdsa },
+    createdAt: row.created_at,
+  };
+}
+
+/** A user by id. */
+export function getUser(db: Db, id: string): UserRow | undefined {
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+}
+
+/** Several users by id, in chunks so the query never exceeds the limit of SQLite. */
+export function getUsers(db: Db, ids: Iterable<string>): PublicUser[] {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return [];
+  const rows: UserRow[] = [];
+  // SQLite caps bound variables; chunk to stay far below it.
+  for (let i = 0; i < unique.length; i += 400) {
+    const chunk = unique.slice(i, i + 400);
+    const marks = chunk
+      .map(function () {
+        return '?';
+      })
+      .join(',');
+    rows.push(
+      ...(db.prepare(`SELECT * FROM users WHERE id IN (${marks})`).all(...chunk) as UserRow[]),
+    );
+  }
+  return rows.map(toPublicUser);
+}
+
+/** Two ids in a fixed order: a friendship is one row, whoever asked first. */
+export function orderedPair(a: string, b: string): [string, string] {
+  return a < b ? [a, b] : [b, a];
+}
+
+/** Whether two people are friends. */
+export function areFriends(db: Db, a: string, b: string): boolean {
+  const [x, y] = orderedPair(a, b);
+  return !!db
+    .prepare("SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ? AND status = 'accepted'")
+    .get(x, y);
+}
+
+export interface ChannelRow {
+  id: string;
+  guild_id: string | null;
+  type: 'text' | 'voice' | 'dm';
+  name: string;
+  dm_key: string | null;
+  position: number;
+  created_at: number;
+}
+
+/** A channel by id. */
+export function getChannel(db: Db, id: string): ChannelRow | undefined {
+  return db.prepare('SELECT * FROM channels WHERE id = ?').get(id) as ChannelRow | undefined;
+}
+
+/** Everyone who can read the channel: DM participants or guild members. */
+export function channelAudience(db: Db, channel: ChannelRow): string[] {
+  const rows = channel.guild_id
+    ? db.prepare('SELECT user_id FROM guild_members WHERE guild_id = ?').all(channel.guild_id)
+    : db.prepare('SELECT user_id FROM dm_members WHERE channel_id = ?').all(channel.id);
+  return (rows as { user_id: string }[]).map(function (r) {
+    return r.user_id;
+  });
+}
+
+/** Whether a person can read a channel: a participant of a direct chat or a member of the group. */
+export function canAccessChannel(db: Db, channel: ChannelRow, userId: string): boolean {
+  if (channel.guild_id) {
+    return !!db
+      .prepare('SELECT 1 FROM guild_members WHERE guild_id = ? AND user_id = ?')
+      .get(channel.guild_id, userId);
+  }
+  return !!db
+    .prepare('SELECT 1 FROM dm_members WHERE channel_id = ? AND user_id = ?')
+    .get(channel.id, userId);
+}
+
+/** Users that should learn about `userId`'s presence changes. */
+export function presenceAudience(db: Db, userId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT CASE WHEN user_a = @u THEN user_b ELSE user_a END AS id
+         FROM friendships WHERE status = 'accepted' AND (user_a = @u OR user_b = @u)
+       UNION
+       SELECT gm2.user_id AS id FROM guild_members gm1
+         JOIN guild_members gm2 ON gm1.guild_id = gm2.guild_id
+        WHERE gm1.user_id = @u AND gm2.user_id <> @u`,
+    )
+    .all({ u: userId }) as { id: string }[];
+  return rows.map(function (r) {
+    return r.id;
+  });
+}

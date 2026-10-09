@@ -1,7 +1,26 @@
 {
+  "name": "chatterly-renewed",
+  "version": "2.1.0",
+  "description": "Chatterly-Renewed: chat, grupos y llamadas WebRTC con cifrado de extremo a extremo.",
+  "private": true,
+  "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev:frontend": "cd frontend && ng serve",
-    "dev:backend": "cd backend && npm run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
-  }
+    "install:all": "pnpm install && pnpm --dir backend install && pnpm --dir frontend install",
+    "dev:frontend": "pnpm --dir frontend start",
+    "dev:backend": "pnpm --dir backend dev",
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "build": "pnpm --dir backend build && pnpm --dir frontend build",
+    "typecheck": "pnpm --dir backend typecheck && pnpm --dir frontend typecheck",
+    "test": "node test/run.mjs",
+    "app": "pnpm build && node scripts/produccion.mjs",
+    "start": "node scripts/produccion.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "playwright": "^1.55.0"
+  },
+  "packageManager": "pnpm@12.9.1"
 }

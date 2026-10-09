@@ -1,0 +1,216 @@
+/**
+ * src/db.ts
+ * SQLite schema of the application and opening of the database (with simple column migrations).
+ */
+import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import path from 'node:path';
+
+export type Db = Database.Database;
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS users (
+  id              TEXT PRIMARY KEY,
+  username        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  display_name    TEXT NOT NULL,
+  auth_hash       TEXT NOT NULL,
+  kdf_salt        TEXT NOT NULL,
+  kdf_iterations  INTEGER NOT NULL,
+  pub_ecdh        TEXT NOT NULL,
+  pub_ecdsa       TEXT NOT NULL,
+  wrapped_ecdh    TEXT NOT NULL,
+  wrapped_ecdsa   TEXT NOT NULL,
+  bio             TEXT NOT NULL DEFAULT '',
+  status_text     TEXT NOT NULL DEFAULT '',
+  accent          TEXT NOT NULL DEFAULT 'mint',
+  aura            TEXT NOT NULL DEFAULT 'prism',
+  avatar_emoji    TEXT NOT NULL DEFAULT '',
+  avatar_color    TEXT NOT NULL DEFAULT '#2ef2b0',
+  created_at      INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash  TEXT NOT NULL UNIQUE,
+  expires_at  INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+-- Tokens de refresco ya usados: si alguien vuelve a presentar uno, se asume robo y se cierran todas las sesiones.
+CREATE TABLE IF NOT EXISTS spent_tokens (
+  token_hash  TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  INTEGER NOT NULL
+);
+
+-- user_a < user_b always, so each pair has exactly one row.
+CREATE TABLE IF NOT EXISTS friendships (
+  user_a        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_b        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  requested_by  TEXT NOT NULL,
+  status        TEXT NOT NULL CHECK (status IN ('pending','accepted')),
+  created_at    INTEGER NOT NULL,
+  PRIMARY KEY (user_a, user_b)
+);
+
+CREATE TABLE IF NOT EXISTS guilds (
+  id              TEXT PRIMARY KEY,
+  name            TEXT NOT NULL,
+  icon            TEXT NOT NULL DEFAULT '',
+  owner_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_version     INTEGER NOT NULL DEFAULT 1,
+  needs_rotation  INTEGER NOT NULL DEFAULT 0,
+  created_at      INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS guild_members (
+  guild_id   TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL CHECK (role IN ('owner','member')),
+  joined_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_guild_members_user ON guild_members(user_id);
+
+-- Tags of a group: only its owner creates them and gives them to the members.
+CREATE TABLE IF NOT EXISTS guild_tags (
+  id          TEXT PRIMARY KEY,
+  guild_id    TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  color       TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_guild_tags_guild ON guild_tags(guild_id);
+CREATE TABLE IF NOT EXISTS guild_member_tags (
+  guild_id  TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+  user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tag_id    TEXT NOT NULL REFERENCES guild_tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (guild_id, user_id, tag_id)
+);
+
+-- The guild key is never stored in clear: each member holds an envelope wrapped for their key pair.
+CREATE TABLE IF NOT EXISTS guild_keys (
+  guild_id     TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_version  INTEGER NOT NULL,
+  wrapper_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  iv           TEXT NOT NULL,
+  data         TEXT NOT NULL,
+  PRIMARY KEY (guild_id, user_id, key_version)
+);
+
+CREATE TABLE IF NOT EXISTS channels (
+  id          TEXT PRIMARY KEY,
+  guild_id    TEXT REFERENCES guilds(id) ON DELETE CASCADE,
+  type        TEXT NOT NULL CHECK (type IN ('text','voice','dm')),
+  name        TEXT NOT NULL,
+  dm_key      TEXT UNIQUE,
+  position    INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_channels_guild ON channels(guild_id);
+
+CREATE TABLE IF NOT EXISTS dm_members (
+  channel_id  TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (channel_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_dm_members_user ON dm_members(user_id);
+
+-- Only ciphertext is persisted. iv / ciphertext / signature are base64.
+CREATE TABLE IF NOT EXISTS messages (
+  seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+  id           TEXT NOT NULL UNIQUE,
+  channel_id   TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  sender_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  iv           TEXT NOT NULL,
+  ciphertext   TEXT NOT NULL,
+  key_version  INTEGER NOT NULL,
+  signature    TEXT NOT NULL,
+  created_at   INTEGER NOT NULL,
+  edited_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id, seq);
+
+-- Delivery and read marks: the highest message number each person has received and read in a channel.
+CREATE TABLE IF NOT EXISTS channel_receipts (
+  channel_id     TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  delivered_seq  INTEGER NOT NULL DEFAULT 0,
+  read_seq       INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (channel_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS reactions (
+  id          TEXT PRIMARY KEY,
+  message_id  TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  iv          TEXT NOT NULL,
+  ciphertext  TEXT NOT NULL,
+  signature   TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reactions_message ON reactions(message_id);
+
+CREATE TABLE IF NOT EXISTS images (
+  id          TEXT PRIMARY KEY,
+  owner_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL CHECK (kind IN ('avatar','banner','group')),
+  mime        TEXT NOT NULL,
+  size        INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_images_owner ON images(owner_id);
+
+CREATE TABLE IF NOT EXISTS files (
+  id           TEXT PRIMARY KEY,
+  channel_id   TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  uploader_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  size         INTEGER NOT NULL,
+  created_at   INTEGER NOT NULL
+);
+`;
+
+/** Columns added after 1.0.0; applied to databases created by older versions. */
+const MIGRATIONS: [table: string, column: string, definition: string][] = [
+  ['users', 'pronouns', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'avatar_image', 'TEXT'],
+  ['users', 'banner_image', 'TEXT'],
+  ['users', 'banner_color', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'profile_color', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'name_font', "TEXT NOT NULL DEFAULT 'default'"],
+  ['users', 'aura_color', "TEXT NOT NULL DEFAULT ''"],
+  ['guilds', 'icon_image', 'TEXT'],
+  ['guild_members', 'sort_order', 'INTEGER'],
+  ['guild_tags', 'position', 'INTEGER NOT NULL DEFAULT 0'],
+];
+
+/** Adds the columns that older databases do not have, so an update never needs a manual step. */
+function migrate(db: Database.Database): void {
+  for (const [table, column, definition] of MIGRATIONS) {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all() as {
+      name: string;
+    }[];
+    if (
+      !columns.some(function (c) {
+        return c.name === column;
+      })
+    )
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+/**
+ * Opens the database (creating the folder and the tables) with foreign keys on and the journal that allows reading while writing.
+ */
+export function openDatabase(dbPath: string): Db {
+  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.exec(SCHEMA);
+  migrate(db);
+  return db;
+}
