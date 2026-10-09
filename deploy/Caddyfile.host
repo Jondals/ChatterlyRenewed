@@ -1,0 +1,11 @@
+# Block for the Caddy that runs on the machine itself (/etc/caddy/Caddyfile), next to the ones of other sites.
+# The app publishes the API on 127.0.0.1:3000 and the web app on 127.0.0.1:3001 (see docker-compose.yml).
+# Both are needed: if only 3001 is given, the sign-in fails with "JSON.parse: unexpected character" because the
+# requests to /api get the web page back instead of the API.
+chatterly.example.com {
+	encode zstd gzip
+
+	@backend path /api/* /ws
+	reverse_proxy @backend 127.0.0.1:3000
+	reverse_proxy 127.0.0.1:3001
+}

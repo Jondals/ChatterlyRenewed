@@ -17,8 +17,8 @@
 1. Do steps 1 to 3 above (the machine, the ports 80 and 443, and the domain). Also open UDP 443 if you want HTTP/3.
 2. Install Docker: `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER` (log out and in again).
 3. `git clone <your repository> ~/ChatterlyRenewed && cd ~/ChatterlyRenewed && cp deploy/.env.docker.example .env`, then edit `.env` (the domain at least).
-4. `docker compose up -d --build`. The first build takes a few minutes on the ARM machine; Caddy gets the certificate by itself.
-5. Update: `git pull && docker compose up -d --build`. Logs: `docker compose logs -f app`.
+4. `docker compose up -d --build app`. The first build takes a few minutes on the ARM machine. HTTPS: if the machine already has a Caddy, add the block of `deploy/Caddyfile.host` (the API on 3000 AND the web on 3001, or sign-in fails with "JSON.parse: unexpected character") and `sudo systemctl reload caddy`; if not, `docker compose --profile caddy up -d --build` runs one inside Docker.
+5. Update: `git pull && docker compose up -d --build app`, or let GitHub do it after every push (`.github/workflows/deploy.yml`; the branch must be the one named in the file: `master` or `main`). Logs: `docker compose logs -f app`.
 6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
 7. Own TURN server: write the real values in `deploy/turnserver.conf`, set `TURN_URLS` and `TURN_SECRET` in `.env` and run `docker compose --profile turn up -d`.
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.6.6
+
+- Deploy: the automatic update never ran because the workflow listened to the branch `main` and the repository uses `master`; it listens to both now, can be started by hand, and replaces the code of the server with `git reset --hard` (a file edited by hand on the server, like the Dockerfile, made `git pull` stop).
+- Docker: the app publishes the API on 127.0.0.1:3000 and the web app on 127.0.0.1:3001 for a Caddy that already runs on the machine (`deploy/Caddyfile.host`); the Caddy inside Docker is now optional (`--profile caddy`). Sending only the web port to Caddy made sign-in fail with "JSON.parse: unexpected character".
+
 ## 2.6.5
 
 - The handoff from the first layer of the page to the introduction is exact now. Measuring the opacity frame by frame showed that the aurora of the animation started at full strength while the one of the first layer was still at 2%: a jump from almost black to full aurora a few milliseconds after load. The animation now reads the point where the first layer's animations are and continues from there (aurora and glow), so the two are the same picture and nothing jumps.

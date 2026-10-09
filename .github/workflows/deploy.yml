@@ -1,23 +1,31 @@
+# .github/workflows/deploy.yml
+# Every push to the main branch (master or main) updates the server: it downloads the new code and rebuilds the
+# container, which holds both the backend and the web app. Secrets to create in GitHub (Settings > Secrets and variables
+# > Actions): SSH_HOST (IP or domain), SSH_USER (for example ubuntu), SSH_KEY (the whole private key) and, if it is not
+# 22, SSH_PORT. It can also be started by hand from the Actions tab.
 name: Deploy Chatterly-Renewed to VPS
 
 on:
   push:
-    branches:
-      - main  # Cambia a 'master' si tu rama principal se llama así
+    branches: [master, main]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploying via SSH
+      - name: Update the server over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
           script: |
             cd ~/ChatterlyRenewed
-            git pull origin main
-            docker-compose up -d --build app
+            git fetch origin ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
+            if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"; else COMPOSE="docker-compose"; fi
+            $COMPOSE up -d --build app
+            docker image prune -f

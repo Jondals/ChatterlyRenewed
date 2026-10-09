@@ -1,14 +1,16 @@
 # docker-compose.yml
-# The whole server in two containers: the app, and Caddy in front of it (it gets the HTTPS certificate by itself).
+# The app in one container (API and web app). HTTPS comes from a Caddy that is already running on the machine (it can
+# serve other sites too): see deploy/Caddyfile.host. The app listens only on this machine: 3000 (API) and 3001 (web).
 #   cp deploy/.env.docker.example .env   (write your domain and secrets)
-#   docker compose up -d --build
+#   docker compose up -d --build app
+# Without a Caddy of your own, this file can run one too:  docker compose --profile caddy up -d --build
 # Optional own TURN server for calls: docker compose --profile turn up -d
 services:
   app:
     build: .
     restart: unless-stopped
     environment:
-      CORS_ORIGINS: https://${DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN:-localhost}
       JWT_SECRET: ${JWT_SECRET:-}
       SERVER_SECRET: ${SERVER_SECRET:-}
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
@@ -16,17 +18,21 @@ services:
       TURN_SECRET: ${TURN_SECRET:-}
     volumes:
       - chatterly-data:/data
+    ports:
+      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:3001:4200'
     expose:
       - '3000'
       - '4200'
 
   caddy:
+    profiles: ['caddy']
     image: caddy:2
     restart: unless-stopped
     depends_on:
       - app
     environment:
-      DOMAIN: ${DOMAIN}
+      DOMAIN: ${DOMAIN:-localhost}
     ports:
       - '80:80'
       - '443:443'
