@@ -73,8 +73,15 @@ export class AuthService {
     return !!this.user() && !!this.unlockedIdentity();
   }
 
+  /** True while the account is being erased (see `deleteAccount`). */
+  private erasing = false;
+
   /** The server refused to renew the session: sign out on this device only. */
   private onSessionExpired(): void {
+    // While the account is being erased the server refuses the session on purpose: the page is about to be loaded again.
+    if (this.erasing) {
+      return;
+    }
     void this.logout(false);
   }
 
@@ -215,7 +222,13 @@ export class AuthService {
     const secrets = await deriveSecrets(password, kdf.salt, kdf.iterations);
     // The password is checked through a sign in first: a wrong one must not look like an expired session (which signs out).
     await this.api.post('/api/auth/login', { username, authSecret: secrets.authSecret }, false);
-    await this.api.post('/api/me/delete', { authSecret: secrets.authSecret });
+    this.erasing = true;
+    try {
+      await this.api.post('/api/me/delete', { authSecret: secrets.authSecret });
+    } catch (error) {
+      this.erasing = false;
+      throw error;
+    }
     // Everything kept on this device goes, without touching the state in memory: the page is loaded again right after.
     const names = new Set(LOCAL_DATABASES);
     for (const database of (await indexedDB.databases?.()) ?? []) {

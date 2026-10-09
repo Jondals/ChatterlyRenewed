@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.15.1
+
+- Deleting the account now erases the row of the person too: nothing of them stays in the database (before a stub without name, password or keys stayed). To make that possible the key envelopes that a person wrapped for others no longer depend on that person's row: the public key of the wrapper (public data) is written into the envelope when the account is erased, and the app uses it. Older databases are updated by themselves when the server starts. The groups where the person was a member are marked so their owner renews the group key.
+
 ## 2.15.0
 
 - Delete the account (Settings > Privacy & security): asks for the username and the password again (the server checks the proof of the password; a stolen session is not enough, and a wrong password does not sign anybody out). It erases the messages, reactions, files and pictures of the person from the server and from the disk, their friendships, their direct chats and the groups they own (in the others they just leave), closes every session and connection, and then erases everything kept on the device (keys, preferences, stickers, sounds, fonts). What stays is a stub row with no name, no password and no private keys: the people of the groups they were in hold keys wrapped by them, and without that row they could not read their own groups. The old tokens stop working at once.
