@@ -4,7 +4,7 @@
  */
 import { Injectable, inject, signal } from '@angular/core';
 import { pickFile } from '../file-picker';
-import { runInStore, type StoreLocation } from '../indexed-db';
+import { packBlobs, runInStore, unpackBlobs, type StoreLocation } from '../indexed-db';
 import { SoundService } from './sound.service';
 
 /** A sound the person uploaded. */
@@ -64,7 +64,7 @@ export class SoundboardStore {
     this.loaded = true;
     try {
       const clips = await runInStore<CustomSound[]>(LOCATION, 'readonly', readAll);
-      this.clips.set(clips.sort(byCreation));
+      this.clips.set(unpackBlobs(clips).sort(byCreation));
     } catch {
       this.clips.set([]);
     }
@@ -72,7 +72,7 @@ export class SoundboardStore {
 
   /** Keeps a sound that was prepared (checked and cut) in the window that edits sounds. */
   async save(clip: CustomSound): Promise<void> {
-    await runInStore(LOCATION, 'readwrite', writeClip.bind(null, clip));
+    await runInStore(LOCATION, 'readwrite', writeClip.bind(null, await packBlobs(clip)));
     this.clips.set([...this.clips(), clip]);
   }
 

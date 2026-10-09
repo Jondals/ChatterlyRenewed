@@ -45,7 +45,7 @@ export interface AppConfig {
   logger: boolean;
 }
 
-export const APP_VERSION = '2.9.0';
+export const APP_VERSION = '2.10.0';
 
 /** A list from an environment variable, separated by commas. */
 function list(value: string | undefined, fallback: string[]): string[] {
@@ -126,7 +126,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     scrypt: { N: 1 << 15, r: 8, p: 1 },
     minKdfIterations: 200_000,
     maxUploadBytes: 12 * 1024 * 1024,
-    maxImageBytes: 2 * 1024 * 1024,
+    maxImageBytes: 8 * 1024 * 1024,
     gifKey: process.env['GIPHY_API_KEY'] ?? '',
     tenorKey: process.env['TENOR_API_KEY'] ?? '',
     rateLimit: { max: 600, authMax: 20, windowMs: 60_000 },

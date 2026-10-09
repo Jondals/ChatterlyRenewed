@@ -27,8 +27,8 @@ import {
 } from '../../core/services/image.service';
 import { ModalComponent } from './modal.component';
 
-/** The biggest animated picture kept as it is (the server accepts up to 2 MB). */
-const ANIMATED_MAX_BYTES = 2 * 1024 * 1024 - 2048;
+/** The biggest animated picture kept as it is (the server accepts up to 8 MB). */
+const ANIMATED_MAX_BYTES = 8 * 1024 * 1024 - 2048;
 /** The most the picture can be zoomed in (times the size that just covers the frame). */
 const MAX_ZOOM = 4;
 
@@ -332,7 +332,7 @@ async function isAnimated(file: Blob): Promise<boolean> {
 }
 
 /**
- * Gets a picture ready: a picture that moves (up to 2 MB) is kept as it is so it keeps moving; any other is adjusted
+ * Gets a picture ready: a picture that moves (up to 8 MB) is kept as it is so it keeps moving; any other is adjusted
  * in the window and cut to the target.
  * @returns The picture, or null when the person cancels.
  */

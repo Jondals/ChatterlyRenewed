@@ -1220,7 +1220,7 @@ export const ES: Record<string, string> = {
   'Trust on first use': 'Confianza en el primer uso',
   'Encrypted before they leave your device. Up to 10 MB each':
     'Se cifran antes de salir de tu dispositivo. Hasta 10 MB cada uno',
-  'Up to 2 MB': 'Hasta 2 MB',
+  'Up to 8 MB': 'Hasta 8 MB',
   'Up to 5 MB': 'Hasta 5 MB',
   'Edit the sound': 'Edita el sonido',
   'Kept: {n} s': 'Se guarda: {n} s',

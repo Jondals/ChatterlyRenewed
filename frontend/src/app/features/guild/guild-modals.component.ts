@@ -62,7 +62,7 @@ import { SocialStore } from '../../store/social.store';
                 <span
                   class="flex h-full w-full flex-col items-center justify-center gap-1 text-xs text-muted group-hover:text-accent"
                   ><app-icon name="upload" [size]="20" /> {{ 'Icon' | t }}
-                  <span class="text-[10px] text-dim">{{ 'Up to 2 MB' | t }}</span></span
+                  <span class="text-[10px] text-dim">{{ 'Up to 8 MB' | t }}</span></span
                 >
               }
             </button>

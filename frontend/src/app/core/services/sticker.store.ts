@@ -4,7 +4,7 @@
  */
 import { Injectable, signal } from '@angular/core';
 import { pickFiles } from '../file-picker';
-import { runInStore, type StoreLocation } from '../indexed-db';
+import { packBlobs, runInStore, unpackBlobs, type StoreLocation } from '../indexed-db';
 import { readZip } from '../zip';
 
 /** One sticker: an image. */
@@ -49,7 +49,7 @@ const STARTER = [
   '👀',
   '🚀',
   '🍕',
-  '☕',
+  '☕️',
   '🌈',
   '🐱',
   '🦊',
@@ -109,7 +109,7 @@ export class StickerStore {
     }
     try {
       const packs = await runInStore<StickerPack[]>(LOCATION, 'readonly', readAll);
-      this.packs.set(packs.sort(byCreation));
+      this.packs.set(unpackBlobs(packs).sort(byCreation));
     } catch {
       this.packs.set([]);
     }
@@ -138,7 +138,7 @@ export class StickerStore {
 
   /** Saves a pack (new or changed) and updates the list. */
   private async save(pack: StickerPack): Promise<void> {
-    await runInStore(LOCATION, 'readwrite', writePack.bind(null, pack));
+    await runInStore(LOCATION, 'readwrite', writePack.bind(null, await packBlobs(pack)));
     const others = this.packs().filter(function isOther(item: StickerPack) {
       return item.id !== pack.id;
     });
@@ -291,14 +291,21 @@ export class StickerStore {
     return this.addImages(blobs, { name: name || 'WhatsApp pack' });
   }
 
+  /** A font that cannot be loaded is not an error here: the system emoji font is used instead. */
+  private ignoreFont(): void {
+    return;
+  }
+
   /** Draws 24 emoji as stickers, so the tab is useful from the first click. */
   async addStarterPack(): Promise<void> {
     const blobs: Blob[] = [];
     for (const emoji of STARTER) {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 256;
+      // The emoji font arrives in pieces, only when a text needs them: ask for the piece of this emoji, or it is drawn blank.
+      await document.fonts.load('200px "Noto Color Emoji"', emoji).catch(this.ignoreFont);
       const context = canvas.getContext('2d')!;
-      context.font = '200px "Noto Color Emoji", "Segoe UI Emoji", sans-serif';
+      context.font = '200px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillText(emoji, 128, 140);

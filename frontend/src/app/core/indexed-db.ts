@@ -51,3 +51,62 @@ export async function runInStore<T>(
     db.close();
   }
 }
+
+/** A file kept as its bytes: some browsers (Safari, private windows) fail to store a Blob in IndexedDB, bytes always work. */
+interface PackedBlob {
+  packedBlob: ArrayBuffer;
+  type: string;
+}
+
+/** Whether a stored value is a file kept as bytes. */
+function isPacked(value: unknown): value is PackedBlob {
+  return typeof value === 'object' && value !== null && 'packedBlob' in value;
+}
+
+/** Copies a value turning every file inside it into its bytes, so it can be stored in any browser. */
+export async function packBlobs<T>(value: T): Promise<T> {
+  if (value instanceof Blob) {
+    return { packedBlob: await value.arrayBuffer(), type: value.type } as T;
+  }
+  if (Array.isArray(value)) {
+    const copy: unknown[] = [];
+    for (const item of value) {
+      copy.push(await packBlobs(item));
+    }
+    return copy as T;
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.getPrototypeOf(value) === Object.prototype
+  ) {
+    const copy: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      copy[key] = await packBlobs(item);
+    }
+    return copy as T;
+  }
+  return value;
+}
+
+/** The opposite of `packBlobs`: files kept as bytes become files again (files stored as files are left alone). */
+export function unpackBlobs<T>(value: T): T {
+  if (isPacked(value)) {
+    return new Blob([value.packedBlob], { type: value.type }) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(unpackBlobs) as T;
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.getPrototypeOf(value) === Object.prototype
+  ) {
+    const copy: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      copy[key] = unpackBlobs(item);
+    }
+    return copy as T;
+  }
+  return value;
+}

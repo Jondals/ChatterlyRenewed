@@ -3,7 +3,7 @@
  * The call ringtones: four melodies written as notes (classic, Christmas, Halloween and New Year), the automatic
  * choice that follows the season, plus the storage of one custom sound on this device. The melodies are played by SoundService with WebAudio.
  */
-import { runInStore, type StoreLocation } from './indexed-db';
+import { packBlobs, runInStore, unpackBlobs, type StoreLocation } from './indexed-db';
 
 /** The ringtone choices: the four melodies and the person's own file. */
 export type RingtoneId = 'auto' | 'classic' | 'christmas' | 'halloween' | 'newyear' | 'custom';
@@ -235,9 +235,10 @@ export function midiToHertz(midi: number): number {
 const CLICK_LOCATION: StoreLocation = { database: 'chatterly-renewed-click', store: 'tone' };
 
 /** Stores the click sound the person uploaded on this device. */
-export function saveCustomClick(blob: Blob): Promise<unknown> {
+export async function saveCustomClick(blob: Blob): Promise<unknown> {
+  const packed = await packBlobs(blob);
   return runInStore(CLICK_LOCATION, 'readwrite', function put(store: IDBObjectStore) {
-    return store.put(blob, KEY);
+    return store.put(packed, KEY);
   });
 }
 
@@ -251,7 +252,7 @@ export async function loadCustomClick(): Promise<Blob | null> {
         return store.get(KEY);
       },
     );
-    return found ?? null;
+    return found ? unpackBlobs(found) : null;
   } catch {
     return null;
   }
@@ -265,9 +266,10 @@ export function deleteCustomClick(): Promise<unknown> {
 }
 
 /** Stores the custom ringtone file on this device. */
-export function saveCustomRingtone(blob: Blob): Promise<unknown> {
+export async function saveCustomRingtone(blob: Blob): Promise<unknown> {
+  const packed = await packBlobs(blob);
   return runInStore(LOCATION, 'readwrite', function put(store: IDBObjectStore) {
-    return store.put(blob, KEY);
+    return store.put(packed, KEY);
   });
 }
 
@@ -281,7 +283,7 @@ export async function loadCustomRingtone(): Promise<Blob | null> {
         return store.get(KEY);
       },
     );
-    return found ?? null;
+    return found ? unpackBlobs(found) : null;
   } catch {
     return null;
   }

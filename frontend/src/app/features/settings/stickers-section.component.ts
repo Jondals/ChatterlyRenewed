@@ -38,11 +38,11 @@ import { IconComponent } from '../../shared/components/icon.component';
           <app-icon name="smile" [size]="15" class="text-accent" />
           {{ 'Add emoji starter pack' | t }}
         </button>
-        <details class="text-xs text-muted">
+        <details class="min-w-0 break-words text-xs text-muted">
           <summary class="cursor-pointer text-sm font-semibold text-fg">
             {{ 'How do I get my WhatsApp stickers?' | t }}
           </summary>
-          <ol class="mt-2 list-decimal space-y-1.5 pl-5">
+          <ol class="mt-2 list-decimal space-y-1.5 break-words pl-5">
             <li>
               {{
                 'Android: open your files app → Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Stickers — those .webp files are your stickers.'

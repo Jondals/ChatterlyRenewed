@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.10.0
+
+- Pictures: the profile picture, the banner and the group icon can be up to 8 MB (moving ones, GIF or animated WebP, are kept as they are up to that size; before it was 2 MB).
+- Emoji starter pack: some emoji came out blank and others drawn with another style, because the emoji font arrives in pieces and the pack was drawn before the piece of each emoji had loaded. Each emoji now waits for its piece first, and the coffee cup has the symbol that tells browsers to draw it as a picture. If your pack has empty squares, delete it and add it again.
+- Browsers: stickers, sounds and ringtones kept on the device are saved as bytes instead of as files, because some browsers (Safari, private windows) fail with "Error preparing Blob/File data to be stored in object store" when a file is put into IndexedDB; what was saved before still opens.
+- Flags: on Windows the flag font is always used, whatever the browser (Brave, Opera and others scramble what a canvas returns, which fooled the test that decides it, so flags showed as letters: GB, ES).
+- The help of the stickers tab breaks long file paths, so the text no longer leaves its box in browsers that do not break after a slash.
+- Tested on Chromium, Firefox and WebKit (the engine of Safari). Emoji do not look the same in every browser because each one draws them with its own font when it does not support ours; the same goes for the style of the flags on systems that have their own.
+
 ## 2.9.0
 
 - Soundboard, your sounds: no more limit of 8 seconds. Choose any audio file (up to 25 MB) and a window opens to prepare it: see its wave, cut the part you want (drag on the wave or use the Start and End sliders; up to 30 seconds are kept), listen to it, give it a name and an emoji, and save. Every sound has a pencil to edit it again later (the whole file is kept, so the cut can be changed), and the tile shows its emoji. An edited sound gets a new identity, so the people in a call receive the new version.

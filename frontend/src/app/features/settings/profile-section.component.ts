@@ -116,7 +116,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                 class="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 text-sm font-semibold opacity-0 group-hover:opacity-100"
               >
                 <app-icon name="upload" [size]="17" /> {{ 'Upload banner' | t }}
-                <span class="text-xs font-normal opacity-80">{{ 'Up to 2 MB' | t }}</span>
+                <span class="text-xs font-normal opacity-80">{{ 'Up to 8 MB' | t }}</span>
               </div>
             </div>
             <div class="flex items-end gap-4 px-4 pb-4">
