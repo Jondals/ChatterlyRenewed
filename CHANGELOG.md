@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.6.1
+
+- Signing out: the padlock really closes now (the animation ended on the open pose by mistake).
+- The dark layer that covers the page until the introduction starts is plain dark now, with no aurora or glow of its own, so there is no change of brightness when the animation takes over; measured in a production build, the layer is on top from the first 30 ms until the animation is.
+- The subtitle "Private by design" is gone from the introduction.
+- Docker: the build now installs Playwright and Chromium in the build stage (the build takes the pictures of the sign-in page with them), and the post-build step no longer stops when Playwright is missing: it skips the pictures and finishes the rest.
+
+## 2.6.0
+
+- The introduction is now the first thing on screen when the page loads: a dark layer with a soft aurora comes inside the HTML itself, so the sign-in page (or the empty page) is never seen before it. The animation takes over from that layer without a flash, and the layer is not drawn at all for people who reduce motion.
+- Signing out: the padlock of the logo now snaps shut earlier, while the iris is still opening, so the closing is seen.
+
+## 2.5.0
+
+- The introduction plays every time the page is loaded (not only the first visit), starting at once; a click skips it. It still respects "reduce motion".
+- The big words of the sign-in page ("Talk freely. Nobody is listening.") have more space between lines, so selecting them no longer draws overlapping blocks, and the selection color is a little stronger.
+
+## 2.4.0
+
+- The page is no longer black while it starts: people who are already signed in see the logo of Chatterly-Renewed breathing (drawn in the HTML itself, so it shows at once) until the app appears, on every reload.
+- The animations use the real logo of Chatterly-Renewed (the bubble with two eyes) instead of a made-up one. It spins in, its outline draws itself, it fills with the gradient, blinks, and carries a padlock that snaps shut (introduction, sign-out) or opens (sign-in). The first light of the introduction shows up sooner, so there is no empty black moment.
+- Performance of the animations: the lights are drawn from one small picture per color instead of a new gradient for every light on every frame, and the moving aurora no longer uses a blur filter.
+
 ## 2.3.0
 
 - The introduction plays again for everyone: the mark that remembers it was seen has a new name, so devices that saw the old, weak one see the new one once.

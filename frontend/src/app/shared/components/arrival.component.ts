@@ -49,23 +49,34 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       <div class="arr-stage">
         <span class="arr-orbit"></span><span class="arr-orbit o2"></span>
         <span class="arr-wave"></span><span class="arr-wave w2"></span>
-        @if (kind() === 'register') {
-          <svg class="arr-logo" viewBox="0 0 64 64" aria-hidden="true">
-            <circle class="ring" cx="32" cy="32" r="29" pathLength="1" />
-            <path class="tick" pathLength="1" d="M19 33l9 9 17-19" />
-          </svg>
-        } @else {
-          <svg class="arr-logo" viewBox="0 0 64 64" aria-hidden="true">
-            <path
-              class="draw"
-              pathLength="1"
-              d="M12 12h40a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H30l-10 9v-9h-8a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
-            />
-            <path class="shackle" d="M28 24v-3a4 4 0 0 1 8 0v3" />
-            <rect class="body" x="25" y="24" width="14" height="11" rx="3" />
-            <path class="key" d="M32 28.4v3.4" />
-          </svg>
-        }
+        <div class="arr-mark">
+          @if (kind() === 'register') {
+            <svg class="arr-logo" viewBox="0 0 64 64" aria-hidden="true">
+              <circle class="ring" cx="32" cy="32" r="29" pathLength="1" />
+              <path class="tick" pathLength="1" d="M19 33l9 9 17-19" />
+            </svg>
+          } @else {
+            <svg class="arr-logo" viewBox="12 10 40 44" aria-hidden="true">
+              <path
+                class="draw"
+                pathLength="1"
+                d="M16 22a8 8 0 0 1 8-8h16a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8h-9l-9 8v-8a8 8 0 0 1-6-8z"
+              />
+              <path
+                class="fill"
+                d="M16 22a8 8 0 0 1 8-8h16a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8h-9l-9 8v-8a8 8 0 0 1-6-8z"
+              />
+              <circle class="eye" cx="26" cy="28" r="2.6" />
+              <circle class="eye e2" cx="38" cy="28" r="2.6" />
+            </svg>
+            <svg class="arr-badge" viewBox="0 0 32 32" aria-hidden="true">
+              <circle class="disc" cx="16" cy="16" r="15" />
+              <path class="shackle" d="M11 15v-3a5 5 0 0 1 10 0v3" />
+              <rect class="body" x="9" y="15" width="14" height="10" rx="3" />
+              <path class="key" d="M16 18.6v3" />
+            </svg>
+          }
+        </div>
         <svg width="0" height="0" aria-hidden="true">
           <defs>
             <linearGradient id="arr-g" x1="0" y1="0" x2="1" y2="1">
@@ -82,7 +93,6 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
                 <span [style.--i]="$index">{{ letter }}</span>
               }
             </h1>
-            <p class="arr-tag">{{ 'Private by design' | t }}</p>
           }
           @case ('login') {
             <p class="arr-line a">{{ 'Unlocking your keys…' | t }}</p>
@@ -152,9 +162,9 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         radial-gradient(40% 35% at 25% 30%, #2ef2b055, transparent 70%),
         radial-gradient(35% 40% at 78% 35%, #a78bfa55, transparent 70%),
         radial-gradient(45% 35% at 55% 80%, #38bdf844, transparent 70%);
-      filter: blur(30px);
+      will-change: transform;
       animation:
-        fade 1.2s forwards,
+        fade 0.5s forwards,
         drift 9s linear infinite;
       opacity: 0;
     }
@@ -177,7 +187,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       mask-image: linear-gradient(to top, #000, transparent 85%);
       opacity: 0;
       animation:
-        fade 1.2s 0.2s forwards,
+        fade 0.6s 0.1s forwards,
         scroll 1.2s linear infinite;
     }
     .arr-login .arr-floor,
@@ -272,27 +282,95 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         opacity: 0;
       }
     }
-    .arr-logo {
+    .arr-mark {
+      position: relative;
+      margin-bottom: 1.4rem;
       width: 9rem;
       height: 9rem;
+      filter: drop-shadow(0 0 18px #2ef2b099);
+      opacity: 0;
+      animation:
+        spin-in 1.3s var(--ease) 0.05s forwards,
+        glow 2.4s ease-in-out 1.4s infinite;
+    }
+    .arr-login .arr-mark,
+    .arr-logout .arr-mark,
+    .arr-register .arr-mark {
+      animation:
+        spin-in 0.9s var(--ease) 0.1s forwards,
+        glow 2.4s ease-in-out 1.1s infinite;
+    }
+    .arr-logo {
+      width: 100%;
+      height: 100%;
       overflow: visible;
       fill: none;
       stroke: url(#arr-g);
       stroke-width: 2.2;
       stroke-linecap: round;
       stroke-linejoin: round;
-      filter: drop-shadow(0 0 18px #2ef2b099);
-      opacity: 0;
-      animation:
-        spin-in 1.5s var(--ease) 0.15s forwards,
-        glow 2.4s ease-in-out 1.6s infinite;
     }
-    .arr-login .arr-logo,
-    .arr-logout .arr-logo,
-    .arr-register .arr-logo {
+    .fill {
+      fill: url(#arr-g);
+      stroke: none;
+      opacity: 0;
+      animation: fade 0.5s 0.9s forwards;
+    }
+    .eye {
+      fill: #04070d;
+      stroke: none;
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
       animation:
-        spin-in 0.9s var(--ease) 0.2s forwards,
-        glow 2.4s ease-in-out 1.1s infinite;
+        fade 0.2s 1.1s forwards,
+        blink 3s 2s infinite;
+    }
+    .arr-login .fill,
+    .arr-logout .fill {
+      animation-delay: 0.5s;
+    }
+    .arr-login .eye,
+    .arr-logout .eye {
+      animation-delay: 0.7s, 1.6s;
+    }
+    @keyframes blink {
+      0%,
+      92%,
+      100% {
+        transform: none;
+      }
+      96% {
+        transform: scaleY(0.1);
+      }
+    }
+    .arr-badge {
+      position: absolute;
+      right: -0.9rem;
+      bottom: -0.7rem;
+      width: 4.2rem;
+      height: 4.2rem;
+      overflow: visible;
+      fill: none;
+      stroke: url(#arr-g);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      transform: scale(0);
+      animation: pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) 0.9s forwards;
+    }
+    .arr-login .arr-badge,
+    .arr-logout .arr-badge {
+      animation-delay: 0.2s;
+    }
+    .disc {
+      fill: #04070d;
+      stroke: url(#arr-g);
+      stroke-width: 1.4;
+    }
+    @keyframes pop {
+      to {
+        transform: none;
+      }
     }
     @keyframes spin-in {
       from {
@@ -314,7 +392,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
     .tick {
       stroke-dasharray: 1;
       stroke-dashoffset: 1;
-      animation: draw 1.2s var(--ease) 0.3s forwards;
+      animation: draw 1s var(--ease) 0.2s forwards;
     }
     .ring {
       animation-duration: 0.8s;
@@ -331,37 +409,21 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
     .body {
       fill: url(#arr-g);
       stroke: none;
-      opacity: 0;
-      animation: fade 0.3s 1.1s forwards;
     }
     .shackle {
-      opacity: 0;
-      transform: translateY(-5px);
-      animation:
-        fade 0.2s 1.1s forwards,
-        snap 0.35s cubic-bezier(0.6, 0, 0.3, 1.6) 1.45s forwards;
+      transform-origin: 21px 15px;
+      animation: snap 0.35s cubic-bezier(0.6, 0, 0.3, 1.6) 1.45s backwards;
     }
     .arr-login .shackle {
-      transform: none;
-      animation:
-        fade 0.2s 0.4s forwards,
-        unlock 0.5s var(--ease) 0.7s forwards;
+      animation: unlock 0.5s var(--ease) 0.9s forwards;
     }
     .arr-logout .shackle {
-      transform: translate(5px, -7px) rotate(20deg);
-      animation:
-        fade 0.2s 0.4s forwards,
-        snap 0.4s cubic-bezier(0.6, 0, 0.3, 1.6) 0.8s forwards;
+      transform: translate(2px, -3px) rotate(22deg);
+      animation: snap 0.4s cubic-bezier(0.6, 0, 0.3, 1.6) 0.55s forwards;
     }
     .key {
       stroke: #04070d;
       stroke-width: 2.2;
-      opacity: 0;
-      animation: fade 0.3s 1.2s forwards;
-    }
-    .arr-login .key,
-    .arr-logout .key {
-      animation-delay: 0.5s;
     }
     .arr-orbit {
       position: absolute;
@@ -388,18 +450,17 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
     .arr-register .arr-orbit {
       display: none;
     }
-    .arr-login .body,
-    .arr-logout .body {
-      animation-delay: 0.4s;
-    }
     @keyframes snap {
+      from {
+        transform: translate(2px, -3px) rotate(22deg);
+      }
       to {
         transform: none;
       }
     }
     @keyframes unlock {
       to {
-        transform: translate(5px, -7px) rotate(20deg);
+        transform: translate(2px, -3px) rotate(22deg);
       }
     }
     @keyframes fade {
@@ -439,22 +500,11 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         background-position: -50% 0;
       }
     }
-    .arr-tag,
     .arr-line,
     .arr-note {
       margin: 0;
       opacity: 0;
       animation: fade 0.6s var(--ease-suave) forwards;
-    }
-    .arr-tag {
-      background: var(--g);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-size: 1rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      animation-delay: 2.7s;
     }
     .arr-skip {
       position: absolute;
@@ -521,6 +571,7 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     const line = TIMELINE[this.kind()];
     this.timers.push(
+      setTimeout(this.arrival.dropCover, 60),
       setTimeout(this.arrival.reveal.bind(this.arrival), line.reveal),
       setTimeout(this.startLeaving.bind(this), line.leave),
       setTimeout(this.arrival.finish.bind(this.arrival), line.end),

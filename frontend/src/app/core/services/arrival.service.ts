@@ -1,6 +1,6 @@
 /**
  * src/app/core/services/arrival.service.ts
- * The moments of arriving in the app: the introduction the very first time, the transition after signing in, the
+ * The moments of arriving in the app: the introduction (every time the page loads), the transition after signing in, the
  * celebration after creating an account and the goodbye when signing out. This file only decides when they play and tells the caller when the
  * page underneath may change; the animations themselves live in a component that is loaded only when needed.
  */
@@ -15,8 +15,6 @@ export interface Arrival {
   name: string;
 }
 
-/** Key that remembers that the introduction was already seen on this device. */
-const SEEN_KEY = 'chatterly.intro2';
 /** The longest the caller waits for the animation to reach its reveal point (if the component fails to load). */
 const GIVE_UP_MS = 4000;
 
@@ -70,19 +68,21 @@ export class ArrivalService {
     this.current.set(null);
   }
 
-  /** The very first time on this device (and only when nobody is signed in) the introduction plays. */
+  /**
+   * Every time the page is loaded (the first visit and every reload) the introduction plays. Until it is on screen
+   * the page is covered by a dark layer that comes inside the HTML, so the first thing seen is never the sign-in page.
+   */
   maybeIntro(): void {
-    if (!this.wanted()) {
-      return;
+    if (this.wanted()) {
+      void this.play('intro');
+      setTimeout(this.dropCover, 6000);
+    } else {
+      this.dropCover();
     }
-    try {
-      if (localStorage.getItem(SEEN_KEY) || localStorage.getItem('chatterly.session')) {
-        return;
-      }
-      localStorage.setItem(SEEN_KEY, '1');
-    } catch {
-      return;
-    }
-    void this.play('intro');
+  }
+
+  /** Removes the dark layer of the HTML (the animation took its place, or there will be none). */
+  dropCover(): void {
+    document.getElementById('boot-cover')?.remove();
   }
 }

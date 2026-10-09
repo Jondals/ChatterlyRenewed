@@ -1275,7 +1275,6 @@ export const ES: Record<string, string> = {
   'Ambient': 'Ambiente',
   'Expand': 'Expandir',
   'Minimize': 'Minimizar',
-  'Private by design': 'Privado por diseño',
   'Click to skip': 'Pulsa para saltar',
   'Unlocking your keys…': 'Desbloqueando tus claves…',
   'Locking your keys…': 'Guardando tus claves…',

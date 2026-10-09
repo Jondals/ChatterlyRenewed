@@ -87,7 +87,7 @@ export class AppComponent {
     // The cursor engine, the tooltips and the uploaded fonts are not needed for the first paint: they load right after it.
     window.setTimeout(this.loadExtras.bind(this), 0);
     // The very first visit opens with a short animation (nothing is shown to people who are already signed in).
-    window.setTimeout(this.arrival.maybeIntro.bind(this.arrival), 250);
+    window.setTimeout(this.arrival.maybeIntro.bind(this.arrival), 0);
     // Not passive: the page must not scroll while the wheel turns over a slider.
     document.addEventListener('wheel', this.wheelHandler, { passive: false });
     document.addEventListener('pointerdown', this.onFingerDown.bind(this), { passive: true });

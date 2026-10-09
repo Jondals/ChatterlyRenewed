@@ -15,7 +15,14 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { chromium } from 'playwright';
+
+/** The browser used to take the snapshots; without it (no Playwright installed) the snapshots are skipped, the rest is done. */
+let chromium = null;
+try {
+  ({ chromium } = await import('playwright'));
+} catch {
+  console.warn('Playwright is not installed: the sign-in snapshots are skipped.');
+}
 
 /** Folder with the built web app (the first argument, or Angular's default output folder). */
 const DIST = path.resolve(
@@ -87,7 +94,8 @@ let SESSION_SCRIPT =
   "var l=p==='auto'?(navigator.language||'en').slice(0,2).toLowerCase():p;" +
   "var q=location.pathname;document.documentElement.dataset.snap=l==='es'?'es':'en';" +
   "document.documentElement.dataset.page=q==='/register'?'register':(q==='/'||q==='/login')?'login':'';" +
-  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session')}catch(e){}";
+  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session');" +
+  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&localStorage.getItem('chatterly.pref.animations')!=='\"off\"'&&(!navigator.webdriver||localStorage.getItem('chatterly.motion')))document.documentElement.classList.add('has-cover')}catch(e){}";
 
 /**
  * Serves the build folder, answering index.html for unknown paths (the routes of the app).
@@ -203,6 +211,25 @@ function preloadFont(html) {
     : html;
 }
 
+/**
+ * What people who are already signed in see while the app starts instead of an empty dark page: the logo of
+ * Chatterly-Renewed, breathing. It lives inside <app-root>, so Angular removes it when the app draws itself, and its
+ * little stylesheet is inline (it is not part of the bundle). Only shown when the "has-session" mark is on.
+ */
+const SPLASH = {
+  style:
+    '<style>#boot-cover{display:none}html.has-cover #boot-cover{position:fixed;inset:0;z-index:299;display:block;background:#04070d}' +
+    '.boot-splash{display:none}html.has-session .boot-splash{position:fixed;inset:0;display:grid;place-items:center;background:#06070b}' +
+    '.boot-splash svg{width:6rem;height:6rem;filter:drop-shadow(0 0 22px #2ef2b080);animation:boot-breathe 1.6s ease-in-out infinite}' +
+    '@keyframes boot-breathe{50%{transform:scale(1.08);filter:drop-shadow(0 0 34px #8b5cf6aa)}}' +
+    '@media (prefers-reduced-motion:reduce){.boot-splash svg{animation:none}}</style>',
+  markup:
+    '<div class="boot-splash" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="bs" x1="0" x2="1" y1="0" y2="1">' +
+    '<stop offset="0" stop-color="#2ef2b0"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>' +
+    '<path fill="url(#bs)" d="M16 22a8 8 0 0 1 8-8h16a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8h-9l-9 8v-8a8 8 0 0 1-6-8z"/>' +
+    '<circle cx="26" cy="28" r="2.6" fill="#06070b"/><circle cx="38" cy="28" r="2.6" fill="#06070b"/></svg></div>',
+};
+
 /** Builds the final index.html. */
 async function main() {
   const indexPath = path.join(DIST, 'index.html');
@@ -212,7 +239,7 @@ async function main() {
     return;
   }
   let snapshots = '';
-  for (const page of PAGES) {
+  for (const page of chromium ? PAGES : []) {
     for (const language of LANGUAGES) {
       const body = await takeSnapshot(page, language.locale);
       snapshots +=
@@ -229,9 +256,11 @@ async function main() {
   html = inlineStylesheet(html);
   html = addSessionScript(html);
   html = preloadFont(html);
+  html = html.replace('</head>', SPLASH.style + '</head>');
+  html = html.replace('<body>', '<body><div id="boot-cover"></div>');
   html = html.replace(
     /<app-root([^>]*)>\s*<\/app-root>/,
-    '<app-root$1 data-snapshot>' + snapshots.replace(/\$/g, '$$$$') + '</app-root>',
+    '<app-root$1 data-snapshot>' + SPLASH.markup + snapshots.replace(/\$/g, '$$$$') + '</app-root>',
   );
   fs.writeFileSync(indexPath, html);
   console.log('Sign-in snapshot and inline stylesheet added to ' + indexPath);

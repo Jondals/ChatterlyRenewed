@@ -119,18 +119,32 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
     }
   }
 
+  /** One glowing dot of each color, drawn once: drawing a picture is much cheaper than making a gradient per spark per frame. */
+  const sprites = new Map<number, HTMLCanvasElement>();
+  for (const hue of HUES) {
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 64;
+    const paint = sprite.getContext('2d');
+    if (paint) {
+      const glow = paint.createRadialGradient(32, 32, 0, 32, 32, 32);
+      glow.addColorStop(0, 'hsla(' + hue + ',95%,80%,1)');
+      glow.addColorStop(0.3, 'hsla(' + hue + ',95%,62%,0.5)');
+      glow.addColorStop(1, 'hsla(' + hue + ',95%,55%,0)');
+      paint.fillStyle = glow;
+      paint.fillRect(0, 0, 64, 64);
+    }
+    sprites.set(hue, sprite);
+  }
+
   /** Draws one spark as a small glowing dot. */
   function draw(spark: Spark, alpha: number): void {
-    if (!context) {
+    const sprite = sprites.get(spark.hue);
+    if (!context || !sprite) {
       return;
     }
-    const radius = spark.size * 3.2;
-    const glow = context.createRadialGradient(spark.x, spark.y, 0, spark.x, spark.y, radius);
-    glow.addColorStop(0, 'hsla(' + spark.hue + ',95%,75%,' + alpha + ')');
-    glow.addColorStop(0.35, 'hsla(' + spark.hue + ',95%,60%,' + alpha * 0.45 + ')');
-    glow.addColorStop(1, 'hsla(' + spark.hue + ',95%,55%,0)');
-    context.fillStyle = glow;
-    context.fillRect(spark.x - radius, spark.y - radius, radius * 2, radius * 2);
+    const size = spark.size * 6.4;
+    context.globalAlpha = alpha;
+    context.drawImage(sprite, spark.x - size / 2, spark.y - size / 2, size, size);
   }
 
   /** One frame: moves every spark and draws them all. */
@@ -170,6 +184,7 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
       }
       draw(spark, left);
     }
+    context.globalAlpha = 1;
     context.globalCompositeOperation = 'source-over';
     frame = requestAnimationFrame(step);
   }

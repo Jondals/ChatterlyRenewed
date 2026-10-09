@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
   && npm install -g pnpm@11.2.2
 ENV CI=true
 WORKDIR /app
+# The build takes pictures of the sign-in page with a real browser (so it paints at once): Playwright and Chromium, only in this stage.
+RUN npm install --no-save --no-package-lock playwright@^1.55.0 && npx playwright install --with-deps chromium
 
 COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml backend/
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/

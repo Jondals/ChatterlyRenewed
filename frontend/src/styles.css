@@ -303,7 +303,7 @@ body {
   overflow: hidden;
 }
 ::selection {
-  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
 }
 button {
   font: inherit;
