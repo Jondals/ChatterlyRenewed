@@ -165,7 +165,7 @@ export class SoundService {
   }
 
   /** The node every sound is connected to (the master volume). */
-  private get output(): AudioNode {
+  get output(): AudioNode {
     void this.context;
     return this.master!;
   }

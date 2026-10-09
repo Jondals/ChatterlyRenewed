@@ -98,19 +98,43 @@ async function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise
   return (await encode('image/webp')) ?? (await encode('image/png'));
 }
 
-/** Whether anything was drawn on the canvas (a browser that protects against fingerprinting can give back a blank one). */
-function hasPicture(canvas: HTMLCanvasElement): boolean {
+/**
+ * What the canvas gives back: 'blank' (nothing drawn), 'flat' (one single color all over: what browsers that protect
+ * against fingerprinting, like Opera or Brave, return instead of the real picture) or 'picture'.
+ */
+function readCanvas(canvas: HTMLCanvasElement): 'blank' | 'flat' | 'picture' {
   try {
     const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
-    for (let i = 3; i < data.length; i += 4 * 61) {
-      if (data[i] > 0) {
-        return true;
-      }
+    let drawn = false;
+    let flat = true;
+    for (let i = 0; i < data.length; i += 4 * 61) {
+      drawn = drawn || data[i + 3]! > 0;
+      flat =
+        flat &&
+        data[i] === data[0] &&
+        data[i + 1] === data[1] &&
+        data[i + 2] === data[2] &&
+        data[i + 3] === data[3];
     }
-    return false;
+    return !drawn ? 'blank' : flat ? 'flat' : 'picture';
   } catch {
-    return false;
+    return 'blank';
   }
+}
+
+/** Whether a real picture was drawn on the canvas. */
+function hasPicture(canvas: HTMLCanvasElement): boolean {
+  return readCanvas(canvas) === 'picture';
+}
+
+/** An emoji as a vector picture: it does not go through a canvas, so it works where the canvas is protected. */
+function emojiSvg(emoji: string): Blob {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><text x="128" y="132" font-size="200" text-anchor="middle" ' +
+    'dominant-baseline="central" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Twemoji Mozilla, sans-serif">' +
+    emoji +
+    '</text></svg>';
+  return new Blob([svg], { type: 'image/svg+xml' });
 }
 
 /**
@@ -203,6 +227,9 @@ export class StickerStore {
 
   /** Turns any image into a sticker (at most 512 px; WebP and GIF are kept as they are to keep the animation). */
   private async normalize(blob: Blob): Promise<Blob | null> {
+    if (blob.type === 'image/svg+xml') {
+      return blob;
+    }
     if (
       (blob.type === 'image/webp' || blob.type === 'image/gif') &&
       blob.size <= MAX_STICKER_BYTES
@@ -217,6 +244,11 @@ export class StickerStore {
       canvas.height = Math.max(1, Math.round(bitmap.height * scale));
       canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       bitmap.close();
+      // A browser that protects against fingerprinting gives back one flat color instead of the picture: then the
+      // picture is kept as it was chosen (when it is small), never as a flat square.
+      if (readCanvas(canvas) !== 'picture') {
+        return blob.type.startsWith('image/') && blob.size <= MAX_STICKER_BYTES ? blob : null;
+      }
       return await canvasToBlob(canvas, 0.9);
     } catch {
       return null;
@@ -357,8 +389,9 @@ export class StickerStore {
     for (const emoji of STARTER) {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 256;
-      // Nothing drawn (no emoji font, a protected canvas): this one is left out instead of saving a blank square.
+      // Nothing real drawn (no emoji font, a protected canvas): the emoji becomes a vector picture instead of a blank or flat square.
       if (!(await this.drawEmoji(canvas, emoji))) {
+        blobs.push(emojiSvg(emoji));
         continue;
       }
       const blob = await canvasToBlob(canvas, 0.92);

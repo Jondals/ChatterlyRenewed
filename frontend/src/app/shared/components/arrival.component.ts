@@ -18,6 +18,9 @@ import {
 } from '@angular/core';
 import { TranslatePipe } from '../../core/i18n/i18n.service';
 import { ArrivalService, type ArrivalKind } from '../../core/services/arrival.service';
+import { SettingsService } from '../../core/services/settings.service';
+import { SoundService } from '../../core/services/sound.service';
+import { playArrivalSounds } from '../util/arrival-sounds';
 import { startFx, type Fx } from '../util/arrival-fx';
 
 /** For each kind: when the page underneath may change, when the animation starts to leave and when it is gone (ms). */
@@ -669,6 +672,9 @@ function followCover(part: string, element: Element | null): void {
 })
 export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly arrival = inject(ArrivalService);
+  private readonly sound = inject(SoundService);
+  private readonly settings = inject(SettingsService);
+  private silence: (() => void) | null = null;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('fx');
   readonly kind = input.required<ArrivalKind>();
@@ -698,6 +704,11 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
       const host = this.host.nativeElement;
       followCover('::before', host.querySelector('.arr-aurora'));
       followCover('::after', host.querySelector('.arr-glow'));
+    }
+    // The sounds (the padlock, the lights, the fireworks) follow the interface sounds, and wait for the first press of the
+    // person: before it the browser does not allow any sound.
+    if (this.settings.sounds() && (navigator.userActivation?.hasBeenActive ?? true)) {
+      this.silence = playArrivalSounds(this.sound.context, this.sound.output, kind);
     }
     this.fx = startFx(this.canvas().nativeElement, kind === 'logout' ? 'login' : kind);
     if (kind === 'intro') {
@@ -743,6 +754,7 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.leaving.set(true);
+    this.silence?.();
     this.clear();
     this.timers.push(setTimeout(this.arrival.finish.bind(this.arrival), 650));
   }
@@ -758,6 +770,7 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Cancels the steps and stops the lights when the component goes away. */
   ngOnDestroy(): void {
     this.clear();
+    this.silence?.();
     this.fx?.stop();
   }
 }

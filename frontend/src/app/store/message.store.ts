@@ -84,7 +84,7 @@ export interface ChannelState {
 }
 
 const INLINE_MIME: Record<AttachmentKind, RegExp | null> = {
-  image: /^image\/(png|jpe?g|gif|webp|avif|bmp)$/,
+  image: /^image\/(png|jpe?g|gif|webp|avif|bmp|svg\+xml)$/,
   audio: /^audio\/(webm|ogg|mpeg|mp3|wav|mp4|aac|x-m4a)(;.*)?$/,
   video: /^video\/(mp4|webm|ogg)(;.*)?$/,
   file: null,

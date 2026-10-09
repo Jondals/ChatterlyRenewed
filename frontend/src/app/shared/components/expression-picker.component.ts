@@ -4,6 +4,7 @@
  */
 import {
   Component,
+  ElementRef,
   HostListener,
   computed,
   effect,
@@ -12,6 +13,7 @@ import {
   output,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
 import { GifService, type GifResult } from '../../core/services/gif.service';
@@ -169,7 +171,7 @@ export class GifThumbComponent {
               <button
                 type="button"
                 class="rounded-ui px-2 py-1 text-xl hover:bg-white/10"
-                [class.bg-white/10]="activeGroup() === g.id"
+                [class.bg-white/10]="currentId() === g.id"
                 (click)="jump(g.id)"
                 [attr.title]="g.name | t"
               >
@@ -177,11 +179,7 @@ export class GifThumbComponent {
               </button>
             }
           </div>
-          <div
-            #scroller
-            class="min-h-0 flex-1 overflow-y-auto px-3 pb-2"
-            (scroll)="onScroll($event)"
-          >
+          <div #scroller class="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
             @if (loading()) {
               <div class="grid grid-cols-7 gap-1 pt-2">
                 @for (i of skeleton; track i) {
@@ -448,14 +446,31 @@ export class ExpressionPickerComponent {
       return out;
     }.bind(this),
   );
-  /** How many sections are drawn. The first ones appear at once and the rest follow one by one, so opening never freezes. */
-  private readonly drawn = signal(2);
-  private scrollFrame = 0;
+  /**
+   * What is drawn: the results of the search, or only the category that is open. One category (100 to 300 emoji) at a
+   * time is what keeps the picker light; drawing all of them at once (about 1900) made weak computers struggle.
+   */
   protected readonly visibleSections = computed(
     function (this: ExpressionPickerComponent) {
-      return this.sections().slice(0, this.drawn());
+      const sections = this.sections();
+      if (this.query().trim()) {
+        return sections;
+      }
+      const open = sections.find(
+        function isOpen(this: ExpressionPickerComponent, section: { id: number | string }) {
+          return section.id === this.activeGroup();
+        }.bind(this),
+      );
+      return open ? [open] : sections.slice(0, 1);
     }.bind(this),
   );
+  /** The id of the category that is open (the first one when the one chosen has nothing). */
+  protected readonly currentId = computed(
+    function (this: ExpressionPickerComponent) {
+      return this.visibleSections()[0]?.id;
+    }.bind(this),
+  );
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   protected readonly groupTabs = computed(
     function (this: ExpressionPickerComponent) {
       const tabs = this.sections()
@@ -498,20 +513,6 @@ export class ExpressionPickerComponent {
 
   constructor() {
     void this.loadEmoji();
-    // Draw the remaining sections one at a time while the browser has time.
-    effect(
-      function (this: ExpressionPickerComponent) {
-        const total = this.sections().length;
-        const drawn = this.drawn();
-        if (drawn < total) {
-          untracked(
-            function (this: ExpressionPickerComponent) {
-              setTimeout(this.drawMore.bind(this), 40);
-            }.bind(this),
-          );
-        }
-      }.bind(this),
-    );
     effect(
       function (this: ExpressionPickerComponent) {
         const tab = this.tab();
@@ -599,46 +600,10 @@ export class ExpressionPickerComponent {
     }
   }
 
-  /** Draws one more section. */
-  private drawMore(): void {
-    this.drawn.update(function (n: number): number {
-      return n + 1;
-    });
-  }
-
-  /** Jumps to a group of emoji; every section is drawn first so the jump finds it. */
+  /** Opens a category of emoji (the list goes back to the top). */
   protected jump(id: number | string): void {
     this.activeGroup.set(id as number);
-    this.drawn.set(1000);
-    requestAnimationFrame(function scroll(): void {
-      document
-        .querySelector(`[data-group="${id}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
-  /** Follows the scroll to mark the group of emoji that is in view. */
-  protected onScroll(event: Event): void {
-    if (this.scrollFrame) {
-      return;
-    }
-    const container = event.target as HTMLElement;
-    this.scrollFrame = requestAnimationFrame(this.followScroll.bind(this, container));
-  }
-
-  /** Once per frame at most: finds the group that is in view. */
-  private followScroll(container: HTMLElement): void {
-    this.scrollFrame = 0;
-    const headers = Array.from(container.querySelectorAll<HTMLElement>('[data-group]'));
-    const top = container.getBoundingClientRect().top + 12;
-    const current =
-      headers
-        .filter(function (h) {
-          return h.getBoundingClientRect().top <= top;
-        })
-        .pop() ?? headers[0];
-    const id = current?.dataset['group'];
-    if (id) this.activeGroup.set(id === 'frequent' ? 'frequent' : Number(id));
+    this.scroller()?.nativeElement.scrollTo({ top: 0 });
   }
 
   // ---- gifs

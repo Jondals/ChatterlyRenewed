@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.14.0
+
+- Sounds in the animations: the introduction has a rising sweep while the lights gather, the click of the padlock when it shuts, a deep boom with the flash and a shimmer of notes; signing in plays the click and spring of the padlock opening and the shimmer; signing out, the padlock shutting; creating an account, a fanfare and the pops of the fireworks. They are made with Web Audio (no files), follow the interface sounds of the settings and the volume, and wait for the first press of the person (before it the browser allows no sound, so the introduction of a reload is silent).
+- Stickers that came out as a flat color (Opera and other browsers that protect against fingerprinting give back one single color instead of what was drawn on a canvas): a sticker that goes through the canvas is checked, and if it came out flat the picture that was chosen is kept as it is; the emoji of the starter pack that cannot be drawn become vector pictures (they are drawn by the font of whoever sees them). Vector pictures (SVG) are shown as images in the chat.
+- Emoji picker: the categories work now. Only the category that is open is drawn (100 to 390 emoji) instead of all of them (about 1900), so pressing a tab is instant and the picker is light on weak computers.
+- Text can be marked with the mouse only where something is typed (boxes and the composer); messages are copied with their menu.
+
 ## 2.13.0
 
 - Deploy: the automatic update failed at the end with `KeyError: 'ContainerConfig'` because it recreated the TURN relay with docker-compose 1.x. The relay is now only started when it is not running (`--no-recreate`), and `deploy/turn-setup.sh` replaces it by removing it first. The app was already replaced that way. The update also runs one at a time and with the minimum permissions of GitHub (`contents: read`). The four secrets of GitHub (`SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT`) are the right and only ones.

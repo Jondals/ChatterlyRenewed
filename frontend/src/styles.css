@@ -302,6 +302,18 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
+/* Text can be marked with the mouse only where something is typed; nowhere else (messages are copied with their menu). */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable],
+[contenteditable] * {
+  -webkit-user-select: text;
+  user-select: text;
+}
 ::selection {
   background: color-mix(in oklab, var(--accent) 45%, transparent);
 }
