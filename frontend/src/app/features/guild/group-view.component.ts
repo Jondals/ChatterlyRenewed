@@ -64,7 +64,7 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
   ],
   host: { class: 'block h-full min-h-0' },
   template: `
-    @for (key of [guild()?.id ?? '']; track key) {
+    @for (key of [guildKey()]; track key) {
       <div class="page-enter block h-full min-h-0">
         @if (!guilds.loaded()) {
           <div class="flex h-full items-center justify-center">
@@ -377,6 +377,12 @@ export class GroupViewComponent {
     function (this: GroupViewComponent) {
       const id = this.guildId();
       return (id ? this.guilds.guild(id) : undefined) ?? this.guilds.activeGuild();
+    }.bind(this),
+  );
+  /** Id of the group on screen, or empty while there is none (the page is redrawn with an animation when it changes). */
+  protected readonly guildKey = computed(
+    function (this: GroupViewComponent) {
+      return this.guild()?.id ?? '';
     }.bind(this),
   );
   protected readonly isOwner = computed(

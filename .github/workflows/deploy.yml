@@ -27,5 +27,9 @@ jobs:
             git fetch origin ${{ github.ref_name }}
             git reset --hard origin/${{ github.ref_name }}
             if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"; else COMPOSE="docker-compose"; fi
-            $COMPOSE up -d --build app
+            # Build first (the site keeps running), then replace the container. Removing the old one before creating the
+            # new one avoids the "KeyError: 'ContainerConfig'" crash of docker-compose 1.29 when it recreates a container.
+            $COMPOSE build app
+            $COMPOSE rm -sf app
+            $COMPOSE up -d app
             docker image prune -f

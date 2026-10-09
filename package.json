@@ -1,6 +1,6 @@
 {
   "name": "chatterly-renewed",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "Chatterly-Renewed: chat, grupos y llamadas WebRTC con cifrado de extremo a extremo.",
   "private": true,
   "license": "ISC",

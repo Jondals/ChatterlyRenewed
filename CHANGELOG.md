@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.6.7
+
+- Deploy: the automatic update failed with `KeyError: 'ContainerConfig'`, a bug of docker-compose 1.29 when it recreates a container made from an image built by a newer Docker. The workflow now builds the image, removes the old container (the data volume stays) and starts the new one, which works with docker-compose 1.x and with `docker compose`.
+- No more warnings in the build: the group page no longer needs the `?.` that Angular flagged (the id of the group is computed in the class), and the warning limit for the size of a component's styles is 8 kB (the error limit 12 kB), because the animations of arriving are big on purpose and load only when they play.
+
 ## 2.6.6
 
 - Deploy: the automatic update never ran because the workflow listened to the branch `main` and the repository uses `master`; it listens to both now, can be started by hand, and replaces the code of the server with `git reset --hard` (a file edited by hand on the server, like the Dockerfile, made `git pull` stop).
