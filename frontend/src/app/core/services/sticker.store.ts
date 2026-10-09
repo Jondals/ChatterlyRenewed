@@ -303,7 +303,12 @@ export class StickerStore {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 256;
       // The emoji font arrives in pieces, only when a text needs them: ask for the piece of this emoji, or it is drawn blank.
-      await document.fonts.load('200px "Noto Color Emoji"', emoji).catch(this.ignoreFont);
+      await Promise.race([
+        document.fonts.load('200px "Noto Color Emoji"', emoji).catch(this.ignoreFont),
+        new Promise<void>(function wait(resolve) {
+          setTimeout(resolve, 1500);
+        }),
+      ]);
       const context = canvas.getContext('2d')!;
       context.font = '200px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
       context.textAlign = 'center';

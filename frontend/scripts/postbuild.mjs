@@ -94,7 +94,11 @@ let SESSION_SCRIPT =
   "var l=p==='auto'?(navigator.language||'en').slice(0,2).toLowerCase():p;" +
   "var q=location.pathname;document.documentElement.dataset.snap=l==='es'?'es':'en';" +
   "document.documentElement.dataset.page=q==='/register'?'register':(q==='/'||q==='/login')?'login':'';" +
-  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session');}catch(e){}";
+  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session');" +
+  // The accent color the person chose is applied from the first paint (the first layer and the animations use it).
+  "var h=document.documentElement,a=JSON.parse(localStorage.getItem('chatterly.pref.accent')||'null');" +
+  "if(a){h.dataset.accent=a;if(a==='custom'){var c=JSON.parse(localStorage.getItem('chatterly.pref.customAccent')||'null');" +
+  "if(/^#[0-9a-f]{6}$/i.test(c))h.style.setProperty('--accent',c)}}}catch(e){}";
 
 /**
  * Serves the build folder, answering index.html for unknown paths (the routes of the app).

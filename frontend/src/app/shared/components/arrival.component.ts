@@ -102,9 +102,9 @@ function followCover(part: string, element: Element | null): void {
         <svg width="0" height="0" aria-hidden="true">
           <defs>
             <linearGradient id="arr-g" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#2ef2b0" />
-              <stop offset="0.5" stop-color="#38bdf8" />
-              <stop offset="1" stop-color="#a78bfa" />
+              <stop offset="0" style="stop-color: var(--a)" />
+              <stop offset="0.5" style="stop-color: var(--m)" />
+              <stop offset="1" style="stop-color: var(--b)" />
             </linearGradient>
           </defs>
         </svg>
@@ -140,7 +140,11 @@ function followCover(part: string, element: Element | null): void {
   `,
   styles: `
     .arr {
-      --g: linear-gradient(120deg, #2ef2b0, #38bdf8 50%, #a78bfa);
+      /* The colors of the animation are the ones of the chosen theme (the second one and the mix of both). */
+      --a: var(--accent, #2ef2b0);
+      --b: var(--accent-2, #a78bfa);
+      --m: color-mix(in oklab, var(--a), var(--b));
+      --g: linear-gradient(120deg, var(--a), var(--m) 50%, var(--b));
       position: fixed;
       inset: 0;
       z-index: 300;
@@ -181,9 +185,21 @@ function followCover(part: string, element: Element | null): void {
       position: absolute;
       inset: -30%;
       background:
-        radial-gradient(40% 35% at 25% 30%, #2ef2b055, transparent 70%),
-        radial-gradient(35% 40% at 78% 35%, #a78bfa55, transparent 70%),
-        radial-gradient(45% 35% at 55% 80%, #38bdf844, transparent 70%);
+        radial-gradient(
+          40% 35% at 25% 30%,
+          color-mix(in oklab, var(--a) 33%, transparent),
+          transparent 70%
+        ),
+        radial-gradient(
+          35% 40% at 78% 35%,
+          color-mix(in oklab, var(--b) 33%, transparent),
+          transparent 70%
+        ),
+        radial-gradient(
+          45% 35% at 55% 80%,
+          color-mix(in oklab, var(--m) 27%, transparent),
+          transparent 70%
+        );
       will-change: transform;
       animation:
         fade 0.5s forwards,
@@ -210,8 +226,10 @@ function followCover(part: string, element: Element | null): void {
       bottom: -10%;
       height: 55%;
       background:
-        linear-gradient(#2ef2b033 1px, transparent 1px) 0 0 / 100% 48px,
-        linear-gradient(90deg, #2ef2b033 1px, transparent 1px) 0 0 / 48px 100%;
+        linear-gradient(color-mix(in oklab, var(--a) 20%, transparent) 1px, transparent 1px) 0 0 /
+          100% 48px,
+        linear-gradient(90deg, color-mix(in oklab, var(--a) 20%, transparent) 1px, transparent 1px)
+          0 0 / 48px 100%;
       transform: rotateX(68deg);
       transform-origin: 50% 100%;
       mask-image: linear-gradient(to top, #000, transparent 85%);
@@ -243,7 +261,12 @@ function followCover(part: string, element: Element | null): void {
     .arr-flash {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 50% 45%, #fff, #2ef2b066 35%, transparent 65%);
+      background: radial-gradient(
+        circle at 50% 45%,
+        #fff,
+        color-mix(in oklab, var(--a) 40%, transparent) 35%,
+        transparent 65%
+      );
       opacity: 0;
     }
     .arr-intro .arr-flash {
@@ -285,17 +308,17 @@ function followCover(part: string, element: Element | null): void {
       height: 9rem;
       margin-top: -4.5rem;
       border-radius: 50%;
-      border: 1px solid #2ef2b0;
+      border: 1px solid var(--a);
       opacity: 0;
       animation: ripple 3.6s ease-out 0.8s infinite;
     }
     .arr-ripple.r2 {
       animation-delay: 2s;
-      border-color: #38bdf8;
+      border-color: var(--m);
     }
     .arr-ripple.r3 {
       animation-delay: 3.2s;
-      border-color: #a78bfa;
+      border-color: var(--b);
     }
     .arr-register .arr-ripple {
       display: none;
@@ -317,8 +340,8 @@ function followCover(part: string, element: Element | null): void {
       height: 9rem;
       margin: -4.5rem 0 0;
       border-radius: 50%;
-      border: 2px solid #2ef2b0;
-      box-shadow: 0 0 30px #2ef2b0;
+      border: 2px solid var(--a);
+      box-shadow: 0 0 30px var(--a);
       opacity: 0;
     }
     .arr-intro .arr-wave {
@@ -326,8 +349,8 @@ function followCover(part: string, element: Element | null): void {
     }
     .arr-intro .arr-wave.w2 {
       animation-delay: 1.8s;
-      border-color: #a78bfa;
-      box-shadow: 0 0 30px #a78bfa;
+      border-color: var(--b);
+      box-shadow: 0 0 30px var(--b);
     }
     .arr-login .arr-wave,
     .arr-logout .arr-wave {
@@ -456,7 +479,12 @@ function followCover(part: string, element: Element | null): void {
       height: 18rem;
       margin-top: -9rem;
       border-radius: 50%;
-      background: radial-gradient(circle closest-side, #2ef2b055, #a78bfa22 55%, transparent);
+      background: radial-gradient(
+        circle closest-side,
+        color-mix(in oklab, var(--a) 33%, transparent),
+        color-mix(in oklab, var(--b) 13%, transparent) 55%,
+        transparent
+      );
       opacity: 0;
       animation:
         fade 0.6s 0.2s forwards,
@@ -512,8 +540,8 @@ function followCover(part: string, element: Element | null): void {
       height: 13rem;
       margin-top: -6.5rem;
       border-radius: 50%;
-      border: 2px dashed #2ef2b066;
-      border-top-color: #2ef2b0;
+      border: 2px dashed color-mix(in oklab, var(--a) 40%, transparent);
+      border-top-color: var(--a);
       opacity: 0;
       animation:
         fade 0.6s 0.3s forwards,
@@ -523,8 +551,8 @@ function followCover(part: string, element: Element | null): void {
       width: 16rem;
       height: 16rem;
       margin-top: -8rem;
-      border-color: #a78bfa44;
-      border-bottom-color: #a78bfa;
+      border-color: color-mix(in oklab, var(--b) 27%, transparent);
+      border-bottom-color: var(--b);
       animation-direction: normal, reverse;
     }
     .arr-register .arr-orbit {
@@ -557,7 +585,7 @@ function followCover(part: string, element: Element | null): void {
     }
     .arr-title span {
       display: inline-block;
-      background: linear-gradient(100deg, #fff 35%, #2ef2b0 45%, #fff 55%) 150% 0 / 300% 100%;
+      background: linear-gradient(100deg, #fff 35%, var(--a) 45%, #fff 55%) 150% 0 / 300% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -609,7 +637,7 @@ function followCover(part: string, element: Element | null): void {
     .arr-logout .arr-line.b {
       position: absolute;
       bottom: 0.6rem;
-      color: #2ef2b0;
+      color: var(--a);
       animation-delay: 1.1s;
     }
     .arr-register .arr-line.a {

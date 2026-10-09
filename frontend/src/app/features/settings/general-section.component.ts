@@ -33,6 +33,16 @@ import {
 } from '../../shared/components/controls.component';
 
 /** Language picker and sound / notification preferences. */
+/** The flags of the languages as pictures: they look the same in every browser and system (an emoji flag depends on the font). */
+const FLAGS: Record<string, string> = {
+  en:
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30"><clipPath id="s"><path d="M0,0v30h60V0z"/></clipPath>' +
+    '<clipPath id="t"><path d="M30,15h30v15zv15h-30zh-30V0zV0h30z"/></clipPath><g clip-path="url(#s)"><path d="M0,0v30h60V0z" fill="#012169"/>' +
+    '<path d="M0,0 60,30M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/>' +
+    '<path d="M30,0v30M0,15h60" stroke="#fff" stroke-width="10"/><path d="M30,0v30M0,15h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+  es: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="3" height="2" fill="#AA151B"/><rect y="0.5" width="3" height="1" fill="#F1BF00"/></svg>',
+};
+
 @Component({
   selector: 'app-general-section',
   standalone: true,
@@ -67,7 +77,13 @@ import {
             [class.is-on]="s.language() === l.id"
             (click)="setLanguage(l.id)"
           >
-            <span class="lang-flag">{{ l.flag }}</span>
+            <span class="lang-flag"
+              ><img
+                class="h-[1em] w-auto rounded-[3px]"
+                alt=""
+                [src]="flagPicture(l.id)"
+                [attr.title]="l.flag"
+            /></span>
             <b class="text-sm">{{ l.native }}</b>
             <span class="text-[11px] text-muted">{{ l.name }}</span>
           </button>
@@ -267,6 +283,11 @@ import {
   `,
 })
 export class GeneralSectionComponent {
+  /** The address of the picture of the flag of a language. */
+  protected flagPicture(id: string): string {
+    return 'data:image/svg+xml,' + encodeURIComponent(FLAGS[id] ?? '');
+  }
+
   /** Stops a ringtone preview when the page is closed. */
   constructor() {
     inject(DestroyRef).onDestroy(this.endPreview.bind(this));

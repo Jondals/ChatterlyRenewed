@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.12.0
+
+- Friends: pressing a friend opens the chat at once (the buttons on the right still do their own thing).
+- The animations (introduction, sign-in, creating an account, signing out) use the colors of the theme the person chose: the aurora, the logo, the rings, the shockwaves, the lights and the first dark layer take the accent color, the second color and the mix of both. The chosen accent is applied from the first paint, so the first layer already has it.
+- Flags of the language cards are pictures now (they look the same in any browser and system, Opera included, without depending on a font).
+- Emoji picker, much lighter: one listener for the whole grid instead of one per emoji (about 2000 less), no hover growth and no container-query sizing on every glyph, and the scroll is followed once per frame at most.
+- Emoji starter pack: it no longer waits for ever for the emoji font in browsers where that font never answers (it waits 1.5 seconds per emoji at most and then draws with the system font).
+
 ## 2.11.0
 
 - Calls on the server: the signalling (messages, ringing, the sounds of the soundboard) went through but the media (audio, camera, screen) did not connect when the two people could not reach each other directly (two people behind the same router, mobile data, firewalls; no setting of the browsers fixes it). The Docker setup now includes a TURN relay (coturn) that is set up with one command, `bash deploy/turn-setup.sh`: it writes the TURN variables of `.env` (secret, public and private IP, addresses), opens the ports of the machine and starts the relay and the app. The three rules of the Oracle Cloud network (UDP 3478, TCP 3478, UDP 49152-49252) still have to be added in the Oracle console; `deploy/DEPLOY.md` says where. The media stays end-to-end encrypted: the relay only sees encrypted frames. The automatic update also keeps the relay running.

@@ -269,7 +269,10 @@ type Tab = 'online' | 'all' | 'pending';
                   @for (u of shownFriends(); track u.id; let i = $index) {
                     <article
                       class="friend-row anim-fade-up"
+                      tabindex="0"
                       [style.--d]="i * 30 + 'ms'"
+                      (click)="message(u)"
+                      (keydown.enter)="message(u)"
                       (contextmenu)="openFriendMenu($event, u)"
                     >
                       <app-avatar [user]="u" [size]="42" [status]="social.statusOf(u.id)" />
@@ -286,7 +289,11 @@ type Tab = 'online' | 'all' | 'pending';
                           {{ u.statusText || (statusWord(u.id) | t) }}
                         </div>
                       </div>
-                      <div class="friend-actions flex items-center gap-1.5">
+                      <div
+                        class="friend-actions flex items-center gap-1.5"
+                        (click)="$event.stopPropagation()"
+                        (keydown.enter)="$event.stopPropagation()"
+                      >
                         <button
                           class="friend-act tip"
                           [attr.data-tip]="'Message' | t"

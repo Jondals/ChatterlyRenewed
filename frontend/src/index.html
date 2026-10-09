@@ -25,6 +25,9 @@
     <!-- The dark layer that covers the page from the very first paint until the introduction takes over (see arrival.service.ts). -->
     <style>
       #boot-cover {
+        --a: var(--accent, #2ef2b0);
+        --b: var(--accent-2, #a78bfa);
+        --m: color-mix(in oklab, var(--a), var(--b));
         position: fixed;
         inset: 0;
         z-index: 299;
@@ -36,9 +39,21 @@
         position: absolute;
         inset: -30%;
         background:
-          radial-gradient(40% 35% at 25% 30%, #2ef2b055, transparent 70%),
-          radial-gradient(35% 40% at 78% 35%, #a78bfa55, transparent 70%),
-          radial-gradient(45% 35% at 55% 80%, #38bdf844, transparent 70%);
+          radial-gradient(
+            40% 35% at 25% 30%,
+            color-mix(in oklab, var(--a) 33%, transparent),
+            transparent 70%
+          ),
+          radial-gradient(
+            35% 40% at 78% 35%,
+            color-mix(in oklab, var(--b) 33%, transparent),
+            transparent 70%
+          ),
+          radial-gradient(
+            45% 35% at 55% 80%,
+            color-mix(in oklab, var(--m) 27%, transparent),
+            transparent 70%
+          );
         opacity: 0;
         animation:
           boot-in 0.5s forwards,
@@ -53,7 +68,12 @@
         height: 18rem;
         margin: -9rem;
         border-radius: 50%;
-        background: radial-gradient(circle closest-side, #2ef2b055, #a78bfa22 55%, transparent);
+        background: radial-gradient(
+          circle closest-side,
+          color-mix(in oklab, var(--a) 33%, transparent),
+          color-mix(in oklab, var(--b) 13%, transparent) 55%,
+          transparent
+        );
         opacity: 0;
         animation:
           boot-in 0.6s 0.2s forwards,

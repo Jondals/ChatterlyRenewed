@@ -198,13 +198,14 @@ export class GifThumbComponent {
               <div
                 class="emoji-grid grid grid-cols-7 gap-0.5"
                 style="content-visibility: auto; contain-intrinsic-size: auto 240px"
+                (mouseover)="onCell($event, false)"
+                (click)="onCell($event, true)"
               >
                 @for (e of section.items; track e.unicode) {
                   <button
                     type="button"
                     class="emoji-cell flex aspect-square items-center justify-center rounded-ui leading-none"
-                    (mouseenter)="hover.set(e)"
-                    (click)="pickEmoji(e)"
+                    [attr.data-u]="e.unicode"
                   >
                     <span class="emoji-glyph">{{ show(e) }}</span>
                   </button>
@@ -390,6 +391,17 @@ export class ExpressionPickerComponent {
   protected readonly activeGroup = signal<number | 'frequent'>('frequent');
   private readonly freq = signal<Record<string, number>>(this.readFreq());
 
+  /** Every emoji by its character: the grid has one listener, and finds the emoji of a cell from here. */
+  private readonly byUnicode = computed(
+    function (this: ExpressionPickerComponent) {
+      const map = new Map<string, EmojiEntry>();
+      for (const entry of this.all()) {
+        map.set(entry.unicode, entry);
+      }
+      return map;
+    }.bind(this),
+  );
+
   protected readonly sections = computed(
     function (this: ExpressionPickerComponent) {
       const q = this.query().trim().toLowerCase();
@@ -435,6 +447,7 @@ export class ExpressionPickerComponent {
   );
   /** How many sections are drawn. The first ones appear at once and the rest follow one by one, so opening never freezes. */
   private readonly drawn = signal(2);
+  private scrollFrame = 0;
   protected readonly visibleSections = computed(
     function (this: ExpressionPickerComponent) {
       return this.sections().slice(0, this.drawn());
@@ -541,6 +554,20 @@ export class ExpressionPickerComponent {
     }
   }
 
+  /** The pointer is over a cell, or a cell was pressed (one listener for the whole grid instead of one per emoji). */
+  protected onCell(event: Event, press: boolean): void {
+    const cell = (event.target as Element).closest<HTMLElement>('.emoji-cell');
+    const entry = cell?.dataset['u'] ? this.byUnicode().get(cell.dataset['u']) : undefined;
+    if (!entry) {
+      return;
+    }
+    if (press) {
+      this.pickEmoji(entry);
+    } else if (this.hover() !== entry) {
+      this.hover.set(entry);
+    }
+  }
+
   /** The emoji with the skin tone the person chose. */
   protected show(e: EmojiEntry): string {
     const tone = this.settings.skinTone();
@@ -589,7 +616,16 @@ export class ExpressionPickerComponent {
 
   /** Follows the scroll to mark the group of emoji that is in view. */
   protected onScroll(event: Event): void {
+    if (this.scrollFrame) {
+      return;
+    }
     const container = event.target as HTMLElement;
+    this.scrollFrame = requestAnimationFrame(this.followScroll.bind(this, container));
+  }
+
+  /** Once per frame at most: finds the group that is in view. */
+  private followScroll(container: HTMLElement): void {
+    this.scrollFrame = 0;
     const headers = Array.from(container.querySelectorAll<HTMLElement>('[data-group]'));
     const top = container.getBoundingClientRect().top + 12;
     const current =

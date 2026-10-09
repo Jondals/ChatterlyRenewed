@@ -509,8 +509,10 @@ async function main() {
   await a.click('.friend-row:has-text("Bobby")', { button: 'right' });
   await a.click('[role=menuitem]:has-text("Remove nickname")');
   await a.waitForSelector('.friend-row:has-text("bob"):not(:has-text("Bobby"))');
-  await a.click('.friend-row [data-tip="Message"]');
+  // Pressing the friend itself (not one of the buttons) opens the chat.
+  await a.click('.friend-row:has-text("bob")', { position: { x: 180, y: 20 } });
   await a.waitForURL('**/direct/**');
+  check(true, 'friends: pressing a friend opens the chat');
   await a.fill('textarea[aria-label=Message]', 'Hello Bob! **bold** `code` :rocket:');
   await a.keyboard.press('Enter');
   await b.waitForTimeout(1500);

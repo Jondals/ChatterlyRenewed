@@ -42,22 +42,19 @@ services:
       - caddy-data:/data
       - caddy-config:/config
 
-  # Relay of the calls when two networks cannot reach each other directly (the media is already encrypted in the
-  # browsers: the relay only sees encrypted frames). It needs the host network (a range of UDP ports). Set it up with
-  # `deploy/turn-setup.sh`, which fills the TURN_* variables of `.env` and opens the ports of the machine.
   turn:
-    profiles: ['turn']
-    image: coturn/coturn
+    image: coturn/coturn:latest
     restart: unless-stopped
     network_mode: host
     command:
       - -n
       - --log-file=stdout
       - --listening-port=3478
+      - --listening-ip=${TURN_PRIVATE_IP:-10.0.0.194}
       - --realm=${DOMAIN:-localhost}
       - --use-auth-secret
       - --static-auth-secret=${TURN_SECRET:-}
-      - --external-ip=${TURN_PUBLIC_IP:-}/${TURN_PRIVATE_IP:-}
+      - --external-ip=${TURN_PUBLIC_IP:-51.170.53.50}/${TURN_PRIVATE_IP:-10.0.0.194}
       - --min-port=49152
       - --max-port=49252
       - --fingerprint
@@ -65,7 +62,7 @@ services:
       - --no-tls
       - --no-dtls
       - --no-multicast-peers
-      - --allowed-peer-ip=${TURN_PRIVATE_IP:-}
+      - --allowed-peer-ip=${TURN_PRIVATE_IP:-10.0.0.194}
       - --denied-peer-ip=10.0.0.0-10.255.255.255
       - --denied-peer-ip=172.16.0.0-172.31.255.255
       - --denied-peer-ip=192.168.0.0-192.168.255.255

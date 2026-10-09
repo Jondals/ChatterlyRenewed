@@ -39,7 +39,50 @@ interface Spark {
   delay: number;
 }
 
-const HUES = [160, 175, 200, 265, 330, 45];
+/** Which color each light has: a position in the palette read from the theme (see `readPalette`). */
+const HUES = [0, 1, 2, 3, 4, 5];
+
+/** A color as red, green and blue. */
+type Rgb = [number, number, number];
+
+/** Reads a #rrggbb color (null when it is something else). */
+function parseHex(value: string): Rgb | null {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value.trim());
+  return match ? [parseInt(match[1]!, 16), parseInt(match[2]!, 16), parseInt(match[3]!, 16)] : null;
+}
+
+/** The middle color between two. */
+function mixColors(first: Rgb, second: Rgb): Rgb {
+  return [
+    Math.round((first[0] + second[0]) / 2),
+    Math.round((first[1] + second[1]) / 2),
+    Math.round((first[2] + second[2]) / 2),
+  ];
+}
+
+/** A lighter version of a color (towards white). */
+function lighten(color: Rgb, amount: number): Rgb {
+  return [
+    Math.round(color[0] + (255 - color[0]) * amount),
+    Math.round(color[1] + (255 - color[1]) * amount),
+    Math.round(color[2] + (255 - color[2]) * amount),
+  ];
+}
+
+/** The colors of the lights, from the theme of the person: its two accents, the mix of both, lighter ones and white. */
+function readPalette(element: Element): Rgb[] {
+  const style = getComputedStyle(element);
+  const first = parseHex(style.getPropertyValue('--accent')) ?? [46, 242, 176];
+  const second = parseHex(style.getPropertyValue('--accent-2')) ?? [167, 139, 250];
+  return [
+    first,
+    second,
+    mixColors(first, second),
+    lighten(first, 0.5),
+    lighten(second, 0.5),
+    [255, 255, 255],
+  ];
+}
 
 /** Smooth start and end of a movement, from 0 to 1. */
 function ease(t: number): number {
@@ -133,16 +176,19 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
   });
 
   /** One glowing dot of each color, drawn once: drawing a picture is much cheaper than making a gradient per spark per frame. */
+  const palette = readPalette(canvas);
   const sprites = new Map<number, HTMLCanvasElement>();
   for (const hue of HUES) {
     const sprite = document.createElement('canvas');
     sprite.width = sprite.height = 64;
     const paint = sprite.getContext('2d');
     if (paint) {
+      const [red, green, blue] = palette[hue]!;
+      const centre = lighten([red, green, blue], 0.55);
       const glow = paint.createRadialGradient(32, 32, 0, 32, 32, 32);
-      glow.addColorStop(0, 'hsla(' + hue + ',95%,80%,1)');
-      glow.addColorStop(0.3, 'hsla(' + hue + ',95%,62%,0.5)');
-      glow.addColorStop(1, 'hsla(' + hue + ',95%,55%,0)');
+      glow.addColorStop(0, 'rgba(' + centre.join(',') + ',1)');
+      glow.addColorStop(0.3, 'rgba(' + red + ',' + green + ',' + blue + ',0.5)');
+      glow.addColorStop(1, 'rgba(' + red + ',' + green + ',' + blue + ',0)');
       paint.fillStyle = glow;
       paint.fillRect(0, 0, 64, 64);
     }
