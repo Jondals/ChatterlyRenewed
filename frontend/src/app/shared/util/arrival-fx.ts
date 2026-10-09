@@ -1,7 +1,8 @@
 /**
  * src/app/shared/util/arrival-fx.ts
  * The light show behind the arrival animations, drawn on a canvas: points of light that spiral in from the edges of
- * the screen and gather into a ring (then burst outward), and fireworks with gravity for the celebration.
+ * the screen and gather into a ring (then burst outward), fireworks with gravity for the celebration, and slow dust that
+ * floats and twinkles in the background all through.
  * It is plain math on a 2D canvas, with no library, and it stops by itself when the show ends.
  */
 
@@ -119,6 +120,18 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
     }
   }
 
+  /** Slow dust that floats upward all through the show and twinkles: it fills the background with life. */
+  const motes = Array.from({ length: mode === 'register' ? 40 : 90 }, function mote(_, i) {
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height,
+      rise: 0.01 + Math.random() * 0.035,
+      sway: Math.random() * Math.PI * 2,
+      size: 0.6 + Math.random() * 1.6,
+      hue: HUES[i % HUES.length]!,
+    };
+  });
+
   /** One glowing dot of each color, drawn once: drawing a picture is much cheaper than making a gradient per spark per frame. */
   const sprites = new Map<number, HTMLCanvasElement>();
   for (const hue of HUES) {
@@ -157,6 +170,28 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
     context.globalCompositeOperation = 'lighter';
+    for (const mote of motes) {
+      mote.y -= mote.rise * dt;
+      mote.x += Math.sin(now / 1400 + mote.sway) * 0.12;
+      if (mote.y < -10) {
+        mote.y = height + 10;
+        mote.x = Math.random() * width;
+      }
+      const sprite = sprites.get(mote.hue);
+      if (sprite) {
+        // Near the top and bottom edges the dust fades out, so it never pops in or out when it wraps around.
+        const edge = Math.min(1, Math.max(0, Math.min(mote.y, height - mote.y) / 70));
+        context.globalAlpha =
+          edge * (0.18 + 0.32 * (0.5 + 0.5 * Math.sin(now / 700 + mote.sway * 3)));
+        context.drawImage(
+          sprite,
+          mote.x - mote.size * 3,
+          mote.y - mote.size * 3,
+          mote.size * 6,
+          mote.size * 6,
+        );
+      }
+    }
     for (let i = sparks.length - 1; i >= 0; i--) {
       const spark = sparks[i]!;
       if (spark.delay > 0) {
@@ -170,7 +205,7 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
         const angle = spark.angle + spark.spin * (1 - ease(t)) + spark.age * 0.0004;
         spark.x = centreX + Math.cos(angle) * radius;
         spark.y = centreY + Math.sin(angle) * radius * 0.92;
-        draw(spark, 0.25 + 0.75 * ease(t));
+        draw(spark, (0.25 + 0.75 * ease(t)) * Math.min(1, spark.age / 350));
         continue;
       }
       spark.vy += spark.gravity * (dt / 16);
@@ -182,7 +217,7 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
         sparks.splice(i, 1);
         continue;
       }
-      draw(spark, left);
+      draw(spark, left * Math.min(1, spark.age / 120));
     }
     context.globalAlpha = 1;
     context.globalCompositeOperation = 'source-over';
@@ -198,8 +233,8 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
           const speed = 2.5 + Math.random() * 5;
           spark.gathering = false;
           spark.delay = 0;
-          spark.age = 0;
-          spark.life = 700 + Math.random() * 700;
+          spark.age = 120;
+          spark.life = 820 + Math.random() * 700;
           spark.vx = Math.cos(out) * speed;
           spark.vy = Math.sin(out) * speed;
         }

@@ -83,6 +83,11 @@ export class ArrivalService {
 
   /** Removes the dark layer of the HTML (the animation took its place, or there will be none). */
   dropCover(): void {
-    document.getElementById('boot-cover')?.remove();
+    const cover = document.getElementById('boot-cover');
+    if (cover) {
+      cover.style.transition = 'opacity 0.4s';
+      cover.style.opacity = '0';
+      setTimeout(cover.remove.bind(cover), 450);
+    }
   }
 }

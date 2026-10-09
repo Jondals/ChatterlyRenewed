@@ -28,6 +28,25 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
   logout: { reveal: 1100, leave: 1900, end: 2500 },
 };
 
+/** Whether an animation belongs to the given part (::before or ::after) of the dark layer of the HTML. */
+function isCoverPart(part: string, animation: Animation): boolean {
+  const effect = animation.effect as KeyframeEffect | null;
+  return (
+    effect?.target instanceof Element &&
+    effect.target.id === 'boot-cover' &&
+    effect.pseudoElement === part
+  );
+}
+
+/** Puts the animations of an element at the same point as the ones of a part of the dark layer (they are the same, in the same order). */
+function followCover(part: string, element: Element | null): void {
+  const source = document.getAnimations().filter(isCoverPart.bind(null, part));
+  const mine = element?.getAnimations() ?? [];
+  for (let i = 0; i < mine.length && i < source.length; i++) {
+    mine[i]!.currentTime = source[i]!.currentTime;
+  }
+}
+
 /** The animation of an arrival. */
 @Component({
   selector: 'app-arrival',
@@ -38,6 +57,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       class="arr"
       [class]="'arr-' + kind()"
       [class.is-leaving]="leaving()"
+      [class.arr-warm]="warm"
       role="status"
       aria-live="polite"
       (click)="skip()"
@@ -47,7 +67,9 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       <canvas #fx class="arr-fx"></canvas>
       <span class="arr-flash"></span>
       <div class="arr-stage">
-        <span class="arr-orbit"></span><span class="arr-orbit o2"></span>
+        <span class="arr-ripple"></span><span class="arr-ripple r2"></span
+        ><span class="arr-ripple r3"></span> <span class="arr-glow"></span
+        ><span class="arr-orbit"></span><span class="arr-orbit o2"></span>
         <span class="arr-wave"></span><span class="arr-wave w2"></span>
         <div class="arr-mark">
           @if (kind() === 'register') {
@@ -165,8 +187,16 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       will-change: transform;
       animation:
         fade 0.5s forwards,
-        drift 9s linear infinite;
+        sway 10s ease-in-out infinite alternate;
       opacity: 0;
+    }
+    @keyframes sway {
+      from {
+        transform: translate(-4%, -3%);
+      }
+      to {
+        transform: translate(4%, 3%) scale(1.08);
+      }
     }
     @keyframes drift {
       to {
@@ -187,7 +217,7 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       mask-image: linear-gradient(to top, #000, transparent 85%);
       opacity: 0;
       animation:
-        fade 0.6s 0.1s forwards,
+        fade 1.6s 0.6s forwards,
         scroll 1.2s linear infinite;
     }
     .arr-login .arr-floor,
@@ -207,6 +237,8 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       inset: 0;
       width: 100%;
       height: 100%;
+      opacity: 0;
+      animation: fade 0.8s forwards;
     }
     .arr-flash {
       position: absolute;
@@ -224,15 +256,20 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       0% {
         opacity: 0;
       }
-      15% {
-        opacity: 0.9;
+      30% {
+        opacity: 0.8;
       }
       100% {
         opacity: 0;
       }
     }
     .arr-stage {
-      position: relative;
+      position: absolute;
+      left: 50%;
+      top: 44%;
+      width: max-content;
+      max-width: 100%;
+      transform: translate(-50%, -6rem);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -240,6 +277,38 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       text-align: center;
       padding: 1.5rem;
       transform-style: preserve-3d;
+    }
+    .arr-ripple {
+      position: absolute;
+      top: 6rem;
+      width: 9rem;
+      height: 9rem;
+      margin-top: -4.5rem;
+      border-radius: 50%;
+      border: 1px solid #2ef2b0;
+      opacity: 0;
+      animation: ripple 3.6s ease-out 0.8s infinite;
+    }
+    .arr-ripple.r2 {
+      animation-delay: 2s;
+      border-color: #38bdf8;
+    }
+    .arr-ripple.r3 {
+      animation-delay: 3.2s;
+      border-color: #a78bfa;
+    }
+    .arr-register .arr-ripple {
+      display: none;
+    }
+    @keyframes ripple {
+      from {
+        transform: scale(0.7);
+        opacity: 0.55;
+      }
+      to {
+        transform: scale(4.2);
+        opacity: 0;
+      }
     }
     .arr-wave {
       position: absolute;
@@ -275,6 +344,9 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
     @keyframes wave {
       from {
         transform: scale(0.3);
+        opacity: 0;
+      }
+      12% {
         opacity: 1;
       }
       to {
@@ -287,18 +359,13 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
       margin-bottom: 1.4rem;
       width: 9rem;
       height: 9rem;
-      filter: drop-shadow(0 0 18px #2ef2b099);
       opacity: 0;
-      animation:
-        spin-in 1.3s var(--ease) 0.05s forwards,
-        glow 2.4s ease-in-out 1.4s infinite;
+      animation: spin-in 1.3s var(--ease) 0.05s forwards;
     }
     .arr-login .arr-mark,
     .arr-logout .arr-mark,
     .arr-register .arr-mark {
-      animation:
-        spin-in 0.9s var(--ease) 0.1s forwards,
-        glow 2.4s ease-in-out 1.1s infinite;
+      animation: spin-in 0.9s var(--ease) 0.1s forwards;
     }
     .arr-logo {
       width: 100%;
@@ -382,9 +449,22 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
         transform: none;
       }
     }
+    .arr-glow {
+      position: absolute;
+      top: 6rem;
+      width: 18rem;
+      height: 18rem;
+      margin-top: -9rem;
+      border-radius: 50%;
+      background: radial-gradient(circle closest-side, #2ef2b055, #a78bfa22 55%, transparent);
+      opacity: 0;
+      animation:
+        fade 0.6s 0.2s forwards,
+        glow 2.4s ease-in-out infinite;
+    }
     @keyframes glow {
       50% {
-        filter: drop-shadow(0 0 34px #a78bfacc);
+        transform: scale(1.18);
       }
     }
     .draw,
@@ -559,10 +639,13 @@ const TIMELINE: Record<ArrivalKind, { reveal: number; leave: number; end: number
 })
 export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly arrival = inject(ArrivalService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('fx');
   readonly kind = input.required<ArrivalKind>();
   readonly name = input('');
   protected readonly leaving = signal(false);
+  /** The dark layer of the HTML already shows the aurora: this one continues it (same turn, no fade) instead of starting over. */
+  protected readonly warm = !!document.getElementById('boot-cover');
   protected readonly letters = Array.from('Chatterly-Renewed');
   private fx: Fx | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -581,6 +664,11 @@ export class ArrivalComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Starts the lights once the canvas exists, and times the explosions to the shapes (the lock, the check). */
   ngAfterViewInit(): void {
     const kind = this.kind();
+    if (this.warm) {
+      const host = this.host.nativeElement;
+      followCover('::before', host.querySelector('.arr-aurora'));
+      followCover('::after', host.querySelector('.arr-glow'));
+    }
     this.fx = startFx(this.canvas().nativeElement, kind === 'logout' ? 'login' : kind);
     if (kind === 'intro') {
       this.at(1550, this.blast.bind(this, 0.5, 0.42, 40));

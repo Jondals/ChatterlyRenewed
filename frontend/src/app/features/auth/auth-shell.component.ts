@@ -47,7 +47,7 @@ import { APP_NAME, APP_VERSION } from '../../version';
               >
             </div>
           </div>
-          <h1 class="text-6xl font-bold leading-[1.2] tracking-tight">
+          <h1 class="text-6xl font-bold leading-[1.38] tracking-tight">
             {{ 'Talk freely.' | t }}<br /><span class="text-gradient">{{
               'Nobody is listening.' | t
             }}</span>

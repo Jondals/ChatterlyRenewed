@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.6.5
+
+- The handoff from the first layer of the page to the introduction is exact now. Measuring the opacity frame by frame showed that the aurora of the animation started at full strength while the one of the first layer was still at 2%: a jump from almost black to full aurora a few milliseconds after load. The animation now reads the point where the first layer's animations are and continues from there (aurora and glow), so the two are the same picture and nothing jumps.
+
+## 2.6.4
+
+- The big words of the sign-in page: more space between the two lines (1.38 times the size) so that the blocks drawn when selecting them never touch, not even with Segoe UI or other fonts that are taller than Inter (measured: with Segoe UI the blocks used to touch or overlap).
+- The introduction has no more "pops": the lights fade in when they are born (and the ring that bursts keeps its light instead of restarting), the dust fades near the top and bottom edges where it wraps around, the layer of lights fades in as a whole, and the flash and the shockwaves start from nothing and rise quickly instead of appearing at full strength.
+
+## 2.6.3
+
+- Animations, background: the aurora no longer turns (a turning square showed its edge as a cut); it sways gently and the layer is larger than the screen, so no edge is ever seen. The first layer of the page and the animation share the same sway, so the handoff is not seen.
+- No more "pops": the glow in the center is the same circle in the first layer and in the animation (same size, place and breathing), the logo sits at the same height in every scene, and the floor grid fades in slowly instead of appearing at once.
+- More life: slow dust floats upward and twinkles all through the show (90 motes), and soft rings of color spread out from the logo again and again.
+
+## 2.6.2
+
+- The introduction starts on the very first frame, also when you run the app with `pnpm dev`: the dark layer with the aurora and a breathing light now lives in `index.html` of the source (before it only existed in the production build), it is visible from the first paint, and the animation continues the same aurora (same turn, no fade) instead of starting over. Measured in a production build: the layer is on top from the first 30 ms and the animation from about 90 ms on a warm load, with no frame of the sign-in page in between.
+- The glow behind the logo is its own circle now, not part of the spinning logo, so no dark rectangle shows while the logo turns.
+
 ## 2.6.1
 
 - Signing out: the padlock really closes now (the animation ended on the open pose by mistake).

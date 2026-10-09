@@ -94,8 +94,7 @@ let SESSION_SCRIPT =
   "var l=p==='auto'?(navigator.language||'en').slice(0,2).toLowerCase():p;" +
   "var q=location.pathname;document.documentElement.dataset.snap=l==='es'?'es':'en';" +
   "document.documentElement.dataset.page=q==='/register'?'register':(q==='/'||q==='/login')?'login':'';" +
-  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session');" +
-  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&localStorage.getItem('chatterly.pref.animations')!=='\"off\"'&&(!navigator.webdriver||localStorage.getItem('chatterly.motion')))document.documentElement.classList.add('has-cover')}catch(e){}";
+  "if(localStorage.getItem('chatterly.session'))document.documentElement.classList.add('has-session');}catch(e){}";
 
 /**
  * Serves the build folder, answering index.html for unknown paths (the routes of the app).
@@ -218,8 +217,7 @@ function preloadFont(html) {
  */
 const SPLASH = {
   style:
-    '<style>#boot-cover{display:none}html.has-cover #boot-cover{position:fixed;inset:0;z-index:299;display:block;background:#04070d}' +
-    '.boot-splash{display:none}html.has-session .boot-splash{position:fixed;inset:0;display:grid;place-items:center;background:#06070b}' +
+    '<style>.boot-splash{display:none}html.has-session .boot-splash{position:fixed;inset:0;display:grid;place-items:center;background:#06070b}' +
     '.boot-splash svg{width:6rem;height:6rem;filter:drop-shadow(0 0 22px #2ef2b080);animation:boot-breathe 1.6s ease-in-out infinite}' +
     '@keyframes boot-breathe{50%{transform:scale(1.08);filter:drop-shadow(0 0 34px #8b5cf6aa)}}' +
     '@media (prefers-reduced-motion:reduce){.boot-splash svg{animation:none}}</style>',
@@ -257,7 +255,6 @@ async function main() {
   html = addSessionScript(html);
   html = preloadFont(html);
   html = html.replace('</head>', SPLASH.style + '</head>');
-  html = html.replace('<body>', '<body><div id="boot-cover"></div>');
   html = html.replace(
     /<app-root([^>]*)>\s*<\/app-root>/,
     '<app-root$1 data-snapshot>' + SPLASH.markup + snapshots.replace(/\$/g, '$$$$') + '</app-root>',
