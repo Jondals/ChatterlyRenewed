@@ -53,7 +53,7 @@ for (const [address, prefix] of [
 }
 
 /**
- * True when an address is private, local or reserved (the server must never connect to those). IPv4 addresses
+ * ! True when an address is private, local or reserved (the server must never connect to those). IPv4 addresses
  * written inside IPv6 (`::ffff:127.0.0.1`, `::ffff:7f00:1`) are judged by their IPv4 rules.
  *
  * @param ip An IPv4 or IPv6 literal, with or without the brackets of a URL.
@@ -80,7 +80,7 @@ export function assertFetchable(url: URL): void {
 }
 
 /**
- * Name resolution that runs right when connecting: a private real address is refused.
+ * ! Name resolution that runs right when connecting: a private real address is refused.
  * That way a name that changes its address between the check and the connection does not work either.
  */
 function safeLookup(host: string, options: unknown, callback: (...args: unknown[]) => void): void {

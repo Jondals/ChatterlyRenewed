@@ -22,7 +22,7 @@ const MAX_BACKOFF = 15_000;
 const PING_INTERVAL = 5000;
 
 /**
- * Realtime channel. It authenticates with a first `auth` frame (the token never appears in the URL or in
+ * ! Realtime channel. It authenticates with a first `auth` frame (the token never appears in the URL or in
  * server logs), reconnects with exponential backoff and measures the round-trip latency.
  */
 @Injectable({ providedIn: 'root' })
@@ -153,7 +153,7 @@ export class SocketService {
       return;
     }
     if (event.code === TOKEN_REJECTED) {
-      // Token rejected: force one refresh; if that fails the session is gone.
+      // ! Token rejected: force one refresh; if that fails the session is gone.
       void this.auth.getAccessToken(true).then(this.retryAfterRefresh.bind(this));
       return;
     }

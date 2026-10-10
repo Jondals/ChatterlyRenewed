@@ -34,7 +34,7 @@ type AuthResponse = { user: User } & Tokens;
 type LoginResponse = AuthResponse & { wrappedKeys: WrappedKeys };
 
 /**
- * Zero-knowledge account handling. The password never leaves the browser: it is stretched with PBKDF2 and
+ * ! Zero-knowledge account handling. The password never leaves the browser: it is stretched with PBKDF2 and
  * split into an auth secret (sent over TLS, hashed again by the server) and a wrapping key (kept here) that
  * decrypts the identity private keys stored on the server.
  */
@@ -220,7 +220,7 @@ export class AuthService {
       '/api/auth/kdf?username=' + encodeURIComponent(username),
     );
     const secrets = await deriveSecrets(password, kdf.salt, kdf.iterations);
-    // The password is checked through a sign in first: a wrong one must not look like an expired session (which signs out).
+    // ! The password is checked through a sign in first: a wrong one must not look like an expired session (which signs out).
     await this.api.post('/api/auth/login', { username, authSecret: secrets.authSecret }, false);
     this.erasing = true;
     try {

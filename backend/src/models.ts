@@ -186,3 +186,27 @@ export function presenceAudience(db: Db, userId: string): string[] {
     return r.id;
   });
 }
+
+/**
+ * Everybody who may see the profile picture of a person: friends (also the ones still pending), people who share a server
+ * with them and people they have a direct conversation with.
+ */
+export function profileAudience(db: Db, userId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT CASE WHEN user_a = @u THEN user_b ELSE user_a END AS id
+         FROM friendships WHERE user_a = @u OR user_b = @u
+       UNION
+       SELECT gm2.user_id AS id FROM guild_members gm1
+         JOIN guild_members gm2 ON gm1.guild_id = gm2.guild_id
+        WHERE gm1.user_id = @u AND gm2.user_id <> @u
+       UNION
+       SELECT d2.user_id AS id FROM dm_members d1
+         JOIN dm_members d2 ON d1.channel_id = d2.channel_id
+        WHERE d1.user_id = @u AND d2.user_id <> @u`,
+    )
+    .all({ u: userId }) as { id: string }[];
+  return rows.map(function (r) {
+    return r.id;
+  });
+}

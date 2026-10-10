@@ -33,7 +33,7 @@ function derive(secret: string, salt: Buffer, params: ScryptParams): Promise<Buf
 }
 
 /**
- * Mixes the secret of the server into what is hashed (a "pepper"). The pepper does not live in the database, so a
+ * ! Mixes the secret of the server into what is hashed (a "pepper"). The pepper does not live in the database, so a
  * stolen copy of the database alone cannot even be attacked by guessing passwords.
  */
 function pepperSecret(secret: string, pepper: string): string {

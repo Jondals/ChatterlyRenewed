@@ -100,6 +100,18 @@ import { IconComponent } from './icon.component';
                 [value]="parts().angle"
                 (input)="changed.emit({ angle: +$any($event.target).value })"
             /></label>
+            <div class="flex flex-wrap gap-1.5">
+              @for (a of angles; track a) {
+                <button
+                  type="button"
+                  class="gangle"
+                  [class.is-on]="parts().angle === a"
+                  (click)="changed.emit({ angle: a })"
+                >
+                  {{ a }}°
+                </button>
+              }
+            </div>
           }
         </div>
       }
@@ -108,15 +120,16 @@ import { IconComponent } from './icon.component';
   styles: `
     .gbar {
       position: relative;
-      height: 0.75rem;
-      margin: 0.55rem 0.7rem;
+      height: 1rem;
+      margin: 0.6rem 0.8rem;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
       touch-action: none;
       transition: height 0.18s ease;
     }
     .gbar.is-editing {
-      height: 1rem;
+      height: 1.5rem;
     }
     .gstop {
       position: absolute;
@@ -125,8 +138,10 @@ import { IconComponent } from './icon.component';
       height: 1.15rem;
       margin: -0.575rem 0 0 -0.575rem;
       border-radius: 999px;
-      border: 2px solid #fff;
-      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+      border: 3px solid #fff;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.55),
+        0 2px 6px rgba(0, 0, 0, 0.45);
       cursor: var(--cur-grab, grab);
     }
     .gstop.is-on {
@@ -139,10 +154,22 @@ import { IconComponent } from './icon.component';
     .gpanel {
       display: grid;
       gap: 0.85rem;
-      padding: 0.8rem;
-      border-radius: var(--r);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(0, 0, 0, 0.18);
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .gangle {
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.72rem;
+      color: var(--muted, #9aa3b5);
+      transition: all 0.15s ease;
+    }
+    .gangle:hover,
+    .gangle.is-on {
+      border-color: var(--accent);
+      color: var(--fg);
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
     }
     .gchip {
       padding: 0.25rem 0.55rem;
@@ -160,6 +187,8 @@ export class GradientControlsComponent {
   /** Show the place of the chosen color (where colors have no place of their own, only their order counts). */
   readonly showPosition = input(true);
   readonly changed = output<Partial<GradientParts>>();
+  /** Quick angles. */
+  protected readonly angles = [0, 45, 90, 135, 180, 270];
   protected readonly open = signal(false);
   protected readonly selected = signal(0);
   private dragging = -1;

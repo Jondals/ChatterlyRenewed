@@ -1,0 +1,205 @@
+/* Avatars and the rings (auras) around them. */
+
+/* ───────────────────────── Avatars & auras ───────────────────────── */
+.aura {
+  position: relative;
+  border-radius: 50%;
+  --c1: var(--a1, var(--accent));
+  --c2: var(--a2, var(--accent-2));
+}
+
+/* A soft glow of the colors of the effect around the ring: the ring is what turns, the glow is still (cheap to draw). */
+.aura {
+  box-shadow: 0 0 calc(var(--ring, 6px) * 3.2) calc(var(--ring, 6px) * 0.1)
+    color-mix(in oklab, var(--a1, var(--accent)) 70%, transparent);
+}
+
+.aura::before,
+.aura::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  /* The rings only turn, scale or fade: the browser keeps them on their own layer and never repaints them. */
+  will-change: transform;
+}
+
+.aura::before {
+  inset: calc(var(--ring, 6px) * -1);
+  z-index: 0;
+  background: conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1));
+  animation: spin 6s linear infinite;
+}
+
+/* Pulse: a breathing ring with a ripple that fades outwards */
+.aura-pulse::before {
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  animation: aura-breathe 2.6s ease-in-out infinite;
+}
+
+.aura-pulse::after {
+  inset: calc(var(--ring, 6px) * -1);
+  border: 2px solid var(--c1);
+  animation: aura-ripple 2.6s ease-out infinite;
+}
+
+/* Orbit: a thin ring with two small lights circling around the picture */
+.aura-orbit::before {
+  inset: calc(var(--ring, 6px) * -0.833);
+  background: none;
+  border: 2px solid color-mix(in oklab, var(--c1) 40%, transparent);
+  animation: none;
+}
+
+.aura-orbit::after {
+  inset: calc(var(--ring, 6px) * -1.5);
+  z-index: 2;
+  background:
+    radial-gradient(circle at 50% 3%, var(--c1) 0 3.2px, transparent 3.6px),
+    radial-gradient(circle at 50% 97%, var(--c2) 0 3.2px, transparent 3.6px);
+  filter: drop-shadow(0 0 4px var(--c1));
+  animation: spin 4.5s linear infinite;
+}
+
+/* Dashed: long dashes that turn slowly */
+.aura-dashed::before {
+  inset: calc(var(--ring, 6px) * -1);
+  background: repeating-conic-gradient(from 0deg, var(--c1) 0 22deg, transparent 22deg 40deg);
+  animation: spin 16s linear infinite;
+}
+
+/* Double: two thin rings turning in opposite directions */
+.aura-double::before {
+  inset: calc(var(--ring, 6px) * -1.333);
+  background: conic-gradient(
+    from 0deg,
+    var(--c1),
+    transparent 45%,
+    var(--c1) 55%,
+    transparent 95%,
+    var(--c1)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: spin 5s linear infinite;
+}
+
+.aura-double::after {
+  inset: calc(var(--ring, 6px) * -0.667);
+  z-index: 0;
+  background: conic-gradient(
+    from 90deg,
+    var(--c2),
+    transparent 40%,
+    var(--c2) 60%,
+    transparent 90%,
+    var(--c2)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: spin 7s linear infinite reverse;
+}
+
+/* Glow: a steady soft light that flickers a little, like a neon sign */
+.aura-glow::before {
+  inset: calc(var(--ring, 6px) * -0.667);
+  background: var(--c1);
+  box-shadow:
+    0 0 10px var(--c1),
+    0 0 24px var(--c2);
+  animation: aura-flicker 3.4s ease-in-out infinite;
+}
+
+/* Ticks: fine marks around the picture, like a dial */
+.aura-ticks::before {
+  inset: calc(var(--ring, 6px) * -1.167);
+  background: repeating-conic-gradient(from 0deg, var(--c1) 0 3deg, transparent 3deg 10deg);
+  animation: spin 24s linear infinite reverse;
+}
+
+.aura-ticks::after {
+  inset: calc(var(--ring, 6px) * -0.667);
+  z-index: 0;
+  border: 1px solid color-mix(in oklab, var(--c2) 55%, transparent);
+}
+
+/* Glitch: a ring that jumps in steps */
+.aura-glitch::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--c1),
+    #0b0d12 30%,
+    var(--c2) 55%,
+    #0b0d12 80%,
+    var(--c1)
+  );
+  animation: spin 2.4s steps(24) infinite;
+}
+
+/* Rainbow: all colors, turning and shifting */
+.aura-rainbow::before {
+  background: conic-gradient(
+    from 0deg,
+    #f43f5e,
+    #f59e0b,
+    #84cc16,
+    #06b6d4,
+    #6366f1,
+    #d946ef,
+    #f43f5e
+  );
+  /* The colors already cover the whole wheel: the old hue-rotate filter only forced a repaint on every frame. */
+  animation: spin 3.5s linear infinite;
+}
+
+.aura > .aura-core {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 3px var(--ink-900);
+}
+
+.speaking-ring {
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--accent) 75%, transparent),
+    0 0 12px -3px var(--accent);
+  transition: box-shadow 0.2s var(--ease);
+}
+
+@layer components {
+  .ring-bars.is-paused i {
+    animation-play-state: paused;
+    transform: scaleY(0.25);
+  }
+  /* four bars that dance while a ringtone plays */
+  .ring-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 1rem;
+  }
+  .ring-bars i {
+    width: 3px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform-origin: bottom;
+    animation: ring-dance 0.8s ease-in-out infinite;
+  }
+  .ring-bars i:nth-child(2) {
+    animation-delay: -0.2s;
+  }
+  .ring-bars i:nth-child(3) {
+    animation-delay: -0.45s;
+  }
+  .ring-bars i:nth-child(4) {
+    animation-delay: -0.1s;
+  }
+}

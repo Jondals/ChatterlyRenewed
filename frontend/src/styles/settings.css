@@ -1,0 +1,273 @@
+/* The settings pages and the pieces that only they use. */
+
+/* Language options: a round "coin" with the flag, the name, and a tick when it is the chosen one. */
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  border-radius: calc(var(--r) * 1.3);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    transform 0.3s var(--ease),
+    border-color 0.3s var(--ease-suave),
+    background-color 0.3s var(--ease-suave),
+    box-shadow 0.3s var(--ease-suave);
+}
+
+.lang-option:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.lang-option:active {
+  transform: scale(0.98);
+}
+
+.lang-option.is-on {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+  box-shadow: 0 10px 28px -16px var(--accent);
+}
+
+.lang-coin {
+  display: grid;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.7);
+}
+
+.lang-coin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lang-coin-auto {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+.lang-tick {
+  display: grid;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.25s var(--ease-suave),
+    transform 0.3s var(--ease);
+}
+
+.lang-option.is-on .lang-tick {
+  opacity: 1;
+  transform: none;
+}
+
+/* The text size of the settings is the size of the page itself: 14 px is the usual 16 px of the root, so everything in rem
+   (all the text sizes, spacing and widths) follows it, not only the text that happens to inherit from the body. */
+html {
+  font-size: calc(var(--font-size) * 16 / 14);
+}
+
+html.flag-polyfill {
+  --flag-font: 'Twemoji Country Flags';
+}
+
+/* ───────────────────────── Themed cursors (set from JS, see CursorService) ───────────────────────── */
+html {
+  cursor: var(--cur-default, auto);
+}
+
+.select-option.is-on {
+  color: var(--accent);
+}
+
+/* Own animated cursor: the system one is hidden except over text fields. */
+/* While the page draws the cursor (see CursorOverlay), every element asks for a cursor STATE through --cur-*
+   variables that carry a marker; the :where() rule keeps the browser's own cursors out of the way. */
+:where(html.cursor-js *) {
+  cursor: var(--cur-default);
+}
+
+/* What is inside something clickable shows the cursor of the clickable thing, not the default one. */
+:where(
+  html.cursor-js a[href] *,
+  html.cursor-js button *,
+  html.cursor-js [role='button'] *,
+  html.cursor-js .clickable *,
+  html.cursor-js [draggable='true'] *
+) {
+  cursor: inherit;
+}
+
+html.cursor-js.cursor-native,
+html.cursor-js.cursor-native * {
+  cursor: auto !important;
+}
+
+/* Settings: soft entrance and exit (the panel rises a little and brightens; on close it fades). */
+.settings-overlay {
+  animation: settings-in 0.32s var(--ease) both;
+}
+
+.settings-overlay.settings-out {
+  animation: settings-out 0.19s ease-in both;
+  pointer-events: none;
+}
+
+/* GitHub link of "About": a padlock that opens on hover (the app is end-to-end encrypted). */
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1.05rem;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--accent) 14%, transparent),
+    color-mix(in oklab, var(--accent-2) 12%, transparent)
+  );
+  color: var(--fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.gh-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: gh-brillo 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.gh-link:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 28px -12px var(--accent);
+}
+
+.gh-lock {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.gh-arco {
+  transform-origin: 8px 11px;
+  transition: transform 0.45s var(--ease-suave);
+}
+
+.gh-link:hover .gh-arco {
+  transform: translateY(-3px);
+}
+
+.gh-flecha {
+  transition: transform 0.3s var(--ease-suave);
+  color: var(--muted);
+}
+
+.gh-link:hover .gh-flecha {
+  transform: translate(2px, -2px);
+  color: var(--accent);
+}
+
+/* A big card to choose files (the stickers import). */
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.6rem 1.2rem;
+  text-align: center;
+  border-radius: var(--r-lg);
+  border: 1.5px dashed color-mix(in oklab, var(--accent) 35%, transparent);
+  background: color-mix(in oklab, var(--accent) 5%, rgba(0, 0, 0, 0.25));
+  transition:
+    background-color 0.25s var(--ease-suave),
+    border-color 0.25s var(--ease-suave);
+}
+
+.drop-card:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, rgba(0, 0, 0, 0.25));
+}
+
+/* The stickers card: smaller, and it keeps its size when the help beside it opens. */
+.drop-card {
+  gap: 0.4rem;
+  padding: 1rem 1rem;
+  font-size: 0.85rem;
+}
+
+@layer components {
+  /* a block of the settings: the title and its rows, in one card (the same in every section) */
+  .settings-card {
+    margin-top: 1.5rem;
+    padding: 0.25rem 1.25rem 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--r-lg);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .settings-card:first-child {
+    margin-top: 0;
+  }
+  .settings-card-title {
+    padding-top: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  /* corner style slider: tick marks that fill up to the thumb and the names of the old styles as guides */
+  .corner-guide {
+    position: relative;
+    height: 1.2rem;
+    margin: 6px 6px 0;
+  }
+  .corner-guide-name {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 0.65625rem;
+    color: var(--dim);
+    transition: color 0.3s var(--ease-suave);
+    white-space: nowrap;
+  }
+  .corner-guide-name.is-on {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .choice-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    box-shadow: 0 8px 24px -14px var(--accent);
+  }
+  .choice-card.is-dashed {
+    border-style: dashed;
+  }
+  .ring-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    box-shadow: 0 8px 24px -14px var(--accent);
+  }
+}

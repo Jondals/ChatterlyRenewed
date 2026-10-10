@@ -40,7 +40,10 @@ declare module '@fastify/jwt' {
 }
 
 /** What the log says about a request: the method and the path, never the address of who asks or the query. */
-function logRequest(request: { method?: string; url?: string }): { method?: string; path: string } {
+function logRequest(request: { method?: string; url?: string }): {
+  method?: string;
+  path: string;
+} {
   return { method: request.method, path: (request.url ?? '').split('?')[0]! };
 }
 
@@ -96,7 +99,7 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
     },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
-  // API answers are never stored in shared caches or in the browser (except media, which has its own policy).
+  // ! API answers are never stored in shared caches or in the browser (except media, which has its own policy).
   app.addHook('onSend', async function (_req, reply, payload) {
     if (!reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');
     reply.header(

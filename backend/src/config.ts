@@ -51,7 +51,7 @@ export interface AppConfig {
   logger: boolean;
 }
 
-export const APP_VERSION = '2.17.1';
+export const APP_VERSION = '2.18.0';
 
 /** ! The shortest secret the server accepts from the environment (generated ones are 64 characters). */
 const MIN_SECRET_LENGTH = 32;
@@ -161,7 +161,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     accessTtlSec: 15 * 60,
     refreshTtlSec: 30 * 24 * 3600,
     // OWASP minimum for scrypt: N=2^17, r=8, p=1. 2^15 keeps login snappy while the client already
-    // spends 600k PBKDF2 rounds before the secret ever reaches us.
+    // ! spends 600k PBKDF2 rounds before the secret ever reaches us.
     scrypt: { N: 1 << 15, r: 8, p: 1 },
     minKdfIterations: 200_000,
     maxUploadBytes: 12 * 1024 * 1024,

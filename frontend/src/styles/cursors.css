@@ -1,0 +1,126 @@
+/* The themed cursors: the page asks for a cursor STATE (--cur-*) and the cursor service draws it. */
+
+.cursor-default {
+  cursor: var(--cur-default, default);
+}
+
+.cursor-text {
+  cursor: var(--cur-text, text);
+}
+
+.cursor-not-allowed {
+  cursor: var(--cur-forbidden, not-allowed);
+}
+
+.cursor-grab {
+  cursor: var(--cur-grab, grab);
+}
+
+.cursor-grabbing,
+.cursor-grab:active {
+  cursor: var(--cur-grabbing, grabbing);
+}
+
+.cursor-zoom-in {
+  cursor: var(--cur-zoom, zoom-in);
+}
+
+.cursor-zoom-out {
+  cursor: var(--cur-zoom, zoom-out);
+}
+
+.cursor-help {
+  cursor: var(--cur-help, help);
+}
+
+.cursor-wait {
+  cursor: var(--cur-wait, wait);
+}
+
+.cursor-move {
+  cursor: var(--cur-move, move);
+}
+
+.cursor-crosshair {
+  cursor: var(--cur-crosshair, crosshair);
+}
+
+.cursor-ew-resize {
+  cursor: var(--cur-resize-h, ew-resize);
+}
+
+.cursor-ns-resize {
+  cursor: var(--cur-resize-v, ns-resize);
+}
+
+.cursor-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  width: auto;
+  height: auto;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s linear;
+  will-change: transform;
+}
+
+.cursor-overlay .cs-in {
+  position: relative;
+  transition: transform 0.2s var(--ease);
+}
+
+.cursor-overlay .cs-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.cursor-overlay .cs-layer.cs-active {
+  opacity: 1;
+}
+
+.cursor-overlay svg {
+  display: block;
+}
+
+.cursor-overlay img {
+  display: block;
+  max-width: none;
+  image-rendering: auto;
+}
+
+.cursor-trail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  z-index: 2147482999;
+  pointer-events: none;
+}
+
+/* Tailwind's important cursor utilities would bypass the themed cursors. */
+.\!cursor-pointer {
+  cursor: var(--cur-pointer, pointer) !important;
+}
+
+.\!cursor-default {
+  cursor: var(--cur-default, default) !important;
+}

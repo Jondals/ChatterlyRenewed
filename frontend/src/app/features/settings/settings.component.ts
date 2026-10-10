@@ -148,7 +148,11 @@ const GROUPS: SectionEntry[][] = [
           >
             <app-icon name="x" />
           </button>
-          <div class="mx-auto max-w-3xl px-5 pb-10 pt-6 md:px-8">
+          <div
+            class="mx-auto px-5 pb-10 pt-6 md:px-8"
+            [class.max-w-3xl]="section() !== 'profile'"
+            [class.max-w-5xl]="section() === 'profile'"
+          >
             <button
               type="button"
               class="btn btn-sm btn-ghost -ml-2 mb-3 md:hidden"

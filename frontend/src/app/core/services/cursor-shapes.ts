@@ -79,7 +79,7 @@ function shapeOf(family: string, name: string): Shape {
   if (preset) {
     return preset;
   }
-  // The arrow and the link of a family are the same drawing (lit up over a link), so the pointer never seems to jump.
+  // ! The arrow and the link of a family are the same drawing (lit up over a link), so the pointer never seems to jump.
   const hot = arrowHot(family);
   if (hot && (name === 'default' || name === 'pointer')) {
     return { svg: arrowSvg(family, name === 'pointer'), hot };

@@ -148,7 +148,7 @@ export function createStaticHandler(webDir) {
       return;
     }
     const hashed = /-[A-Za-z0-9]{8}\.(js|css|woff2?)$/.test(file);
-    // The recorded sounds do not change between versions (and are small): a week in the cache of the browser.
+    // ! The recorded sounds do not change between versions (and are small): a week in the cache of the browser.
     const sound = file.endsWith('.ogg');
     const { body, encoding } = readForClient(
       file,

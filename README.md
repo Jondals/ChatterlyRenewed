@@ -8,7 +8,7 @@
 
 **English** · [Español](README.es.md)
 
-![version](https://img.shields.io/badge/version-2.17.1-2ef2b0?style=flat-square)
+![version](https://img.shields.io/badge/version-2.18.0-2ef2b0?style=flat-square)
 ![encryption](https://img.shields.io/badge/E2EE-AES--256--GCM%20%C2%B7%20ECDH%20P--256%20%C2%B7%20ECDSA-8b5cf6?style=flat-square)
 ![calls](https://img.shields.io/badge/calls-WebRTC%20mesh%20%C2%B7%20DTLS--SRTP-38e8ff?style=flat-square)
 ![tests](https://img.shields.io/badge/test-1%20completo-2ef2b0?style=flat-square)
@@ -44,9 +44,9 @@ the [changelog](CHANGELOG.md).
 - 🛰️ **Groups** with owner-managed channels, invitations, member removal and **automatic group-key rotation**.
 - 📎 **Encrypted attachments** (per-file key, SHA-256 verified), 🎙️ voice notes, 😀 emoji picker,
   `:shortcodes:`, reactions (also encrypted), replies, edit/delete, typing indicators, markdown-lite with code blocks.
-- 🎡 **Spinly wheels and tournaments built in**: send one from the `+` menu like a poll (anyone runs it once, everybody sees the same result) or put one in a call for everybody to spin, edit and play again; link your Spinly account for your own themes and presets. Also right-click menus, friend nicknames, and an "Activities" menu in calls to **listen to YouTube/Spotify together** (with a shared queue, playlists and votes to skip), **watch YouTube videos together** or spin a Spinly, each one a tile of the stage. Keyboard shortcuts for the call (mute, deafen, camera, screen, soundboard, hang up) can be changed in Settings; the soundboard has categories and your own sounds, which everybody in the call hears. Group owners can make tags for the members (shown as sections of the members list), and names and banners can use gradients with a third color and their own start and end. Groups can be reordered by dragging them in the side bar, and the wallpaper can be a GIF or a short video that moves.
+- 🎡 **Spinly wheels and tournaments built in**: send one from the `+` menu like a poll (anyone runs it once, everybody sees the same result) or put one in a call for everybody to spin, edit and play again; link your Spinly account for your own themes and presets. Also right-click menus, friend nicknames, and an "Activities" menu in calls to **listen to YouTube/Spotify together** (with a shared queue, playlists and votes to skip), **watch YouTube videos together** or spin a Spinly, each one a tile of the stage. Keyboard shortcuts for the call (mute, deafen, camera, screen, soundboard, hang up) can be changed in Settings; the soundboard has the tabs All, Default and Yours, a volume slider, your own sounds (which everybody in the call hears) and any audio or video that somebody marks "for the soundboard" in a chat can be added with one button. Group owners can make tags for the members (shown as sections of the members list), and names and banners can use gradients with a third color and their own start and end. Groups can be reordered by dragging them in the side bar, and the wallpaper can be a GIF or a short video that moves.
 - 🎨 **Living UI** — 20+ animated backgrounds (with shuffle), aura rings, 10 themes, custom colour picker with
-  eyedropper, animated and trailing cursors (your own `.cur`/`.ani` too), synthesized UI sounds, four call ringtones (or your own), your own fonts, soundboard,
+  eyedropper, animated and trailing cursors (your own `.cur`/`.ani` too), UI sounds that are audio files you can replace (organized in `frontend/public/sounds`), four call ringtones (or your own, cut to the part you want), your own fonts, soundboard,
   smooth transitions, reduced-motion support.
 
 ## Quick start
@@ -149,7 +149,7 @@ warning. For high-stakes conversations compare the **safety number** (🛡 in th
 
 ### What the server still sees (honest threat model)
 
-Profile pictures, banners and group icons are stored **in clear** (the server re-checks them and strips their metadata) and are readable by any signed-in user who knows the id. They are not end-to-end encrypted. Photos meant to be private belong in chat attachments, which are encrypted in the browser.
+Profile pictures and banners are **end-to-end encrypted** (since 2.18.0): the browser encrypts each one with its own random key, the server keeps only ciphertext, and the key is sealed for each person who may see it (friends, people who share a server, direct conversations) with the pair key of the owner and that person. A person who is not in that circle gets nothing, and the server cannot open any of them. Limits: someone who saw a picture keeps what they saw, a new friend sees the picture the next time its owner is online (their browser seals the key then), and the server still knows who has a picture and its size. **Group icons are not encrypted** (the members read them; the server re-checks them and strips their metadata). Photos that are private belong in chat attachments.
 
 The application cannot protect you from a server that serves you malicious JavaScript: the end-to-end guarantees assume the code you load is the code in this repository.
 
@@ -177,11 +177,13 @@ frontend/                Angular 21 (signals) + Tailwind 4
   src/app/features       auth, chat, direct, guild, settings, spinly, voice
   src/app/layout         rail, sidebar, dialogs, call dock
   src/app/shared         components, pipes, utilities
+  public/sounds          every sound of the app as an audio file in organized folders (see its README)
   scripts/postbuild.mjs  pre-render and CSP hash
 scripts/                 production server used by the test and Lighthouse
 test/                    the single end-to-end test (run.mjs) and chatterly-test.exe
-.github/                 issue and pull request templates
-CONTRIBUTING.md          how to set up, check and contribute
+deploy/                  server and deployment: Caddy, coturn, systemd, update script (see deploy/DEPLOY.md)
+.github/                 CONTRIBUTING, code of conduct, issue and pull request templates, deploy workflow
+Dockerfile, docker-compose.yml   stay at the root: the server and its deployment build from here
 ```
 
 ## Spinly
@@ -206,7 +208,7 @@ There is one test, `pnpm test` (or run `test/chatterly-test.exe`), and it leaves
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Security problems go through [SECURITY.md](SECURITY.md); everyone is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) first. Security problems go through [SECURITY.md](SECURITY.md); everyone is expected to follow the [code of conduct](.github/CODE_OF_CONDUCT.md).
 
 ## License
 

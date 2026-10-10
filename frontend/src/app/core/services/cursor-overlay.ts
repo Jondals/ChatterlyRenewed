@@ -237,8 +237,8 @@ export class CursorOverlay {
       return;
     }
     // No related element: the pointer left the page, unless the element under it was only replaced (a list that
-    // re-renders), which must not bring the system cursor back.
-    // The page of another site (an iframe) never says where the pointer went: the element under the pointer does.
+    // ! re-renders), which must not bring the system cursor back.
+    // ! The page of another site (an iframe) never says where the pointer went: the element under the pointer does.
     if (
       !related &&
       document.elementFromPoint(pointer.clientX, pointer.clientY)?.tagName === 'IFRAME'
@@ -322,7 +322,7 @@ export class CursorOverlay {
       return;
     }
     if (this.nativeMode) {
-      // The pointer left (the window edge, a frame of another site): a frame that was already due must not bring the cursor back.
+      // ! The pointer left (the window edge, a frame of another site): a frame that was already due must not bring the cursor back.
       node.style.opacity = '0';
       return;
     }

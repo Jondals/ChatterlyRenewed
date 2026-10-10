@@ -13,14 +13,10 @@ import {
   signal,
 } from '@angular/core';
 import { I18nService, TranslatePipe } from '../core/i18n/i18n.service';
+import { SettingsService } from '../core/services/settings.service';
 import { CallService } from '../core/services/call.service';
 import { SoundboardStore, type CustomSound } from '../core/services/soundboard.store';
-import {
-  SOUNDBOARD,
-  SOUNDBOARD_GROUPS,
-  SoundService,
-  type SfxId,
-} from '../core/services/sound.service';
+import { SOUNDBOARD, SoundService, type SfxId } from '../core/services/sound.service';
 import { ToastService } from '../core/services/toast.service';
 import { UiService } from '../core/services/ui.service';
 import { IconComponent } from '../shared/components/icon.component';
@@ -96,84 +92,93 @@ import { IconComponent } from '../shared/components/icon.component';
             {{ group.label | t }}
           </button>
         }
-        <button
-          type="button"
-          role="tab"
-          class="sb-pill"
-          [class.is-on]="current() === 'mine'"
-          [attr.aria-selected]="current() === 'mine'"
-          (click)="current.set('mine')"
+      </div>
+
+      <div class="flex items-center gap-3 border-b border-white/8 px-5 py-2.5">
+        <app-icon name="volume" [size]="15" class="text-muted" />
+        <input
+          type="range"
+          min="0"
+          max="200"
+          class="min-w-0 flex-1 accent-[var(--accent)]"
+          [value]="settings.callEffectsVolume()"
+          (input)="settings.callEffectsVolume.set(+$any($event.target).value)"
+          [attr.aria-label]="'Soundboard volume' | t"
+        />
+        <b class="w-10 text-right font-mono text-xs text-accent"
+          >{{ settings.callEffectsVolume() }}%</b
         >
-          <app-icon name="upload" [size]="14" />
-          {{ 'Your sounds' | t }}
-        </button>
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto p-3">
-        @if (current() !== 'mine') {
-          <div class="sb-grid grid grid-cols-3 gap-2.5">
-            @for (effect of inGroup(current()); track effect.id) {
-              <button
-                type="button"
-                class="sb-tile anim-fade-up"
-                [style.--d]="$index * 25 + 'ms'"
-                [class.is-hit]="hit() === effect.id"
-                (click)="playBuiltin(effect.id)"
-              >
-                <span class="emoji-glyph text-2xl leading-none">{{ effect.icon }}</span>
-                <span class="w-full truncate text-[0.6875rem]">{{ effect.label | t }}</span>
+        @for (tab of [current()]; track tab) {
+          <div class="sb-grid grid grid-cols-3 gap-2.5 anim-fade-in">
+            @if (tab !== 'mine') {
+              @for (effect of SOUNDBOARD; track effect.id) {
+                <button
+                  type="button"
+                  class="sb-tile"
+                  [class.is-hit]="hit() === effect.id"
+                  (click)="playBuiltin(effect.id)"
+                >
+                  <span class="emoji-glyph text-2xl leading-none">{{ effect.icon }}</span>
+                  <span class="w-full truncate text-[0.6875rem]">{{ effect.label | t }}</span>
+                </button>
+              }
+            }
+            @if (tab !== 'default') {
+              @for (c of store.clips(); track c.id) {
+                <div class="group relative">
+                  <button
+                    type="button"
+                    class="sb-tile h-full w-full"
+                    [class.is-hit]="hit() === c.id"
+                    (click)="playClip(c)"
+                  >
+                    @if (c.emoji) {
+                      <span class="emoji-glyph text-2xl leading-none">{{ c.emoji }}</span>
+                    } @else {
+                      <app-icon name="music" [size]="22" class="text-accent" />
+                    }
+                    <span class="w-full truncate text-[0.6875rem]">{{ c.name }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sb-act absolute left-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-accent group-hover:flex"
+                    (click)="edit(c)"
+                    [attr.aria-label]="'Edit the sound' | t"
+                  >
+                    <app-icon name="edit" [size]="11" />
+                  </button>
+                  <button
+                    type="button"
+                    class="sb-act absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
+                    (click)="store.remove(c.id)"
+                    [attr.aria-label]="'Delete' | t"
+                  >
+                    <app-icon name="x" [size]="11" />
+                  </button>
+                </div>
+              }
+            }
+            @if (tab !== 'default') {
+              <button type="button" class="sb-tile sb-add" (click)="upload()">
+                <app-icon name="plus" [size]="22" class="text-muted" />
+                <span class="text-[0.6875rem]">{{ 'Add a sound' | t }}</span>
+                <span class="text-[0.625rem] text-dim">{{
+                  'Cut it, name it, add an emoji' | t
+                }}</span>
               </button>
             }
           </div>
-        } @else {
-          <div class="sb-grid grid grid-cols-3 gap-2.5">
-            @for (c of store.clips(); track c.id) {
-              <div class="group relative">
-                <button
-                  type="button"
-                  class="sb-tile h-full w-full"
-                  [class.is-hit]="hit() === c.id"
-                  (click)="playClip(c)"
-                >
-                  @if (c.emoji) {
-                    <span class="emoji-glyph text-2xl leading-none">{{ c.emoji }}</span>
-                  } @else {
-                    <app-icon name="music" [size]="22" class="text-accent" />
-                  }
-                  <span class="w-full truncate text-[0.6875rem]">{{ c.name }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="sb-act absolute left-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-accent group-hover:flex"
-                  (click)="edit(c)"
-                  [attr.aria-label]="'Edit the sound' | t"
-                >
-                  <app-icon name="edit" [size]="11" />
-                </button>
-                <button
-                  type="button"
-                  class="sb-act absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
-                  (click)="store.remove(c.id)"
-                  [attr.aria-label]="'Delete' | t"
-                >
-                  <app-icon name="x" [size]="11" />
-                </button>
-              </div>
-            }
-            <button type="button" class="sb-tile sb-add" (click)="upload()">
-              <app-icon name="plus" [size]="22" class="text-muted" />
-              <span class="text-[0.6875rem]">{{ 'Add a sound' | t }}</span>
-              <span class="text-[0.625rem] text-dim">{{
-                'Cut it, name it, add an emoji' | t
-              }}</span>
-            </button>
-          </div>
-          <p class="mt-3 text-[0.6875rem] leading-snug text-dim">
-            {{
-              'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
-                | t
-            }}
-          </p>
+          @if (tab !== 'default') {
+            <p class="mt-3 text-[0.6875rem] leading-snug text-dim">
+              {{
+                'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
+                  | t
+              }}
+            </p>
+          }
         }
       </div>
     </ng-template>
@@ -194,9 +199,15 @@ export class SoundboardDockComponent {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
   private readonly injector = inject(EnvironmentInjector);
-  protected readonly groups = SOUNDBOARD_GROUPS;
-  /** The category shown (or 'mine' for the sounds of the person). */
-  protected readonly current = signal('effects');
+  protected readonly settings = inject(SettingsService);
+  protected readonly SOUNDBOARD = SOUNDBOARD;
+  protected readonly groups = [
+    { id: 'all', label: 'All', icon: 'grid' },
+    { id: 'default', label: 'Default', icon: 'music' },
+    { id: 'mine', label: 'Your sounds', icon: 'upload' },
+  ];
+  /** The group shown: everything, the default effects or the sounds of the person. */
+  protected readonly current = signal('all');
   /** The sound that was just played (it lights up for a moment). */
   protected readonly hit = signal<string | null>(null);
   private hitTimer: ReturnType<typeof setTimeout> | undefined;
@@ -235,13 +246,6 @@ export class SoundboardDockComponent {
     if (!(event.target as Element).closest('app-sound-edit')) {
       this.ui.soundboardOpen.set(false);
     }
-  }
-
-  /** The effects of one category. */
-  protected inGroup(group: string): typeof SOUNDBOARD {
-    return SOUNDBOARD.filter(function same(effect) {
-      return effect.group === group;
-    });
   }
 
   /** Lights a sound up for a moment. */

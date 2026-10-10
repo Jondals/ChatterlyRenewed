@@ -259,7 +259,10 @@ async function saveAdjusted(page) {
     slider.dispatchEvent(new Event('input'));
   });
   await page.click('[aria-label="Adjust the picture"] button:has-text("Save")');
-  await page.waitForSelector('.adjust-frame', { state: 'detached', timeout: 15000 });
+  await page.waitForSelector('.adjust-frame', {
+    state: 'detached',
+    timeout: 15000,
+  });
 }
 
 async function main() {
@@ -403,7 +406,7 @@ async function main() {
         // The wrong password typed on purpose when the account is erased answers 401.
         !(name === 'carol' && m.text().includes('401'))
       )
-        errors.push(`[${name}] ${m.text().slice(0, 300)}`);
+        errors.push(`[${name}] ${m.text().slice(0, 300)} @ ${m.location().url}`);
     });
     page.on('pageerror', function (e) {
       errors.push(`[${name}] ${e.message}`);
@@ -498,7 +501,7 @@ async function main() {
   });
   check(wide.length === 0, 'the friends list has no sideways scroll ' + wide.join(' | '));
   await shot(a, '01-amigos');
-  // when the status menu opens, the user panel and its buttons do not move
+  // ! when the status menu opens, the user panel and its buttons do not move
   await a.mouse.move(700, 400);
   await a.waitForTimeout(600);
   const dockBefore = await a.locator('.dock-btn').first().boundingBox();
@@ -1039,14 +1042,20 @@ async function main() {
   await shot(b, '11c-ver-juntos');
   // Closing is personal; stopping from the Activities menu ends it for everybody.
   await b.click('button[aria-label="Close for me"]');
-  await b.waitForSelector('text=Watching together', { state: 'detached', timeout: 15000 });
+  await b.waitForSelector('text=Watching together', {
+    state: 'detached',
+    timeout: 15000,
+  });
   check(
     (await a.locator('iframe[title="Video"]').count()) === 1,
     'closing the video only closes it for the person who pressed it',
   );
   await a.click('[data-tip="Activities"]');
   await a.click('.menu-card:has-text("Watch together") button:has-text("Stop")');
-  await a.waitForSelector('iframe[title="Video"]', { state: 'detached', timeout: 15000 });
+  await a.waitForSelector('iframe[title="Video"]', {
+    state: 'detached',
+    timeout: 15000,
+  });
   await a.click('[data-tip="Activities"]');
   await a.click('.menu-card:has-text("Spinly") button >> nth=0');
   await a.waitForSelector('[role=dialog][aria-label="Spinly"]');
@@ -1345,6 +1354,12 @@ async function main() {
   await a.click('button:has-text("Save changes")');
   await a.waitForTimeout(1000);
   check(true, 'profile picture and banner uploaded, name font saved');
+  // The picture is ciphertext on the server: a friend sees it only if the key that alice sealed for them opens it.
+  await b.waitForSelector('app-avatar img[src^="blob:"]', { timeout: 40000 });
+  check(
+    true,
+    'a friend sees the profile picture: it was encrypted, and its key was sealed for them',
+  );
 
   check(
     (await a.evaluate(function () {
@@ -1738,7 +1753,9 @@ async function main() {
     again.status === 401 || again.status === 400,
     'delete account: the name can not sign in any more',
   );
-  const stale = await fetch(API + '/api/me', { headers: { authorization: carolBearer } });
+  const stale = await fetch(API + '/api/me', {
+    headers: { authorization: carolBearer },
+  });
   check(
     carolBearer.length > 20 && stale.status === 401,
     'delete account: the old session token stops working at once',

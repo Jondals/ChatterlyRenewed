@@ -205,9 +205,11 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
                               <app-icon name="crown" [size]="12" class="text-amber" />
                             }
                           </span>
-                          <span class="block truncate text-[0.6875rem]">{{
-                            m.user.statusText || '&#64;' + m.user.username
-                          }}</span>
+                          @if (m.user.statusText) {
+                            <span class="block truncate text-[0.6875rem]">{{
+                              m.user.statusText
+                            }}</span>
+                          }
                           @if (m.tags.length) {
                             <span class="mt-0.5 flex flex-wrap gap-1">
                               @for (tag of m.tags; track tag.id) {

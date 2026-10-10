@@ -1,6 +1,6 @@
 /**
  * src/app/features/settings/audio-section.component.ts
- * Settings - Voice & video: devices, microphone processing and private mode.
+ * Settings - Voice & video: devices, microphone processing, voice improvements, camera and private mode.
  */
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
@@ -9,14 +9,26 @@ import { SettingsService } from '../../core/services/settings.service';
 import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/components/icon.component';
 import { SelectComponent, type SelectOption } from '../../shared/components/select.component';
-import { SettingRowComponent, ToggleComponent } from '../../shared/components/controls.component';
+import {
+  SegmentedComponent,
+  SettingRowComponent,
+  ToggleComponent,
+} from '../../shared/components/controls.component';
+import { buildVoiceChain } from '../../core/audio-chain';
 import { decibels } from '../../shared/util/audio-level';
 
 /** Devices, microphone processing and call privacy. */
 @Component({
   selector: 'app-audio-section',
   standalone: true,
-  imports: [IconComponent, TranslatePipe, SettingRowComponent, ToggleComponent, SelectComponent],
+  imports: [
+    IconComponent,
+    TranslatePipe,
+    SegmentedComponent,
+    SettingRowComponent,
+    ToggleComponent,
+    SelectComponent,
+  ],
   template: `
     <div class="mb-6 flex gap-3 rounded-ui border border-accent/25 bg-accent/8 p-4 text-sm">
       <app-icon name="lock" class="mt-0.5 shrink-0 text-accent" />
@@ -54,7 +66,7 @@ import { decibels } from '../../shared/util/audio-level';
       </div>
     </section>
 
-    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 p-4">
+    <section class="settings-card">
       <div class="mb-3 flex items-center justify-between">
         <span class="label">{{ 'Microphone test' | t }}</span
         ><b class="font-mono text-xs text-accent">{{ dbfs(level()) }} dB</b>
@@ -91,7 +103,7 @@ import { decibels } from '../../shared/util/audio-level';
       </button>
     </section>
 
-    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 p-4">
+    <section class="settings-card">
       <label class="block text-sm"
         ><span class="flex items-center justify-between gap-3"
           ><span class="font-semibold">{{ 'Call sound effects' | t }}</span
@@ -111,7 +123,8 @@ import { decibels } from '../../shared/util/audio-level';
       /></label>
     </section>
 
-    <section class="mt-6">
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Microphone processing' | t }}</h2>
       <app-setting-row
         title="Noise suppression"
         hint="Filters keyboard and background noise (browser processing)."
@@ -141,14 +154,131 @@ import { decibels } from '../../shared/util/audio-level';
           [label]="'3D spatial audio' | t"
       /></app-setting-row>
     </section>
+
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Your voice' | t }}</h2>
+      <app-setting-row
+        title="Microphone volume"
+        hint="How loud your voice is before it is sent. Above 100% it is amplified."
+      >
+        <div class="flex items-center gap-3">
+          <input
+            type="range"
+            min="0"
+            max="200"
+            class="w-44 accent-[var(--accent)]"
+            [value]="s.inputVolume()"
+            (input)="s.inputVolume.set(+$any($event.target).value)"
+            (change)="apply()"
+            [attr.aria-label]="'Microphone volume' | t"
+          /><span class="w-10 text-right font-mono text-xs text-muted">{{ s.inputVolume() }}%</span>
+        </div>
+      </app-setting-row>
+      <app-setting-row
+        title="Extra noise removal"
+        hint="After the browser suppression: Light cuts the low rumble of desks and fans; Strong also cuts hiss and learns how loud your room is, so the microphone opens only for your voice."
+      >
+        <app-segmented
+          [options]="cleanupOptions"
+          [value]="s.voiceCleanup()"
+          (valueChange)="s.voiceCleanup.set($any($event)); apply()"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Voice leveler"
+        hint="Brings your loud and quiet words closer, so nobody has to change the volume when you laugh or whisper."
+      >
+        <app-segmented
+          [options]="levelerOptions"
+          [value]="s.voiceLeveler()"
+          (valueChange)="s.voiceLeveler.set($any($event)); apply()"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Clearer voice"
+        hint="A little less boominess and more presence, like a podcast."
+      >
+        <app-toggle
+          [checked]="s.voiceClarity()"
+          (checkedChange)="s.voiceClarity.set($event); apply()"
+          [label]="'Clearer voice' | t"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Hear yourself"
+        hint="Plays your voice back while you test the microphone. Use headphones, or it will echo."
+      >
+        <app-toggle
+          [checked]="monitoring()"
+          (checkedChange)="setMonitoring($event)"
+          [label]="'Hear yourself' | t"
+        />
+      </app-setting-row>
+    </section>
+
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Camera' | t }}</h2>
+      <app-setting-row
+        title="Quality"
+        hint="The size of your picture. Higher is sharper and uses more data."
+      >
+        <app-segmented
+          [options]="qualityOptions"
+          [value]="s.cameraQuality()"
+          (valueChange)="s.cameraQuality.set($any($event)); call.changeCamera()"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Frames per second"
+        hint="Smoother motion at 60, lighter on slow connections at 15."
+      >
+        <app-segmented
+          [options]="fpsOptions"
+          [value]="s.cameraFps()"
+          (valueChange)="s.cameraFps.set($any($event)); call.changeCamera()"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Mirror my camera"
+        hint="You see yourself as in a mirror. The others see you as you are."
+      >
+        <app-toggle
+          [checked]="s.cameraMirror()"
+          (checkedChange)="s.cameraMirror.set($event)"
+          [label]="'Mirror my camera' | t"
+        />
+      </app-setting-row>
+    </section>
   `,
 })
 export class AudioSectionComponent implements OnDestroy {
   protected readonly s = inject(SettingsService);
-  private readonly call = inject(CallService);
+  protected readonly call = inject(CallService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
 
+  protected readonly cleanupOptions = [
+    { id: 'off', label: 'Off' },
+    { id: 'light', label: 'Light' },
+    { id: 'strong', label: 'Strong' },
+  ];
+  protected readonly levelerOptions = [
+    { id: 'off', label: 'Off' },
+    { id: 'gentle', label: 'Gentle' },
+    { id: 'strong', label: 'Strong' },
+  ];
+  protected readonly qualityOptions = [
+    { id: '480', label: '480p' },
+    { id: '720', label: '720p' },
+    { id: '1080', label: '1080p' },
+  ];
+  protected readonly fpsOptions = [
+    { id: '15', label: '15' },
+    { id: '30', label: '30' },
+    { id: '60', label: '60' },
+  ];
+  /** Whether the test of the microphone plays the voice back. */
+  protected readonly monitoring = signal(false);
   protected readonly Math = Math;
   protected readonly bars = Array.from({ length: 30 }, function (_, i) {
     return Math.abs(Math.sin(i * 0.9)) * 0.5 + 0.25;
@@ -265,6 +395,12 @@ export class AudioSectionComponent implements OnDestroy {
     this.apply();
   }
 
+  /** Turns the playback of your own voice on or off (the test starts or restarts so that it applies). */
+  protected setMonitoring(on: boolean): void {
+    this.monitoring.set(on);
+    void this.start();
+  }
+
   /** Starts or stops the test of the microphone. */
   protected toggleTest(): void {
     if (this.testing()) this.stop();
@@ -287,7 +423,17 @@ export class AudioSectionComponent implements OnDestroy {
       this.ctx = new AudioContext();
       const analyser = this.ctx.createAnalyser();
       analyser.fftSize = 512;
-      this.ctx.createMediaStreamSource(this.stream).connect(analyser);
+      const chain = buildVoiceChain(this.ctx, {
+        inputVolume: this.s.inputVolume(),
+        cleanup: this.s.voiceCleanup(),
+        leveler: this.s.voiceLeveler(),
+        clarity: this.s.voiceClarity(),
+      });
+      this.ctx.createMediaStreamSource(this.stream).connect(chain.input);
+      chain.output.connect(analyser);
+      if (this.monitoring()) {
+        chain.output.connect(this.ctx.destination);
+      }
       const data = new Uint8Array(analyser.fftSize);
       this.timer = setInterval(
         function (this: AudioSectionComponent) {

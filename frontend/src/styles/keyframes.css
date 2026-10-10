@@ -1,0 +1,631 @@
+/* Every keyframe of the app, in one place. */
+
+/* ───────────────────────── Animations ───────────────────────── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes aura-breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes aura-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes aura-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  46% {
+    opacity: 0.85;
+  }
+  48% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  52% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes menu-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(9vw, 7vh) scale(1.25);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-10vw, -6vh) scale(0.9);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-6vw, 9vh) scale(1.3);
+  }
+}
+
+@keyframes drift-d {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(7vw, -8vh) scale(1.15);
+  }
+}
+
+@keyframes gradient-pan {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes ring-out {
+  from {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes ring-shake {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30%,
+  50% {
+    transform: rotate(-14deg);
+  }
+  20%,
+  40%,
+  60% {
+    transform: rotate(14deg);
+  }
+  70% {
+    transform: rotate(0);
+  }
+}
+
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes wave-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) rotate(6deg) scale(0.8);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes shine {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
+}
+
+@keyframes stars-fall {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(var(--tile) * -1), 0);
+  }
+}
+
+@keyframes bubble-up {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(30px, -115vh, 0) scale(1.15);
+    opacity: 0;
+  }
+}
+
+@keyframes beam-sweep {
+  from {
+    transform: translate3d(-18vw, 0, 0) rotate(18deg);
+    opacity: 0.3;
+  }
+  to {
+    transform: translate3d(22vw, 0, 0) rotate(18deg);
+    opacity: 1;
+  }
+}
+
+@keyframes firefly {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.15;
+  }
+  20% {
+    opacity: 1;
+  }
+  35% {
+    transform: translate3d(var(--dx), var(--dy), 0);
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.2;
+  }
+  70% {
+    transform: translate3d(calc(var(--dx) * -0.7), calc(var(--dy) * 0.6), 0);
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes rain-fall {
+  from {
+    transform: translate3d(0, -20vh, 0) rotate(12deg);
+  }
+  to {
+    transform: translate3d(-12vh, 125vh, 0) rotate(12deg);
+  }
+}
+
+@keyframes snow-fall {
+  from {
+    transform: translate3d(0, -6vh, 0);
+  }
+  to {
+    transform: translate3d(var(--sway), 112vh, 0);
+  }
+}
+
+@keyframes grid-run {
+  from {
+    transform: rotateX(62deg) translateY(0);
+  }
+  to {
+    transform: rotateX(62deg) translateY(70px);
+  }
+}
+
+@keyframes curtain-sway {
+  from {
+    transform: translateX(-4vw) skewX(-6deg) scaleY(0.85);
+  }
+  to {
+    transform: translateX(5vw) skewX(7deg) scaleY(1.1);
+  }
+}
+
+@keyframes cloud-spin {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.12);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+@keyframes meteor {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(32deg);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  14% {
+    transform: translate3d(34vw, 22vw, 0) rotate(32deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(34vw, 22vw, 0) rotate(32deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fog-drift {
+  from {
+    transform: translate3d(-9%, 0, 0);
+  }
+  to {
+    transform: translate3d(9%, 3%, 0);
+  }
+}
+
+@keyframes wave-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pick-out {
+  to {
+    opacity: 0;
+    transform: scale(0.94) translateY(-4px);
+  }
+}
+
+@keyframes grid-wave {
+  from {
+    mask-position: 130% 0;
+  }
+  to {
+    mask-position: -130% 0;
+  }
+}
+
+@keyframes leave-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes leave-pop {
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+@keyframes settings-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settings-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.99) translateY(6px);
+  }
+}
+
+@keyframes msg-actions-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gh-brillo {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes emoji-idle {
+  0%,
+  86%,
+  100% {
+    transform: none;
+  }
+  90% {
+    transform: translateY(-0.45rem) rotate(-6deg) scale(1.08);
+  }
+  94% {
+    transform: translateY(0) rotate(5deg);
+  }
+  97% {
+    transform: translateY(-0.15rem) rotate(-2deg);
+  }
+}
+
+@keyframes emoji-pop {
+  0% {
+    transform: scale(0.2) rotate(-12deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes emoji-drop {
+  0% {
+    transform: translateY(-1.6rem) scale(0.8);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(0.25rem) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes emoji-spin {
+  0% {
+    transform: rotate(-200deg) scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes topo-breathe {
+  from {
+    transform: scale(0.94) rotate(-2deg);
+  }
+  to {
+    transform: scale(1.07) rotate(2deg);
+  }
+}
+
+@keyframes sun-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5%);
+  }
+}
+
+/* only the position changes (the browser moves the layer, it does not draw it again) */
+@keyframes grid-drift {
+  to {
+    transform: translate(36px, 36px);
+  }
+}
+
+@keyframes tile-sweep {
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(130%);
+  }
+}
+
+@layer components {
+  @keyframes ring-dance {
+    0%,
+    100% {
+      transform: scaleY(0.25);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+}

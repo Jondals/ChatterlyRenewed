@@ -8,12 +8,13 @@ import { StickerStore, type StickerPack } from '../../core/services/sticker.stor
 import { ToastService } from '../../core/services/toast.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { IconComponent } from '../../shared/components/icon.component';
+import { CollapseComponent } from '../../shared/components/collapse.component';
 
 /** Manage sticker packs (stored only on this device) and import WhatsApp stickers. */
 @Component({
   selector: 'app-stickers-section',
   standalone: true,
-  imports: [IconComponent, TranslatePipe],
+  imports: [CollapseComponent, IconComponent, TranslatePipe],
   template: `
     <section class="mb-6 grid items-start gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
       <button type="button" class="drop-card" (click)="import()">
@@ -42,11 +43,8 @@ import { IconComponent } from '../../shared/components/icon.component';
           <app-icon name="smile" [size]="15" class="text-accent" />
           {{ 'Add emoji starter pack' | t }}
         </button>
-        <details class="min-w-0 break-words text-xs text-muted">
-          <summary class="cursor-pointer text-sm font-semibold text-fg">
-            {{ 'How do I get my WhatsApp stickers?' | t }}
-          </summary>
-          <ol class="mt-2 list-decimal space-y-1.5 break-words pl-5">
+        <app-collapse title="How do I get my WhatsApp stickers?">
+          <ol class="list-decimal space-y-1.5 break-words pl-5 text-xs text-muted">
             <li>
               {{
                 'Android: open your files app → Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Stickers — those .webp files are your stickers.'
@@ -61,7 +59,7 @@ import { IconComponent } from '../../shared/components/icon.component';
             </li>
             <li>{{ 'WhatsApp Web / Desktop: right-click a sticker → Save image as…' | t }}</li>
           </ol>
-        </details>
+        </app-collapse>
       </div>
     </section>
 

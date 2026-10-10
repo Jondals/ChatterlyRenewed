@@ -412,8 +412,8 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
       </app-collapse>
     </div>
 
-    <section class="mb-10 mt-12">
-      <h2 class="mb-2 text-sm font-semibold">{{ 'Motion' | t }}</h2>
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Motion' | t }}</h2>
       <app-setting-row
         title="Background visibility"
         hint="How much of the animated background shows through the panels."
@@ -515,8 +515,8 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
       </app-setting-row>
     </section>
 
-    <section class="mb-10">
-      <h2 class="mb-2 text-sm font-semibold">{{ 'Interface' | t }}</h2>
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Interface' | t }}</h2>
       <app-collapse class="mb-3" title="Corner style" [summary]="corners[s.cornerStep()].name">
         <span
           preview
@@ -639,8 +639,8 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
       </app-setting-row>
     </section>
 
-    <section class="mb-10">
-      <h2 class="mb-2 text-sm font-semibold">{{ 'Chat' | t }}</h2>
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Chat' | t }}</h2>
       <app-setting-row title="Message style" hint="Chat bubbles or a flat, IRC-like list.">
         <app-segmented
           [options]="chatStyles"
@@ -755,8 +755,8 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
       </div>
     </section>
 
-    <section class="mb-10">
-      <h2 class="mb-2 text-sm font-semibold">{{ 'Cursor' | t }}</h2>
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Cursor' | t }}</h2>
       <app-collapse title="Mouse cursor" [summary]="currentCursor()">
         <span preview class="flex gap-1">
           <span

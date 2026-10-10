@@ -41,7 +41,7 @@ import { MessageStore } from '../store/message.store';
       >
         <span class="rail-pill" [class.on]="home.isActive"></span>
         <span
-          class="flex h-11 w-11 items-center justify-center rounded-ui-lg bg-white/7 transition-all duration-300"
+          class="flex h-11 w-11 items-center justify-center rounded-ui-lg bg-white/7 transition-[background-color,color,border-radius,box-shadow,transform] duration-300"
           [class.!bg-accent]="home.isActive"
           [class.text-accent-ink]="home.isActive"
         >
@@ -99,7 +99,7 @@ import { MessageStore } from '../store/message.store';
         (click)="ui.createGuildOpen.set(true)"
       >
         <span
-          class="flex h-11 w-11 items-center justify-center rounded-ui-lg border border-dashed border-white/20 text-muted transition-all duration-300 hover:border-accent hover:bg-accent/10 hover:text-accent"
+          class="flex h-11 w-11 items-center justify-center rounded-ui-lg border border-dashed border-white/20 text-muted transition-[background-color,color,border-color] duration-300 hover:border-accent hover:bg-accent/10 hover:text-accent"
         >
           <app-icon name="plus" [size]="20" />
         </span>

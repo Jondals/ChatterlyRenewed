@@ -196,7 +196,10 @@ function envelope(): { iv: string; data: string } {
 
 /** Creates a group owned by `owner` and returns its id and its first text channel. */
 async function makeGuild(app: TestApp, owner: Account): Promise<{ id: string; text: string }> {
-  const res = await call(app, owner, 'POST', '/api/guilds', { name: 'Club', envelope: envelope() });
+  const res = await call(app, owner, 'POST', '/api/guilds', {
+    name: 'Club',
+    envelope: envelope(),
+  });
   const guild = res.json().guild;
   const text = guild.channels.find(function isText(c: { type: string }) {
     return c.type === 'text';
@@ -373,7 +376,10 @@ async function checkRelayConfiguration(): Promise<void> {
     delete process.env['TURN_URLS'];
     delete process.env['TURN_SECRET'];
     delete process.env['STUN_URLS'];
-    const config = loadConfig({ jwtSecret: 'j'.repeat(48), serverSecret: 's'.repeat(48) });
+    const config = loadConfig({
+      jwtSecret: 'j'.repeat(48),
+      serverSecret: 's'.repeat(48),
+    });
     check(
       config.relayOnly === true,
       'RELAY_ONLY=1 stays on when no relay is configured (it does not turn itself off)',
@@ -382,10 +388,16 @@ async function checkRelayConfiguration(): Promise<void> {
     check(relayProblem(config) !== null, 'the missing relay is reported at start');
     process.env['TURN_URLS'] = 'stun:only-stun.test:3478';
     process.env['TURN_SECRET'] = 'z'.repeat(40);
-    const stunOnly = loadConfig({ jwtSecret: 'j'.repeat(48), serverSecret: 's'.repeat(48) });
+    const stunOnly = loadConfig({
+      jwtSecret: 'j'.repeat(48),
+      serverSecret: 's'.repeat(48),
+    });
     check(stunOnly.turn === null, 'a STUN address is not accepted as a TURN relay');
     process.env['TURN_URLS'] = 'turn:relay.test:3478';
-    const ready = loadConfig({ jwtSecret: 'j'.repeat(48), serverSecret: 's'.repeat(48) });
+    const ready = loadConfig({
+      jwtSecret: 'j'.repeat(48),
+      serverSecret: 's'.repeat(48),
+    });
     check(
       ready.turn !== null && relayProblem(ready) === null,
       'a valid relay satisfies relay-only',
@@ -430,7 +442,9 @@ async function checkSessions(): Promise<void> {
     headers: { authorization: 'Bearer ' + legacy },
   });
   check(old.statusCode === 401, 'a token that names no session is refused');
-  const forged = app.jwt.sign({ sub: alice.id, sid: randomUUID() } as never, { expiresIn: 600 });
+  const forged = app.jwt.sign({ sub: alice.id, sid: randomUUID() } as never, {
+    expiresIn: 600,
+  });
   const unknown = await app.inject({
     method: 'GET',
     url: '/api/me',
@@ -471,7 +485,10 @@ async function checkSessions(): Promise<void> {
   );
   check((await live.closed) === 4401, 'and the open socket of that session is closed');
 
-  const login = async function (): Promise<{ accessToken: string; refreshToken: string }> {
+  const login = async function (): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
@@ -576,7 +593,10 @@ async function checkSessions(): Promise<void> {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: target.username, authSecret: randomBytes(32).toString('base64') },
+      payload: {
+        username: target.username,
+        authSecret: randomBytes(32).toString('base64'),
+      },
     });
     last = res.statusCode;
   }
@@ -584,7 +604,10 @@ async function checkSessions(): Promise<void> {
   const stranger = await app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { username: 'nobody_here', authSecret: randomBytes(32).toString('base64') },
+    payload: {
+      username: 'nobody_here',
+      authSecret: randomBytes(32).toString('base64'),
+    },
   });
   check(stranger.statusCode === 401, 'an unknown user and a wrong password look the same');
   await app.close();
@@ -759,8 +782,12 @@ async function checkAuthorization(): Promise<void> {
     'a member cannot delete the group',
   );
   check(
-    (await call(app, bob, 'POST', `/api/guilds/${guild.id}/channels`, { name: 'x', type: 'text' }))
-      .statusCode === 403,
+    (
+      await call(app, bob, 'POST', `/api/guilds/${guild.id}/channels`, {
+        name: 'x',
+        type: 'text',
+      })
+    ).statusCode === 403,
     'a member cannot create channels',
   );
   check(
@@ -901,11 +928,14 @@ async function checkImages(): Promise<void> {
   const app = await makeApp();
   const alice = await signUp(app, 'alice');
   const bob = await signUp(app, 'bob');
-  const upload = async function (who: Account | null, body: Buffer, kind = 'avatar') {
+  const upload = async function (who: Account | null, body: Buffer, kind = 'group') {
     return app.inject({
       method: 'POST',
       url: '/api/images?kind=' + kind,
-      headers: { ...(who ? bearer(who) : {}), 'content-type': 'application/octet-stream' },
+      headers: {
+        ...(who ? bearer(who) : {}),
+        'content-type': 'application/octet-stream',
+      },
       payload: body,
     });
   };
@@ -927,7 +957,7 @@ async function checkImages(): Promise<void> {
   const downloaded = await call(app, bob, 'GET', `/api/images/${imageId}`);
   check(
     downloaded.statusCode === 200 && downloaded.headers['content-type'] === 'image/png',
-    'profile pictures are readable by signed-in users (by design) with their real type',
+    'group icons are readable by signed-in users (by design) with their real type',
   );
   check(
     String(downloaded.headers['content-security-policy']).includes('sandbox'),
@@ -949,27 +979,133 @@ async function checkImages(): Promise<void> {
       `a path in place of an id gives nothing (${bad.slice(0, 18)})`,
     );
   }
+  step('profile pictures are end-to-end encrypted');
+  const secretPicture = randomBytes(300);
+  const avatarUp = await upload(alice, secretPicture, 'avatar');
+  check(avatarUp.statusCode === 201, 'a profile picture is stored as the ciphertext it arrives as');
+  const avatarId = avatarUp.json().id;
   check(
-    (await call(app, bob, 'PATCH', '/api/me', { avatarImage: imageId })).statusCode === 400,
+    fs.readFileSync(path.join(app.ctx.config.uploadDir, 'images', avatarId)).equals(secretPicture),
+    'the server keeps the bytes untouched (it cannot read or rebuild them)',
+  );
+  check(
+    (await upload(alice, Buffer.from('tiny'), 'avatar')).statusCode === 400,
+    'too short to be ciphertext is refused',
+  );
+  check(
+    (await call(app, bob, 'GET', `/api/images/${avatarId}`)).statusCode === 404,
+    'a person without a key gets nothing, as if it did not exist',
+  );
+  check(
+    (await call(app, alice, 'GET', `/api/images/${avatarId}`)).statusCode === 404,
+    'not even the owner reads it before a key exists (their browser seals one for them)',
+  );
+  check(
+    (await call(app, bob, 'GET', `/api/images/${avatarId}/audience`)).statusCode === 404,
+    'only the owner asks who is missing a key',
+  );
+  const audience0 = (await call(app, alice, 'GET', `/api/images/${avatarId}/audience`)).json();
+  check(
+    audience0.missing.length === 1 && audience0.missing[0].id === alice.id,
+    'a stranger is not in the audience; the owner is',
+  );
+  const mutual = await befriend(app, alice, bob);
+  void mutual;
+  const audience1 = (await call(app, alice, 'GET', `/api/images/${avatarId}/audience`)).json();
+  check(
+    audience1.missing.some(function (m: { id: string }) {
+      return m.id === bob.id;
+    }),
+    'a friend joins the audience',
+  );
+  const keyFor = function (viewer: Account) {
+    return {
+      viewerId: viewer.id,
+      iv: Buffer.alloc(12, 1).toString('base64'),
+      ciphertext: Buffer.alloc(48, 2).toString('base64'),
+    };
+  };
+  check(
+    (
+      await call(app, bob, 'PUT', `/api/images/${avatarId}/keys`, {
+        keys: [keyFor(bob)],
+      })
+    ).statusCode === 404,
+    'only the owner can seal keys',
+  );
+  const carolStranger = await signUp(app, 'carol2');
+  const sealedKeys = await call(app, alice, 'PUT', `/api/images/${avatarId}/keys`, {
+    keys: [keyFor(alice), keyFor(bob), keyFor(carolStranger)],
+  });
+  check(sealedKeys.json().stored === 2, 'keys for people outside the audience are dropped');
+  check(
+    (await call(app, bob, 'GET', `/api/images/${avatarId}`)).rawPayload.equals(secretPicture),
+    'with a key sealed for them, a friend downloads the ciphertext',
+  );
+  check(
+    (await call(app, bob, 'GET', `/api/images/${avatarId}/key`)).json().ownerEcdh ===
+      (
+        app.ctx.db.prepare('SELECT pub_ecdh AS k FROM users WHERE id = ?').get(alice.id) as {
+          k: string;
+        }
+      ).k,
+    'and gets the key sealed for them with the public key of the owner',
+  );
+  check(
+    (await call(app, carolStranger, 'GET', `/api/images/${avatarId}`)).statusCode === 404,
+    'a stranger still gets nothing',
+  );
+  check(
+    (await call(app, carolStranger, 'GET', `/api/images/${avatarId}/key`)).statusCode === 404,
+    'and no key',
+  );
+  check(
+    (await call(app, bob, 'PATCH', '/api/me', { avatarImage: avatarId })).statusCode === 400,
     "nobody can use another person's picture as theirs",
   );
   check(
-    (await call(app, alice, 'PATCH', '/api/me', { avatarImage: imageId })).statusCode === 200,
+    (await call(app, alice, 'PATCH', '/api/me', { avatarImage: avatarId })).statusCode === 200,
     'the owner can use their picture',
+  );
+  app.ctx.db
+    .prepare(
+      "INSERT INTO images (id, owner_id, kind, mime, size, created_at, encrypted) VALUES ('old-plain', ?, 'avatar', 'image/png', 3, ?, 0)",
+    )
+    .run(bob.id, Date.now());
+  app.ctx.db.prepare("UPDATE users SET avatar_image = 'old-plain' WHERE id = ?").run(bob.id);
+  check(
+    runMaintenance(app.ctx).plainPictures === 1,
+    'a picture stored before the encryption is erased',
+  );
+  check(
+    !app.ctx.db.prepare("SELECT 1 FROM images WHERE id = 'old-plain'").get() &&
+      (
+        app.ctx.db.prepare('SELECT avatar_image AS a FROM users WHERE id = ?').get(bob.id) as {
+          a: string | null;
+        }
+      ).a === null,
+    'and its owner is left without it, to upload it again',
   );
 
   step('maintenance: abandoned uploads and dead sessions');
-  const abandoned = (await upload(alice, pngWithMetadata(), 'banner')).json().id;
-  app.ctx.db
-    .prepare('UPDATE images SET created_at = ? WHERE id = ?')
-    .run(Date.now() - IMAGE_GRACE_MS - 1000, abandoned);
-  const recent = (await upload(alice, pngWithMetadata(), 'banner')).json().id;
+  const addPicture = function (age: number): string {
+    const id = randomUUID();
+    fs.writeFileSync(path.join(app.ctx.config.uploadDir, 'images', id), randomBytes(64));
+    app.ctx.db
+      .prepare(
+        "INSERT INTO images (id, owner_id, kind, mime, size, created_at, encrypted) VALUES (?, ?, 'banner', 'application/octet-stream', 64, ?, 1)",
+      )
+      .run(id, alice.id, Date.now() - age);
+    return id;
+  };
+  const abandoned = addPicture(IMAGE_GRACE_MS + 1000);
+  const recent = addPicture(0);
   const report = runMaintenance(app.ctx);
-  check(report.images === 1, 'an old picture that nothing uses is removed');
+  check(report.images === 1, 'an old picture that nothing uses is removed ');
   check(!fs.existsSync(path.join(app.ctx.config.uploadDir, 'images', abandoned)), 'with its file');
   check(
     fs.existsSync(path.join(app.ctx.config.uploadDir, 'images', recent)) &&
-      fs.existsSync(path.join(app.ctx.config.uploadDir, 'images', imageId)),
+      fs.existsSync(path.join(app.ctx.config.uploadDir, 'images', avatarId)),
     'a new upload and a picture in use stay',
   );
   app.ctx.db.prepare('UPDATE sessions SET expires_at = 1 WHERE user_id = ?').run(bob.id);
@@ -1125,7 +1261,9 @@ async function checkDeletion(): Promise<void> {
     payload: pngWithMetadata(),
   });
   const iconId = icon.json().id;
-  await call(app, alice, 'PATCH', `/api/guilds/${club.id}`, { iconImage: iconId });
+  await call(app, alice, 'PATCH', `/api/guilds/${club.id}`, {
+    iconImage: iconId,
+  });
   const avatar = (
     await app.inject({
       method: 'POST',
@@ -1151,13 +1289,18 @@ async function checkDeletion(): Promise<void> {
       payload: randomBytes(64),
     })
   ).json().fileId;
-  await call(app, alice, 'POST', `/api/channels/${dm}/messages`, { ...sealed(), keyVersion: 1 });
+  await call(app, alice, 'POST', `/api/channels/${dm}/messages`, {
+    ...sealed(),
+    keyVersion: 1,
+  });
 
   step('account deletion: a failed deletion changes nothing');
   app.ctx.db.exec(
     "CREATE TRIGGER block_user_delete BEFORE DELETE ON users BEGIN SELECT RAISE(ABORT, 'blocked'); END",
   );
-  const failed = await call(app, alice, 'POST', '/api/me/delete', { authSecret: alice.authSecret });
+  const failed = await call(app, alice, 'POST', '/api/me/delete', {
+    authSecret: alice.authSecret,
+  });
   check(
     failed.statusCode === 500,
     'when the database refuses, the request fails (and shows no internals)',
@@ -1168,8 +1311,11 @@ async function checkDeletion(): Promise<void> {
   );
   const db = app.ctx.db;
   check(
-    (db.prepare('SELECT owner_id FROM guilds WHERE id = ?').get(club.id) as { owner_id: string })
-      .owner_id === alice.id,
+    (
+      db.prepare('SELECT owner_id FROM guilds WHERE id = ?').get(club.id) as {
+        owner_id: string;
+      }
+    ).owner_id === alice.id,
     'the group still belongs to its owner after the failure',
   );
   check(
@@ -1199,7 +1345,9 @@ async function checkDeletion(): Promise<void> {
     (await call(app, alice, 'GET', '/api/me')).statusCode === 200,
     'the account is still there',
   );
-  const gone = await call(app, alice, 'POST', '/api/me/delete', { authSecret: alice.authSecret });
+  const gone = await call(app, alice, 'POST', '/api/me/delete', {
+    authSecret: alice.authSecret,
+  });
   check(gone.statusCode === 204, 'the right proof deletes the account');
   check(
     (await call(app, alice, 'GET', '/api/me')).statusCode === 401,
@@ -1303,8 +1451,11 @@ async function checkDeletion(): Promise<void> {
     'the icon of the group stays',
   );
   check(
-    (db.prepare('SELECT owner_id FROM images WHERE id = ?').get(iconId) as { owner_id: string })
-      .owner_id === bob.id,
+    (
+      db.prepare('SELECT owner_id FROM images WHERE id = ?').get(iconId) as {
+        owner_id: string;
+      }
+    ).owner_id === bob.id,
     'and now belongs to the new owner',
   );
   const bobView = (await call(app, bob, 'GET', '/api/guilds')).json();
@@ -1393,7 +1544,9 @@ async function checkDatabase(): Promise<void> {
   `);
   old.close();
   const db = openDatabase(file);
-  const columns = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
+  const columns = db.prepare('PRAGMA table_info(users)').all() as {
+    name: string;
+  }[];
   check(
     ['pronouns', 'avatar_image', 'deleted_at'].every(function present(name) {
       return columns.some(function has(c) {
@@ -1407,7 +1560,9 @@ async function checkDatabase(): Promise<void> {
       'old_user',
     'the old rows are kept',
   );
-  const ties = db.prepare('PRAGMA foreign_key_list(guild_keys)').all() as { from: string }[];
+  const ties = db.prepare('PRAGMA foreign_key_list(guild_keys)').all() as {
+    from: string;
+  }[];
   check(
     !ties.some(function onWrapper(tie) {
       return tie.from === 'wrapper_id';
@@ -1457,7 +1612,9 @@ async function checkSockets(): Promise<void> {
   const mallory = await signUp(app, 'mallory');
   const dm = await befriend(app, alice, bob);
 
-  const evil = await openSocket(port, alice.access, { origin: 'http://evil.test' });
+  const evil = await openSocket(port, alice.access, {
+    origin: 'http://evil.test',
+  });
   check((await evil.closed) === 1008, 'a page of another site cannot open the socket');
   const silent = await openSocket(port, null);
   await silent.open;
@@ -1536,8 +1693,18 @@ async function checkSockets(): Promise<void> {
     }).length;
   };
   const before = signals();
-  a.send({ t: 'rtc.signal', roomId: dm, to: bob.id, payload: { blob: 'x'.repeat(50_000) } });
-  a.send({ t: 'rtc.signal', roomId: dm, to: mallory.id, payload: { sdp: 'leak' } });
+  a.send({
+    t: 'rtc.signal',
+    roomId: dm,
+    to: bob.id,
+    payload: { blob: 'x'.repeat(50_000) },
+  });
+  a.send({
+    t: 'rtc.signal',
+    roomId: dm,
+    to: mallory.id,
+    payload: { sdp: 'leak' },
+  });
   a.send({ t: 'rtc.signal', roomId: dm, to: bob.id, payload: 'not an object' });
   await sleep(200);
   check(signals() === before, 'oversized, misdirected and malformed signals are dropped');
@@ -1599,7 +1766,11 @@ async function checkStaticServer(): Promise<void> {
     method: string,
     url: string,
   ): { status: number; headers: Record<string, unknown>; body: string } {
-    const result = { status: 0, headers: {} as Record<string, unknown>, body: '' };
+    const result = {
+      status: 0,
+      headers: {} as Record<string, unknown>,
+      body: '',
+    };
     handler(
       { method, url, headers: {} } as never,
       {
@@ -1863,7 +2034,10 @@ async function checkRelayPolicy(): Promise<void> {
     'relay-only with only STUN does not start the call (no direct fallback)',
   );
   check(
-    refuses({ iceServers: [{ urls: ['turn:relay.test:3478'] }], relayOnly: true } as never),
+    refuses({
+      iceServers: [{ urls: ['turn:relay.test:3478'] }],
+      relayOnly: true,
+    } as never),
     'a relay without credentials is not usable',
   );
   check(
@@ -1874,11 +2048,17 @@ async function checkRelayPolicy(): Promise<void> {
     'a relay with an empty credential is not usable',
   );
   check(
-    refuses({ iceServers: [turnServer(Math.floor(now / 1000) - 10)], relayOnly: true } as never),
+    refuses({
+      iceServers: [turnServer(Math.floor(now / 1000) - 10)],
+      relayOnly: true,
+    } as never),
     'expired relay credentials do not start the call',
   );
   check(
-    refuses({ iceServers: [turnServer(Math.floor(now / 1000) + 5)], relayOnly: true } as never),
+    refuses({
+      iceServers: [turnServer(Math.floor(now / 1000) + 5)],
+      relayOnly: true,
+    } as never),
     'credentials about to expire do not start the call',
   );
   check(refuses(undefined as never), 'a missing answer does not start the call');
@@ -1960,7 +2140,12 @@ async function checkRelayPolicy(): Promise<void> {
   check(
     selectedPathKind(
       report([
-        { type: 'candidate-pair', id: 'P', selected: true, localCandidateId: 'L' },
+        {
+          type: 'candidate-pair',
+          id: 'P',
+          selected: true,
+          localCandidateId: 'L',
+        },
         { type: 'local-candidate', id: 'L', candidateType: 'host' },
       ]),
     ) === 'direct',
@@ -2002,7 +2187,10 @@ async function checkHeaders(): Promise<void> {
   const cors = await app.inject({
     method: 'OPTIONS',
     url: '/api/friends',
-    headers: { origin: 'http://evil.test', 'access-control-request-method': 'GET' },
+    headers: {
+      origin: 'http://evil.test',
+      'access-control-request-method': 'GET',
+    },
   });
   check(
     !cors.headers['access-control-allow-origin'],
@@ -2011,7 +2199,10 @@ async function checkHeaders(): Promise<void> {
   const allowed = await app.inject({
     method: 'OPTIONS',
     url: '/api/friends',
-    headers: { origin: 'http://app.test', 'access-control-request-method': 'GET' },
+    headers: {
+      origin: 'http://app.test',
+      'access-control-request-method': 'GET',
+    },
   });
   check(
     allowed.headers['access-control-allow-origin'] === 'http://app.test',
@@ -2156,8 +2347,11 @@ async function checkPrivacy(): Promise<void> {
   );
   await set({ friendRequests: 'everyone' });
   check(
-    (await call(app, eve, 'POST', '/api/friends/request', { username: alice.username }))
-      .statusCode === 201,
+    (
+      await call(app, eve, 'POST', '/api/friends/request', {
+        username: alice.username,
+      })
+    ).statusCode === 201,
     'opening them again allows requests',
   );
 
@@ -2173,8 +2367,11 @@ async function checkPrivacy(): Promise<void> {
   check(!(await found(bob, prefix)), 'then a search does not list them');
   const frank = await signUp(app, 'frank');
   check(
-    (await call(app, frank, 'POST', '/api/friends/request', { username: alice.username }))
-      .statusCode === 201,
+    (
+      await call(app, frank, 'POST', '/api/friends/request', {
+        username: alice.username,
+      })
+    ).statusCode === 201,
     'but their exact username still works',
   );
   await app.close();

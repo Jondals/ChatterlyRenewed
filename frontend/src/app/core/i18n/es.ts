@@ -72,6 +72,9 @@ export const ES: Record<string, string> = {
   'How end-to-end encryption works': 'Cómo funciona el cifrado de extremo a extremo',
   'Checked with SHA-256': 'Comprobado con SHA-256',
   'Effects volume': 'Volumen de efectos',
+  'Soundboard volume': 'Volumen del tablero de sonidos',
+  'How loud the effects of the soundboard are, for you and for the people in the call.':
+    'Lo alto que suenan los efectos del tablero, para ti y para la gente de la llamada.',
   'Message pings, button clicks, mute tones and the soundboard.':
     'Avisos de mensajes, clics, sonidos de silenciar y el tablero de sonidos.',
   'Music volume': 'Volumen de la música',
@@ -975,8 +978,10 @@ export const ES: Record<string, string> = {
   'Neon bubbles use a single color.': 'Las burbujas de neón usan un solo color.',
   'Could not load the font': 'No se pudo cargar la tipografía',
   'Upload your own': 'Sube la tuya',
-  'Plays when someone calls you. Tap one to hear it. Your own sound: up to 2 MB and 30 seconds.':
-    'Suena cuando alguien te llama. Pulsa una para oírla. Tu propio sonido: hasta 2 MB y 30 segundos.',
+  'Plays when someone calls you. Tap one to hear it. Your own sound: any audio file, cut to up to 30 seconds.':
+    'Suena cuando alguien te llama. Pulsa una para oírla. Tu propio sonido: cualquier archivo de audio, recortado hasta 30 segundos.',
+  'Any audio file: cut the part you want (up to 30 seconds)':
+    'Cualquier audio: recorta la parte que quieras (hasta 30 segundos)',
   'Ringtones can last up to 30 seconds.': 'Los tonos pueden durar hasta 30 segundos.',
   'Marimba': 'Marimba',
   'Kalimba': 'Kalimba',
@@ -1308,7 +1313,6 @@ export const ES: Record<string, string> = {
   'The video is bigger than 25 MB.': 'El vídeo pesa más de 25 MB.',
   'The picture is bigger than 12 MB.': 'La imagen pesa más de 12 MB.',
   'Your own sound: up to 1 MB and 3 seconds': 'Tu propio sonido: hasta 1 MB y 3 segundos',
-  'Up to 2 MB and 30 seconds': 'Hasta 2 MB y 30 segundos',
   'Each sticker up to 1 MB; packs (.zip, .wastickers) up to 48 MB':
     'Cada sticker hasta 1 MB; los paquetes (.zip, .wastickers) hasta 48 MB',
   '{n} participants · {d} duels': '{n} participantes · {d} duelos',
@@ -1359,4 +1363,38 @@ export const ES: Record<string, string> = {
   'Welcome, {name}': 'Te damos la bienvenida, {name}',
   'Your keys were made on this device and never left it.':
     'Tus claves se crearon en este dispositivo y nunca salieron de él.',
+  'Microphone processing': 'Procesado del micrófono',
+  'Your voice': 'Tu voz',
+  'Microphone volume': 'Volumen del micrófono',
+  'Clearer voice': 'Voz más clara',
+  'Hear yourself': 'Escucharte',
+  'Mirror my camera': 'Cámara en espejo',
+  'Extra noise removal': 'Eliminación extra de ruido',
+  'Voice leveler': 'Nivelador de voz',
+  'Frames per second': 'Imágenes por segundo',
+  'How loud your voice is before it is sent. Above 100% it is amplified.':
+    'Lo alto que suena tu voz antes de enviarse. Por encima del 100 % se amplifica.',
+  'After the browser suppression: Light cuts the low rumble of desks and fans; Strong also cuts hiss and learns how loud your room is, so the microphone opens only for your voice.':
+    'Después de la supresión del navegador: Suave corta el retumbar grave de mesas y ventiladores; Fuerte también corta el siseo y aprende lo ruidosa que es tu habitación, para que el micrófono se abra solo con tu voz.',
+  'Brings your loud and quiet words closer, so nobody has to change the volume when you laugh or whisper.':
+    'Acerca tus palabras fuertes y flojas, para que nadie tenga que cambiar el volumen cuando te ríes o susurras.',
+  'A little less boominess and more presence, like a podcast.':
+    'Un poco menos de graves y más presencia, como en un pódcast.',
+  'Plays your voice back while you test the microphone. Use headphones, or it will echo.':
+    'Reproduce tu voz mientras pruebas el micrófono. Usa auriculares o habrá eco.',
+  'The size of your picture. Higher is sharper and uses more data.':
+    'El tamaño de tu imagen. Más alto se ve más nítido y gasta más datos.',
+  'Smoother motion at 60, lighter on slow connections at 15.':
+    'Movimiento más fluido a 60, más ligero en conexiones lentas a 15.',
+  'You see yourself as in a mirror. The others see you as you are.':
+    'Te ves como en un espejo. Los demás te ven tal como eres.',
+  'Gentle': 'Suave',
+  '480p': '480p',
+  '720p': '720p',
+  '1080p': '1080p',
+  'Add to my soundboard': 'Añadir a mi tablero de sonidos',
+  'Added to your soundboard': 'Añadido a tu tablero de sonidos',
+  'Let the others add it to their soundboard':
+    'Deja que los demás lo añadan a su tablero de sonidos',
+  'For the soundboard': 'Para el tablero',
 };

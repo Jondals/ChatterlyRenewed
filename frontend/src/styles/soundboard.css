@@ -1,0 +1,105 @@
+/* The soundboard and the sound editor. */
+
+/* a button of the soundboard */
+.sb-tile {
+  display: flex;
+  min-height: 4.2rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.4rem;
+  border-radius: var(--r);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    border-color 0.2s var(--ease-suave),
+    box-shadow 0.35s var(--ease-suave);
+}
+
+.sb-tile:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.sb-tile:active {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.sb-tile.is-hit {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+.sb-add {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* Soundboard: the categories are a row of pills on top and what is in the chosen one opens below. */
+.sb-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  scrollbar-width: none;
+}
+
+.sb-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.sb-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+
+.sb-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+
+.sb-pill.is-on {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+/* The soundboard opening upward from its button: it grows from there. */
+.sb-pop {
+  transform-origin: 50% 100%;
+}
+
+.sb-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+/* The soundboard keeps its size when the category changes, and its sounds are bigger. */
+.sb-grid {
+  min-height: 14rem;
+  align-content: start;
+}
+
+.sb-grid .sb-tile {
+  padding-block: 0.9rem;
+}
+
+.sb-tabs {
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+}

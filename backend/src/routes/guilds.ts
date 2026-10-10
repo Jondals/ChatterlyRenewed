@@ -388,7 +388,11 @@ export function registerGuildRoutes(app: FastifyInstance, ctx: AppContext): void
           additionalProperties: false,
           required: ['ids'],
           properties: {
-            ids: { type: 'array', maxItems: MAX_TAGS, items: { type: 'string', maxLength: 64 } },
+            ids: {
+              type: 'array',
+              maxItems: MAX_TAGS,
+              items: { type: 'string', maxLength: 64 },
+            },
           },
         },
       },

@@ -112,6 +112,18 @@ const GRADIENTS = [
               />
               <span class="max-w-40 truncate font-semibold">{{ f.name }}</span
               ><span class="text-dim">{{ bytes(f.data.size) }}</span>
+              @if (f.mime.startsWith('audio/') || f.mime.startsWith('video/')) {
+                <button
+                  class="btn btn-sm !h-6 gap-1 !px-2"
+                  [class.btn-active]="f.soundboard"
+                  type="button"
+                  [attr.aria-pressed]="!!f.soundboard"
+                  [attr.title]="'Let the others add it to their soundboard' | t"
+                  (click)="toggleSoundboard($index)"
+                >
+                  <app-icon name="waveform" [size]="12" /> {{ 'For the soundboard' | t }}
+                </button>
+              }
               <button
                 class="btn btn-icon btn-sm btn-ghost !h-6 !w-6"
                 type="button"
@@ -823,7 +835,7 @@ export class MessageInputComponent implements OnDestroy {
   }
 
   /**
-   * Sends a GIF at once: it is downloaded and sent as an encrypted attachment, so the GIF service never learns who got it.
+   * ! Sends a GIF at once: it is downloaded and sent as an encrypted attachment, so the GIF service never learns who got it.
    */
   protected async sendGif(gif: GifResult): Promise<void> {
     this.pickerOpen.set(false);
@@ -883,6 +895,15 @@ export class MessageInputComponent implements OnDestroy {
         ];
       });
     }
+  }
+
+  /** Marks a staged audio or video as offered for the soundboard of the people who receive it (or takes the mark off). */
+  protected toggleSoundboard(index: number): void {
+    this.staged.update(function mark(files) {
+      return files.map(function toggle(file, i) {
+        return i === index ? { ...file, soundboard: !file.soundboard } : file;
+      });
+    });
   }
 
   /** Takes a staged file out before sending. */

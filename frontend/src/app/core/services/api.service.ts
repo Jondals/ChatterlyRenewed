@@ -19,7 +19,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 /**
  * Thin fetch wrapper. The auth layer plugs in `tokenProvider` (it returns a fresh access token), so this
@@ -43,6 +43,11 @@ export class ApiService {
   /** PATCH request with a JSON body. */
   patch<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>('PATCH', path, body);
+  }
+
+  /** PUT request with a JSON body. */
+  put<T>(path: string, body: unknown): Promise<T> {
+    return this.request<T>('PUT', path, body);
   }
 
   /** DELETE request. */

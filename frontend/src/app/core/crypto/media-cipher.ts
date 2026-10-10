@@ -172,7 +172,7 @@ export class MediaKeyChain {
     const keyId = trailer[8]!;
 
     let epoch = this.epoch;
-    // A ratchet step is only *committed* after the frame authenticates, so forged frames carrying a
+    // ! A ratchet step is only *committed* after the frame authenticates, so forged frames carrying a
     // bogus key id cannot push the receiver's key chain out of sync.
     let pending: { secret: Uint8Array<ArrayBuffer>; epoch: Epoch; before: Epoch } | null = null;
     if (keyId !== epoch.keyId) {

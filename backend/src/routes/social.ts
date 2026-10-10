@@ -129,8 +129,7 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
       const self = me(req);
       const { username } = req.body as { username: string };
       const target = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
-        | UserRow
-        | undefined;
+        UserRow | undefined;
       if (!target) return reply.code(404).send({ error: 'user_not_found' });
       if (target.id === self) return reply.code(400).send({ error: 'cannot_friend_self' });
       const [a, b] = orderedPair(self, target.id);
@@ -250,8 +249,7 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
       const [a, b] = orderedPair(self, userId);
       const dmKey = `${a}:${b}`;
       let channel = db.prepare('SELECT id FROM channels WHERE dm_key = ?').get(dmKey) as
-        | { id: string }
-        | undefined;
+        { id: string } | undefined;
       if (!channel) {
         const id = randomUUID();
         db.transaction(function () {

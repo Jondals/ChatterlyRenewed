@@ -62,8 +62,8 @@ import { describeError, passwordScore } from '../../shared/util/errors';
       </div>
     </section>
 
-    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
-      <h2 class="pt-3 text-sm font-semibold">{{ 'Visibility' | t }}</h2>
+    <section class="settings-card">
+      <h2 class="settings-card-title">{{ 'Visibility' | t }}</h2>
       <app-setting-row
         title="Who can see you online"
         hint="Your online status. Anybody who is not allowed sees you as offline, whatever you do."
@@ -86,7 +86,7 @@ import { describeError, passwordScore } from '../../shared/util/errors';
       </app-setting-row>
     </section>
 
-    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
+    <section class="settings-card">
       <h2 class="pt-3 text-sm font-semibold">{{ 'Contact' | t }}</h2>
       <app-setting-row
         title="Who can send you friend requests"
@@ -100,7 +100,7 @@ import { describeError, passwordScore } from '../../shared/util/errors';
       </app-setting-row>
     </section>
 
-    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
+    <section class="settings-card">
       <h2 class="pt-3 text-sm font-semibold">{{ 'Conversations' | t }}</h2>
       <app-setting-row
         title="Send read receipts"
@@ -194,7 +194,7 @@ import { describeError, passwordScore } from '../../shared/util/errors';
           <div class="flex gap-1.5">
             @for (i of [1, 2, 3, 4]; track i) {
               <div
-                class="h-1.5 flex-1 rounded-full transition-all"
+                class="h-1.5 flex-1 rounded-full transition-colors"
                 [style.background]="score() >= i ? 'var(--accent)' : 'rgba(255,255,255,.08)'"
               ></div>
             }

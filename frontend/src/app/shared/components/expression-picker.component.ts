@@ -402,7 +402,7 @@ export class ExpressionPickerComponent {
   protected readonly query = signal('');
   protected readonly hover = signal<EmojiEntry | null>(null);
   protected readonly toneOpen = signal(false);
-  protected readonly activeGroup = signal<number | 'frequent' | 'all'>('frequent');
+  protected readonly activeGroup = signal<number | 'frequent' | 'all'>('all');
   /** How many emoji of the open category are drawn so far (it grows step by step while the browser is idle). */
   private readonly shown = signal(FIRST_CHUNK);
   private growHandle: number | undefined;
@@ -467,7 +467,7 @@ export class ExpressionPickerComponent {
         });
         if (items.length) out.push({ id: g, name: GROUP_NAMES[g]!, items });
       }
-      // Every emoji in one list: it is drawn in small steps (see `renderedSections`), never all at once.
+      // ! Every emoji in one list: it is drawn in small steps (see `renderedSections`), never all at once.
       if (all.length) out.push({ id: 'all', name: 'All emoji', items: all });
       return out;
     }.bind(this),
@@ -487,7 +487,20 @@ export class ExpressionPickerComponent {
           return section.id === this.activeGroup();
         }.bind(this),
       );
-      return open ? [open] : sections.slice(0, 1);
+      const target =
+        open ??
+        sections.find(function isAll(section) {
+          return section.id === 'all';
+        }) ??
+        sections[0];
+      if (!target) {
+        return [];
+      }
+      // "All emoji" starts with the most used ones, as a part of the same list.
+      const lead = sections.find(function isFrequent(section) {
+        return section.id === 'frequent';
+      });
+      return target.id === 'all' && lead ? [{ ...lead, id: 'lead-frequent' }, target] : [target];
     }.bind(this),
   );
   /**
@@ -514,7 +527,7 @@ export class ExpressionPickerComponent {
   /** The id of the category that is open (the first one when the one chosen has nothing). */
   protected readonly currentId = computed(
     function (this: ExpressionPickerComponent) {
-      return this.visibleSections()[0]?.id;
+      return this.visibleSections().at(-1)?.id;
     }.bind(this),
   );
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
@@ -531,6 +544,10 @@ export class ExpressionPickerComponent {
             name: s.name,
           };
         });
+      // "All" comes first: it is the one that opens.
+      tabs.sort(function allFirst(a, b) {
+        return Number(b.id === 'all') - Number(a.id === 'all');
+      });
       return this.query() ? [] : tabs;
     }.bind(this),
   );

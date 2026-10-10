@@ -3,7 +3,7 @@
  * Settings - Language and Sounds & notifications: the interface language, the time format, the sound volumes,
  * the click sound, the soundboard, the pop-up notices and the desktop notifications.
  */
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, EnvironmentInjector, inject, input, signal } from '@angular/core';
 import { I18nService, LANGUAGES, TranslatePipe } from '../../core/i18n/i18n.service';
 import {
   SettingsService,
@@ -59,35 +59,39 @@ const FLAGS: Record<string, string> = {
       <p class="mb-5 text-sm text-muted">
         {{ 'Choose the language of the interface. Emoji search follows it too.' | t }}
       </p>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <button
           type="button"
-          class="choice-card lang-card"
+          class="lang-option"
           [class.is-on]="s.language() === 'auto'"
           (click)="s.language.set('auto')"
         >
-          <span class="lang-flag text-sky"><app-icon name="globe" [size]="30" /></span>
-          <b class="text-sm">{{ 'Automatic' | t }}</b>
-          <span class="text-[0.6875rem] text-muted">{{ 'Use the browser language' | t }}</span>
+          <span class="lang-coin lang-coin-auto"><app-icon name="globe" [size]="22" /></span>
+          <span class="min-w-0 flex-1 text-left">
+            <b class="block truncate text-sm">{{ 'Automatic' | t }}</b>
+            <span class="block truncate text-xs text-muted">{{
+              'Use the browser language' | t
+            }}</span>
+          </span>
+          <span class="lang-tick"><app-icon name="check" [size]="14" /></span>
         </button>
         @for (l of languages; track l.id) {
           <button
             type="button"
-            class="choice-card lang-card"
+            class="lang-option"
             [class.is-on]="s.language() === l.id"
             (click)="setLanguage(l.id)"
           >
-            <span class="lang-flag"
-              ><img
-                class="h-[1em] w-auto rounded-[3px]"
-                alt=""
-                [src]="flagPicture(l.id)"
-                [attr.title]="l.flag"
+            <span class="lang-coin"
+              ><img alt="" [src]="flagPicture(l.id)" [attr.title]="l.flag"
             /></span>
-            <b class="text-sm">{{ l.native }}</b>
-            @if (languageHint(l); as hint) {
-              <span class="text-[0.6875rem] text-muted">{{ hint }}</span>
-            }
+            <span class="min-w-0 flex-1 text-left">
+              <b class="block truncate text-sm">{{ l.native }}</b>
+              @if (languageHint(l); as hint) {
+                <span class="block truncate text-xs text-muted">{{ hint }}</span>
+              }
+            </span>
+            <span class="lang-tick"><app-icon name="check" [size]="14" /></span>
           </button>
         }
       </div>
@@ -106,183 +110,218 @@ const FLAGS: Record<string, string> = {
         }}
       </p>
     } @else {
-      <h2 class="mb-2 text-sm font-semibold">{{ 'Volume' | t }}</h2>
-      <app-setting-row
-        title="Interface sounds"
-        hint="Message pings, join/leave tones and a soft click under every button."
-      >
-        <app-toggle
-          [checked]="s.sounds()"
-          (checkedChange)="s.sounds.set($event)"
-          [label]="'Interface sounds' | t"
-        />
-      </app-setting-row>
-      <app-setting-row
-        title="Effects volume"
-        hint="Message pings, button clicks, mute tones and the soundboard."
-      >
-        <div class="flex items-center gap-3">
-          <app-icon name="volume" [size]="16" class="text-muted" /><input
-            type="range"
-            min="0"
-            max="100"
-            class="w-44 accent-[var(--accent)]"
-            [value]="s.soundVolume()"
-            (input)="s.soundVolume.set(+$any($event.target).value)"
-            (change)="sound.play('success')"
-          /><span class="w-9 text-right font-mono text-xs text-muted">{{ s.soundVolume() }}%</span>
-        </div>
-      </app-setting-row>
-      <app-setting-row
-        title="Music volume"
-        hint="The song shared in a call. Only YouTube can be controlled from here; Spotify uses its own player volume."
-      >
-        <div class="flex items-center gap-3">
-          <app-icon name="music" [size]="16" class="text-muted" /><input
-            type="range"
-            min="0"
-            max="100"
-            class="w-44 accent-[var(--accent)]"
-            [value]="s.musicVolume()"
-            (input)="s.musicVolume.set(+$any($event.target).value)"
-          /><span class="w-9 text-right font-mono text-xs text-muted">{{ s.musicVolume() }}%</span>
-        </div>
-      </app-setting-row>
-      <h2 class="mb-2 text-sm font-semibold mt-8">{{ 'Sounds' | t }}</h2>
-      <div class="my-5">
-        <app-collapse title="Click sound" [summary]="clickLabel()">
-          <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            @for (c of clickStyles; track c.id) {
-              <button
-                type="button"
-                class="rounded-ui border px-3 py-2.5 text-sm font-medium hover:bg-white/5"
-                [class.border-accent]="s.clickStyle() === c.id"
-                [class.bg-accent/10]="s.clickStyle() === c.id"
-                [class.border-white/10]="s.clickStyle() !== c.id"
-                (click)="setClick(c.id)"
-              >
-                {{ c.label | t }}
-              </button>
-            }
-            @if (s.clickName()) {
-              <button
-                type="button"
-                class="rounded-ui border px-3 py-2.5 text-sm font-medium hover:bg-white/5"
-                [class.border-accent]="s.clickStyle() === 'custom'"
-                [class.bg-accent/10]="s.clickStyle() === 'custom'"
-                [class.border-white/10]="s.clickStyle() !== 'custom'"
-                (click)="setClick('custom')"
-              >
-                <span class="block truncate">{{ s.clickName() }}</span>
-              </button>
-            }
-            <button
-              type="button"
-              class="flex items-center justify-center gap-2 rounded-ui border border-dashed border-white/15 px-3 py-2.5 text-sm font-medium text-muted hover:bg-white/5 hover:text-fg"
-              (click)="uploadClick()"
-            >
-              <app-icon name="upload" [size]="15" />
-              {{ (s.clickName() ? 'Change' : 'Upload yours') | t }}
-            </button>
-          </div>
-          <p class="mt-3 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-            <span>{{ 'The sound of pressing a button. Try them!' | t }}</span>
-            <span class="text-dim">{{ 'Your own sound: up to 1 MB and 3 seconds' | t }}</span>
-            @if (s.clickName()) {
-              <button type="button" class="underline hover:text-fg" (click)="removeClick()">
-                {{ 'Remove' | t }}
-              </button>
-            }
-          </p>
-        </app-collapse>
-      </div>
-      <div class="my-5">
-        <app-collapse title="Call ringtone" [summary]="ringtoneLabel()">
-          <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            @for (id of ringtones; track id) {
-              <button
-                type="button"
-                class="ring-card"
-                [class.is-on]="s.ringtone() === id"
-                [class.is-playing]="playing() === id"
-                (click)="chooseRingtone(id)"
-              >
-                <span class="flex w-full items-start justify-between">
-                  <span class="nav-tile !h-9 !w-9" [class]="ringtoneTone(id)"
-                    ><app-icon [name]="ringtoneIcon(id)" [size]="18"
-                  /></span>
-                  @if (playing() === id) {
-                    <span class="ring-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                  } @else if (s.ringtone() === id) {
-                    <app-icon name="check" [size]="15" class="text-accent" />
-                  }
-                </span>
-                <span class="mt-1 text-sm font-semibold">{{ ringtoneName(id) | t }}</span>
-                <span class="text-[0.6875rem] leading-snug text-muted">{{
-                  ringtoneHint(id) | t
-                }}</span>
-                @if (id === 'auto') {
-                  <span class="mt-0.5 text-[0.6875rem] font-semibold text-accent"
-                    >{{ 'Today' | t }}: {{ ringtoneName(today()) | t }}</span
-                  >
-                }
-              </button>
-            }
-          </div>
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <button class="btn btn-sm" type="button" (click)="uploadRingtone()">
-              <app-icon name="upload" [size]="14" /> {{ 'Upload your own' | t }}
-            </button>
-            <span class="text-xs text-dim">{{ 'Up to 2 MB and 30 seconds' | t }}</span>
-            @if (s.ringtoneName()) {
-              <span class="max-w-48 truncate text-xs text-muted">{{ s.ringtoneName() }}</span>
-              <button class="btn btn-sm btn-soft-danger" type="button" (click)="removeRingtone()">
-                {{ 'Remove' | t }}
-              </button>
-            }
-          </div>
-          <p class="mt-3 text-xs text-muted">
-            {{
-              'Plays when someone calls you. Tap one to hear it. Your own sound: up to 2 MB and 30 seconds.'
-                | t
-            }}
-          </p>
-        </app-collapse>
-      </div>
-      <app-setting-row
-        title="Soundboard"
-        hint="Open it from the bar of a call or with its shortcut, to try the effects and upload your own sounds."
-      >
-        <button
-          class="btn btn-sm btn-primary"
-          type="button"
-          (mousedown)="$event.stopPropagation()"
-          (click)="ui.soundboardAnchor.set(null); ui.soundboardOpen.set(true)"
+      <section class="settings-card">
+        <h2 class="settings-card-title">{{ 'Volume' | t }}</h2>
+        <app-setting-row
+          title="Interface sounds"
+          hint="Message pings, join/leave tones and a soft click under every button."
         >
-          <app-icon name="waveform" [size]="14" /> {{ 'Open soundboard' | t }}
-        </button>
-      </app-setting-row>
-      <h2 class="mb-2 text-sm font-semibold mt-8">{{ 'Notifications' | t }}</h2>
-      <app-setting-row
-        title="Pop-up notices"
-        hint="The small messages that appear in the corner, like Copied."
-      >
-        <app-segmented
-          [options]="noticeModes"
-          [value]="s.toastMode()"
-          (valueChange)="setNoticeMode($event)"
-        />
-      </app-setting-row>
-      <app-setting-row
-        title="Desktop notifications"
-        hint="Generic alerts only — never the text of your messages."
-      >
-        <app-toggle
-          [checked]="s.desktopNotifications()"
-          (checkedChange)="setNotifications($event)"
-          [label]="'Desktop notifications' | t"
-        />
-      </app-setting-row>
+          <app-toggle
+            [checked]="s.sounds()"
+            (checkedChange)="s.sounds.set($event)"
+            [label]="'Interface sounds' | t"
+          />
+        </app-setting-row>
+        <app-setting-row
+          title="Effects volume"
+          hint="Message pings, button clicks, mute tones and the soundboard."
+        >
+          <div class="flex items-center gap-3">
+            <app-icon name="volume" [size]="16" class="text-muted" /><input
+              type="range"
+              min="0"
+              max="100"
+              class="w-44 accent-[var(--accent)]"
+              [value]="s.soundVolume()"
+              (input)="s.soundVolume.set(+$any($event.target).value)"
+              (change)="sound.play('success')"
+            /><span class="w-9 text-right font-mono text-xs text-muted"
+              >{{ s.soundVolume() }}%</span
+            >
+          </div>
+        </app-setting-row>
+        <app-setting-row
+          title="Soundboard volume"
+          hint="How loud the effects of the soundboard are, for you and for the people in the call."
+        >
+          <div class="flex items-center gap-3">
+            <app-icon name="volume" [size]="16" class="text-muted" /><input
+              type="range"
+              min="0"
+              max="200"
+              class="w-44 accent-[var(--accent)]"
+              [value]="s.callEffectsVolume()"
+              (input)="s.callEffectsVolume.set(+$any($event.target).value)"
+            /><span class="w-9 text-right font-mono text-xs text-muted"
+              >{{ s.callEffectsVolume() }}%</span
+            >
+          </div>
+        </app-setting-row>
+        <app-setting-row
+          title="Music volume"
+          hint="The song shared in a call. Only YouTube can be controlled from here; Spotify uses its own player volume."
+        >
+          <div class="flex items-center gap-3">
+            <app-icon name="music" [size]="16" class="text-muted" /><input
+              type="range"
+              min="0"
+              max="100"
+              class="w-44 accent-[var(--accent)]"
+              [value]="s.musicVolume()"
+              (input)="s.musicVolume.set(+$any($event.target).value)"
+            /><span class="w-9 text-right font-mono text-xs text-muted"
+              >{{ s.musicVolume() }}%</span
+            >
+          </div>
+        </app-setting-row>
+      </section>
+      <section class="settings-card">
+        <h2 class="settings-card-title">{{ 'Sounds' | t }}</h2>
+        <div class="my-5">
+          <app-collapse title="Click sound" [summary]="clickLabel()">
+            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              @for (c of clickStyles; track c.id) {
+                <button
+                  type="button"
+                  class="rounded-ui border px-3 py-2.5 text-sm font-medium hover:bg-white/5"
+                  [class.border-accent]="s.clickStyle() === c.id"
+                  [class.bg-accent/10]="s.clickStyle() === c.id"
+                  [class.border-white/10]="s.clickStyle() !== c.id"
+                  (click)="setClick(c.id)"
+                >
+                  {{ c.label | t }}
+                </button>
+              }
+              @if (s.clickName()) {
+                <button
+                  type="button"
+                  class="rounded-ui border px-3 py-2.5 text-sm font-medium hover:bg-white/5"
+                  [class.border-accent]="s.clickStyle() === 'custom'"
+                  [class.bg-accent/10]="s.clickStyle() === 'custom'"
+                  [class.border-white/10]="s.clickStyle() !== 'custom'"
+                  (click)="setClick('custom')"
+                >
+                  <span class="block truncate">{{ s.clickName() }}</span>
+                </button>
+              }
+              <button
+                type="button"
+                class="flex items-center justify-center gap-2 rounded-ui border border-dashed border-white/15 px-3 py-2.5 text-sm font-medium text-muted hover:bg-white/5 hover:text-fg"
+                (click)="uploadClick()"
+              >
+                <app-icon name="upload" [size]="15" />
+                {{ (s.clickName() ? 'Change' : 'Upload yours') | t }}
+              </button>
+            </div>
+            <p class="mt-3 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+              <span>{{ 'The sound of pressing a button. Try them!' | t }}</span>
+              <span class="text-dim">{{ 'Your own sound: up to 1 MB and 3 seconds' | t }}</span>
+              @if (s.clickName()) {
+                <button type="button" class="underline hover:text-fg" (click)="removeClick()">
+                  {{ 'Remove' | t }}
+                </button>
+              }
+            </p>
+          </app-collapse>
+        </div>
+        <div class="my-5">
+          <app-collapse title="Call ringtone" [summary]="ringtoneLabel()">
+            <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              @for (id of ringtones; track id) {
+                <button
+                  type="button"
+                  class="ring-card"
+                  [class.is-on]="s.ringtone() === id"
+                  [class.is-playing]="playing() === id"
+                  (click)="chooseRingtone(id)"
+                >
+                  <span class="flex w-full items-start justify-between">
+                    <span class="nav-tile !h-9 !w-9" [class]="ringtoneTone(id)"
+                      ><app-icon [name]="ringtoneIcon(id)" [size]="18"
+                    /></span>
+                    @if (playing() === id) {
+                      <span class="ring-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                    } @else if (s.ringtone() === id) {
+                      <app-icon name="check" [size]="15" class="text-accent" />
+                    }
+                  </span>
+                  <span class="mt-1 text-sm font-semibold">{{ ringtoneName(id) | t }}</span>
+                  <span class="text-[0.6875rem] leading-snug text-muted">{{
+                    ringtoneHint(id) | t
+                  }}</span>
+                  @if (id === 'auto') {
+                    <span class="mt-0.5 text-[0.6875rem] font-semibold text-accent"
+                      >{{ 'Today' | t }}: {{ ringtoneName(today()) | t }}</span
+                    >
+                  }
+                </button>
+              }
+            </div>
+            @if (s.ringtone() === 'custom') {
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button class="btn btn-sm" type="button" (click)="uploadRingtone()">
+                  <app-icon name="upload" [size]="14" /> {{ 'Upload your own' | t }}
+                </button>
+                <span class="text-xs text-dim">{{
+                  'Any audio file: cut the part you want (up to 30 seconds)' | t
+                }}</span>
+                @if (s.ringtoneName()) {
+                  <span class="max-w-48 truncate text-xs text-muted">{{ s.ringtoneName() }}</span>
+                  <button
+                    class="btn btn-sm btn-soft-danger"
+                    type="button"
+                    (click)="removeRingtone()"
+                  >
+                    {{ 'Remove' | t }}
+                  </button>
+                }
+              </div>
+            }
+            <p class="mt-3 text-xs text-muted">
+              {{
+                'Plays when someone calls you. Tap one to hear it. Your own sound: any audio file, cut to up to 30 seconds.'
+                  | t
+              }}
+            </p>
+          </app-collapse>
+        </div>
+        <app-setting-row
+          title="Soundboard"
+          hint="Open it from the bar of a call or with its shortcut, to try the effects and upload your own sounds."
+        >
+          <button
+            class="btn btn-sm btn-primary"
+            type="button"
+            (mousedown)="$event.stopPropagation()"
+            (click)="ui.soundboardAnchor.set(null); ui.soundboardOpen.set(true)"
+          >
+            <app-icon name="waveform" [size]="14" /> {{ 'Open soundboard' | t }}
+          </button>
+        </app-setting-row>
+      </section>
+      <section class="settings-card">
+        <h2 class="settings-card-title">{{ 'Notifications' | t }}</h2>
+        <app-setting-row
+          title="Pop-up notices"
+          hint="The small messages that appear in the corner, like Copied."
+        >
+          <app-segmented
+            [options]="noticeModes"
+            [value]="s.toastMode()"
+            (valueChange)="setNoticeMode($event)"
+          />
+        </app-setting-row>
+        <app-setting-row
+          title="Desktop notifications"
+          hint="Generic alerts only — never the text of your messages."
+        >
+          <app-toggle
+            [checked]="s.desktopNotifications()"
+            (checkedChange)="setNotifications($event)"
+            [label]="'Desktop notifications' | t"
+          />
+        </app-setting-row>
+      </section>
     }
   `,
 })
@@ -315,7 +354,6 @@ export class GeneralSectionComponent {
 
   protected readonly languages = LANGUAGES;
   protected readonly clickStyles: { id: ClickStyle; label: string }[] = [
-    { id: 'pop', label: 'Pop' },
     { id: 'tap', label: 'Tap' },
     { id: 'switch', label: 'Switch' },
     { id: 'pluck', label: 'Pluck' },
@@ -329,6 +367,7 @@ export class GeneralSectionComponent {
     { id: 'off', label: 'Off' },
   ];
 
+  private readonly injector = inject(EnvironmentInjector);
   protected readonly ringtones = RINGTONE_IDS;
   protected readonly melodies = MELODIES;
   /** Stops the ringtone that is being previewed. */
@@ -452,22 +491,27 @@ export class GeneralSectionComponent {
     if (!file) {
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      this.toast.error(this.i18n.t('Sounds can be up to 2 MB.'));
-      return;
-    }
     try {
-      const buffer = await this.sound.context.decodeAudioData(await file.arrayBuffer());
-      if (buffer.duration > 30) {
-        this.toast.error(this.i18n.t('Ringtones can last up to 30 seconds.'));
+      const editor = await import('../../shared/components/sound-edit.component');
+      if (file.size > editor.MAX_SOURCE_BYTES) {
+        this.toast.error(this.i18n.t('Sounds can be up to 25 MB.'));
         return;
       }
+      const result = await editor.editSound(
+        this.injector,
+        file,
+        null,
+        file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Ringtone',
+      );
+      if (!result) {
+        return;
+      }
+      await saveCustomRingtone(result.blob);
+      this.s.ringtoneName.set(result.name.slice(0, 40));
     } catch {
       this.toast.error(this.i18n.t('That file is not a playable audio file.'));
       return;
     }
-    await saveCustomRingtone(file);
-    this.s.ringtoneName.set(file.name.slice(0, 40));
     this.s.ringtone.set('custom');
     this.playPreview('custom');
   }

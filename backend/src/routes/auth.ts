@@ -136,7 +136,7 @@ function noop(): void {
 }
 
 /**
- * Registers the routes of the accounts: sign-up, sign-in, sessions, profile and password. Passwords are never received in clear.
+ * ! Registers the routes of the accounts: sign-up, sign-in, sessions, profile and password. Passwords are never received in clear.
  */
 export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void {
   const { db, config } = ctx;
@@ -316,8 +316,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           .send({ error: 'account_locked', retryAfter: wait });
       }
       const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
-        | UserRow
-        | undefined;
+        UserRow | undefined;
       let ok = false;
       if (row) {
         ok = await verifyAuthSecret(authSecret, row.auth_hash, config.serverSecret);
@@ -368,8 +367,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       const session = db
         .prepare('SELECT * FROM sessions WHERE token_hash = ?')
         .get(sha256(refreshToken)) as
-        | { id: string; user_id: string; expires_at: number }
-        | undefined;
+        { id: string; user_id: string; expires_at: number } | undefined;
       if (!session) {
         // ! Reusing a token that was already rotated means it was copied: every session of that account is closed.
         const spent = db
@@ -461,7 +459,10 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
               pattern:
                 '^(#[0-9a-fA-F]{6}|g:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6},[0-9]{1,3}(,[0-9]{1,3},[0-9]{1,3}(,#[0-9a-fA-F]{6})?)?|m:[0-9]{1,3}:[0-9]{1,3}:#[0-9a-fA-F]{6}@[0-9]{1,3}(,#[0-9a-fA-F]{6}@[0-9]{1,3}){1,4})?$',
             },
-            presenceVisibility: { type: 'string', enum: ['everyone', 'friends', 'nobody'] },
+            presenceVisibility: {
+              type: 'string',
+              enum: ['everyone', 'friends', 'nobody'],
+            },
             friendRequests: { type: 'string', enum: ['everyone', 'nobody'] },
             searchable: { type: 'boolean' },
             avatarImage: { type: ['string', 'null'], pattern: UUID },
@@ -578,7 +579,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         kdfIterations: number;
         wrappedKeys: { ecdh: string; ecdsa: string };
       };
-      // A stolen session must not be able to guess the old password: failures lock this action like the sign-in.
+      // ! A stolen session must not be able to guess the old password: failures lock this action like the sign-in.
       const lockKey = 'password:' + id;
       const wait = ctx.throttle.retryAfter(lockKey);
       if (wait > 0) {
@@ -638,7 +639,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       },
     },
     /**
-     * POST /api/me/delete: erases the account. It asks for the proof of the password again (a stolen session must not be
+     * ! POST /api/me/delete: erases the account. It asks for the proof of the password again (a stolen session must not be
      * enough). Everything of the person goes: their messages, reactions, files, pictures, friendships, direct
      * conversations, the keys that protect their private data, their sessions and the row of the person itself.
      * Other people keep what is theirs: a group the person owns passes to its longest-standing member (who is asked to
@@ -775,9 +776,15 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       ctx.hub.dropUser(id);
       ctx.hub.sendToMany([...friends, ...dmPeers], { t: 'friends.update' });
       for (const guild of joinedGuilds)
-        ctx.hub.sendToMany(joinedMembers, { t: 'guild.update', guildId: guild });
+        ctx.hub.sendToMany(joinedMembers, {
+          t: 'guild.update',
+          guildId: guild,
+        });
       for (const guild of heirs.keys())
-        ctx.hub.sendToMany(inheritedMembers, { t: 'guild.update', guildId: guild });
+        ctx.hub.sendToMany(inheritedMembers, {
+          t: 'guild.update',
+          guildId: guild,
+        });
       return reply.code(204).send();
     },
   );

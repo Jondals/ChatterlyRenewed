@@ -1,0 +1,146 @@
+/* Animated backgrounds (scenes) and the screens that open the app. */
+
+/* "Quick": the interface still animates, but briefly. */
+[data-motion='quick'] :not(.scene, .scene *) {
+  transition-duration: 0.12s !important;
+}
+
+[data-motion='quick'] [class*='anim-'] {
+  animation-duration: 0.16s !important;
+}
+
+/* A still background: its scenes stop where they are (the rest of the interface keeps its animations). */
+[data-bg='still'] .scene,
+[data-bg='still'] .scene * {
+  animation-play-state: paused !important;
+}
+
+/* ...and so do the decorative animations that never stop: the rings of the avatars and the scenes stay still. */
+[data-perf='low'] .aura::before,
+[data-perf='low'] .aura::after,
+[data-perf='low'] .scene,
+[data-perf='low'] .scene * {
+  animation-play-state: paused !important;
+  will-change: auto;
+}
+
+/* the lit grid background */
+.grid-lines {
+  --gl: color-mix(in oklab, var(--accent) 24%, transparent);
+  background-image:
+    linear-gradient(var(--gl) 1px, transparent 1px),
+    linear-gradient(90deg, var(--gl) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* The sign-in snapshot stored in index.html is not shown to people who are already signed in. */
+.boot-snapshot {
+  display: none;
+}
+
+html[data-snap='en'][data-page='login'] .boot-snapshot[lang='en'][data-page='login'],
+html[data-snap='es'][data-page='login'] .boot-snapshot[lang='es'][data-page='login'],
+html[data-snap='en'][data-page='register'] .boot-snapshot[lang='en'][data-page='register'],
+html[data-snap='es'][data-page='register'] .boot-snapshot[lang='es'][data-page='register'] {
+  display: block;
+}
+
+html.has-session .boot-snapshot {
+  display: none !important;
+}
+
+/* Topography: lines of height that breathe slowly, faded out toward the edges. */
+.topo {
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 35%, transparent 92%);
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 35%, transparent 92%);
+}
+
+/* Sunset: a sky from the dark to the warm horizon, a low sun, slow clouds and the dark line of the hills. */
+.sunset-sky {
+  background: linear-gradient(
+    180deg,
+    var(--ink-950) 0%,
+    color-mix(in oklab, var(--accent-2) 38%, var(--ink-950)) 38%,
+    color-mix(in oklab, #ff5e7e 52%, var(--ink-900)) 66%,
+    color-mix(in oklab, #ffb36b 70%, var(--ink-900)) 86%
+  );
+}
+
+.sunset-sun {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: min(34vmin, 18rem);
+  aspect-ratio: 1;
+  margin-left: calc(min(34vmin, 18rem) / -2);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 45%,
+    #fff6d6 0%,
+    #ffd08a 40%,
+    #ff8f6b 78%,
+    #ff5e7e 100%
+  );
+  box-shadow:
+    0 0 6rem 2rem rgba(255, 150, 100, 0.45),
+    0 0 18rem 8rem rgba(255, 94, 126, 0.22);
+  animation: sun-bob calc(var(--bg-speed, 1) * 18s) ease-in-out infinite alternate;
+}
+
+.sunset-hills {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 30%;
+  background:
+    radial-gradient(ellipse 70% 100% at 22% 100%, var(--ink-950) 62%, transparent 63%),
+    radial-gradient(ellipse 80% 90% at 78% 100%, var(--ink-950) 64%, transparent 65%),
+    linear-gradient(0deg, var(--ink-950) 20%, transparent);
+}
+
+@media (max-width: 640px) {
+  html .friend-tab .friend-tab-count {
+    display: none;
+  }
+}
+
+.friend-tabs .friend-tab {
+  height: 2.1rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.friend-tabs .friend-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: transparent;
+}
+
+.friend-tabs .friend-tab.is-on {
+  background: color-mix(in oklab, var(--accent) 20%, rgba(0, 0, 0, 0.35));
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  box-shadow: none;
+}
+
+.friend-tabs .friend-add {
+  height: 2.1rem;
+  margin-left: auto;
+  border: 1px solid color-mix(in oklab, var(--accent) 38%, transparent);
+  background: color-mix(in oklab, var(--accent) 22%, rgba(0, 0, 0, 0.5));
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.friend-tabs .friend-add:hover {
+  background: color-mix(in oklab, var(--accent) 32%, rgba(0, 0, 0, 0.45));
+}
+
+.dock-zone.is-on {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* The targets of the music card are as big as the card. */
+.stage-host .dock-zone {
+  width: 22rem;
+  height: 6.25rem;
+}

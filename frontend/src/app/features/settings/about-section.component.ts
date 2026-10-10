@@ -442,7 +442,7 @@ export class AboutSectionComponent {
     {
       label: 'Contribute',
       name: 'CONTRIBUTING',
-      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/main/CONTRIBUTING.md',
+      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/main/.github/CONTRIBUTING.md',
     },
   ];
   /** A text with the names of the encryption systems as links to their documents. */

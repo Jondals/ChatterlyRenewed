@@ -245,7 +245,7 @@ export class StickerStore {
       canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       bitmap.close();
       // A browser that protects against fingerprinting gives back one flat color instead of the picture: then the
-      // picture is kept as it was chosen (when it is small), never as a flat square.
+      // ! picture is kept as it was chosen (when it is small), never as a flat square.
       if (readCanvas(canvas) !== 'picture') {
         return blob.type.startsWith('image/') && blob.size <= MAX_STICKER_BYTES ? blob : null;
       }

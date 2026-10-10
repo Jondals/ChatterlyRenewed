@@ -102,7 +102,7 @@ function isNitterHost(host: string): boolean {
 }
 
 /**
- * The player address of a link of a video or music site, built only from identifiers that were checked, so no link can inject anything.
+ * ! The player address of a link of a video or music site, built only from identifiers that were checked, so no link can inject anything.
  */
 export function videoEmbed(link: string): VideoEmbed | null {
   let url: URL;

@@ -50,6 +50,8 @@ export interface AttachmentPayload {
   sticker?: boolean;
   /** Picked from the GIF tab (downloaded via the server, then re-encrypted like any file). */
   gif?: boolean;
+  /** The sender offers this audio or video for the soundboard: the others get a button to add it to theirs. */
+  soundboard?: boolean;
 }
 
 export interface SealedForServer extends Sealed {

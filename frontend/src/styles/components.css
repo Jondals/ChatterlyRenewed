@@ -1,0 +1,1126 @@
+/* Shared components: buttons, panels, inputs, menus, chips, toggles and other pieces used everywhere. */
+
+[data-theme='graphite'] {
+  --ink-950: #0a0a0b;
+  --ink-900: #101011;
+  --ink-850: #151516;
+  --ink-800: #1b1b1d;
+  --ink-700: #232326;
+  --ink-600: #2d2d31;
+  --ink-500: #3a3a40;
+  --accent-2: #94a3b8;
+}
+
+[data-theme='amoled'] {
+  --ink-950: #000000;
+  --ink-900: #050505;
+  --ink-850: #0a0a0a;
+  --ink-800: #101010;
+  --ink-700: #171717;
+  --ink-600: #212121;
+  --ink-500: #2c2c2c;
+}
+
+[data-theme='dusk'] {
+  --ink-950: #0b0814;
+  --ink-900: #110c1d;
+  --ink-850: #171126;
+  --ink-800: #1e1730;
+  --ink-700: #281f3d;
+  --ink-600: #342a4e;
+  --ink-500: #443861;
+  --accent-2: #f472b6;
+}
+
+[data-theme='forest'] {
+  --ink-950: #060b09;
+  --ink-900: #0a110e;
+  --ink-850: #0e1713;
+  --ink-800: #131e19;
+  --ink-700: #1a2822;
+  --ink-600: #24352d;
+  --ink-500: #314540;
+  --accent-2: #38bdf8;
+}
+
+[data-theme='ocean'] {
+  --ink-950: #050b12;
+  --ink-900: #08121c;
+  --ink-850: #0c1a28;
+  --ink-800: #112336;
+  --ink-700: #182f46;
+  --ink-600: #223f5c;
+  --ink-500: #2f536f;
+  --accent-2: #38bdf8;
+}
+
+[data-theme='crimson'] {
+  --ink-950: #0d0607;
+  --ink-900: #150a0c;
+  --ink-850: #1c0f12;
+  --ink-800: #261418;
+  --ink-700: #331a20;
+  --ink-600: #43232b;
+  --ink-500: #5a303a;
+  --accent-2: #fb7185;
+}
+
+[data-theme='mocha'] {
+  --ink-950: #0c0908;
+  --ink-900: #130e0c;
+  --ink-850: #1a1411;
+  --ink-800: #231b17;
+  --ink-700: #2e231e;
+  --ink-600: #3d2f27;
+  --ink-500: #52413a;
+  --accent-2: #fbbf24;
+}
+
+[data-theme='nord'] {
+  --ink-950: #0c1016;
+  --ink-900: #11161e;
+  --ink-850: #161d27;
+  --ink-800: #1d2530;
+  --ink-700: #262f3c;
+  --ink-600: #323d4d;
+  --ink-500: #435064;
+  --accent-2: #88c0d0;
+}
+
+[data-theme='matrix'] {
+  --ink-950: #010603;
+  --ink-900: #030c06;
+  --ink-850: #05120a;
+  --ink-800: #081a0e;
+  --ink-700: #0c2515;
+  --ink-600: #12331e;
+  --ink-500: #1b472b;
+  --accent-2: #a3e635;
+}
+
+[data-theme='rose'] {
+  --ink-950: #0e070b;
+  --ink-900: #160b11;
+  --ink-850: #1d0f17;
+  --ink-800: #27141f;
+  --ink-700: #351b2a;
+  --ink-600: #472538;
+  --ink-500: #5e3249;
+  --accent-2: #fb7185;
+}
+
+[data-theme='tangerine'] {
+  --ink-950: #190a03;
+  --ink-900: #241006;
+  --ink-850: #2e150a;
+  --ink-800: #3d1c0d;
+  --ink-700: #55280f;
+  --ink-600: #70361a;
+  --ink-500: #934d27;
+  --accent-2: #fb923c;
+}
+
+[data-theme='abyss'] {
+  --ink-950: #04100f;
+  --ink-900: #071917;
+  --ink-850: #0a211f;
+  --ink-800: #0e2b28;
+  --ink-700: #143a36;
+  --ink-600: #1c4b46;
+  --ink-500: #276059;
+  --accent-2: #2dd4bf;
+}
+
+[data-theme='plum'] {
+  --ink-950: #0b0612;
+  --ink-900: #120a1c;
+  --ink-850: #190e26;
+  --ink-800: #221433;
+  --ink-700: #2e1c45;
+  --ink-600: #3d265c;
+  --ink-500: #53357c;
+  --accent-2: #c084fc;
+}
+
+[data-accent='violet'] {
+  --accent: #b794f6;
+  --accent-ink: #12061f;
+  --accent-2: #38bdf8;
+}
+
+[data-accent='coral'] {
+  --accent: #ff8a7a;
+  --accent-ink: #220804;
+  --accent-2: #fbbf24;
+}
+
+[data-accent='quantum'] {
+  --accent: #38e8ff;
+  --accent-ink: #021318;
+  --accent-2: #2ef2b0;
+}
+
+[data-accent='obsidian'] {
+  --accent: #d9dde8;
+  --accent-ink: #0b0d12;
+  --accent-2: #8d95a9;
+}
+
+[data-accent='rose'] {
+  --accent: #fb6f9a;
+  --accent-ink: #230613;
+  --accent-2: #a78bfa;
+}
+
+[data-accent='amber'] {
+  --accent: #fbbf24;
+  --accent-ink: #1f1502;
+  --accent-2: #fb7185;
+}
+
+[data-accent='lime'] {
+  --accent: #a3e635;
+  --accent-ink: #101c02;
+  --accent-2: #2ef2b0;
+}
+
+[data-accent='indigo'] {
+  --accent: #818cf8;
+  --accent-ink: #0b0d28;
+  --accent-2: #f472b6;
+}
+
+[data-font='outfit'] {
+  --font-ui: 'Outfit Variable', 'Inter Variable', system-ui, sans-serif;
+}
+
+[data-font='space'] {
+  --font-ui: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+}
+
+[data-font='mono'] {
+  --font-ui: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+}
+
+[data-font='manrope'] {
+  --font-ui: 'Manrope Variable', 'Inter Variable', system-ui, sans-serif;
+}
+
+[data-font='nunito'] {
+  --font-ui: 'Nunito Variable', 'Inter Variable', system-ui, sans-serif;
+}
+
+[data-font='lora'] {
+  --font-ui: 'Lora Variable', Georgia, serif;
+}
+
+[data-font='custom'] {
+  --font-ui: 'Chatterly Custom UI', 'Inter Variable', system-ui, sans-serif;
+}
+
+[data-font='system'] {
+  --font-ui: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Backdrop blur over an animated background re-renders every frame and made menus stutter: it is off everywhere. */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Figures of equal width wherever the "mono" look was asked for (times, counters, percentages). */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────────────────────── Base ───────────────────────── */
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-950);
+  color: var(--fg);
+  font-family:
+    var(--flag-font,) var(--font-ui),
+    'Noto Color Emoji',
+    sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+input,
+textarea,
+.selectable,
+[contenteditable],
+[contenteditable] * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 80%, white);
+  outline-offset: 2px;
+}
+
+textarea:focus-visible,
+input:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  cursor: var(--cur-default, auto);
+}
+
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-corner {
+  cursor: var(--cur-default, auto);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* Everything interactive eases in and out — hovers never "snap". */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+label,
+[role='button'],
+[role='switch'],
+[role='link'],
+[class*='hover:'],
+.nav-item,
+.btn {
+  transition:
+    background-color 0.34s var(--ease-suave),
+    color 0.34s var(--ease-suave),
+    border-color 0.34s var(--ease-suave),
+    box-shadow 0.38s var(--ease-suave),
+    opacity 0.34s var(--ease-suave),
+    transform 0.34s var(--ease-suave),
+    filter 0.34s var(--ease-suave);
+}
+
+.app-tooltip {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  max-width: 18rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: calc(var(--r) * 0.8);
+  background: var(--ink-600);
+  color: var(--fg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.app-tooltip.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.anim-fade-up {
+  animation: fade-up 0.45s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.anim-fade-in {
+  animation: fade-in 0.35s ease both;
+  animation-delay: var(--d, 0ms);
+}
+
+.menu-down {
+  transform-origin: top center;
+  animation: menu-down 0.24s var(--ease) both;
+}
+
+.menu-up {
+  transform-origin: bottom left;
+  animation: menu-up 0.24s var(--ease) both;
+}
+
+.anim-pop {
+  animation: pop-in 0.32s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.anim-slide-right {
+  animation: slide-right 0.4s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.anim-slide-left {
+  animation: slide-left 0.35s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.anim-shake {
+  animation: shake 0.4s ease;
+}
+
+.page-enter {
+  animation: fade-up 0.4s var(--ease) both;
+}
+
+.eq-bar {
+  transform-origin: bottom;
+  animation: eq 1s ease-in-out infinite;
+  animation-delay: var(--d, 0ms);
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.ring-shake {
+  animation: ring-shake 1.4s ease-in-out infinite;
+  transform-origin: 50% 20%;
+}
+
+.font-name-serif {
+  font-family: 'Lora Variable', Georgia, serif;
+  font-style: italic;
+}
+
+.font-name-custom {
+  font-family: 'Chatterly Custom Name', var(--font-ui), sans-serif;
+}
+
+.font-name-mono {
+  font-family: var(--font-code);
+}
+
+.font-name-script {
+  font-family: 'Pacifico', cursive;
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Weak devices: the blur behind the panels is what costs most to draw, so it goes (the panels stay readable). */
+[data-perf='low'] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.float-handle {
+  position: absolute;
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-suave);
+}
+
+/* the drop-down list drawn by the page (see SelectComponent) */
+.select-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.35rem;
+  overflow-y: auto;
+  border-radius: var(--r);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ink-800, #12151d);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+  color: var(--fg);
+}
+
+.select-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--r) * 0.7);
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: var(--cur-pointer, pointer);
+  transition:
+    background-color 0.15s var(--ease-suave),
+    color 0.15s var(--ease-suave);
+}
+
+.select-option.is-active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sv-area {
+  position: relative;
+  height: 10.5rem;
+  touch-action: none;
+  cursor: var(--cur-crosshair, crosshair);
+  overflow: hidden;
+  border-radius: calc(var(--r) * 0.9);
+}
+
+.hue-bar {
+  position: relative;
+  height: 0.8rem;
+  touch-action: none;
+  cursor: var(--cur-pointer, pointer);
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+
+.grid-lit {
+  --gl: color-mix(in oklab, var(--accent) 85%, white);
+  mask-image: linear-gradient(115deg, transparent 38%, #000 50%, transparent 62%);
+  mask-size: 260% 100%;
+  mask-repeat: no-repeat;
+  filter: drop-shadow(0 0 3px var(--accent));
+  animation: grid-wave calc(var(--bg-speed, 1) * 9s) linear infinite;
+}
+
+.grid-lit-2 {
+  --gl: color-mix(in oklab, var(--accent-2) 85%, white);
+  mask-image: linear-gradient(65deg, transparent 40%, #000 50%, transparent 60%);
+  animation-duration: calc(var(--bg-speed, 1) * 14s);
+  animation-direction: reverse;
+}
+
+/* leaving animations (the element stays until they end) */
+.leave-fade {
+  animation: leave-fade 0.2s var(--ease-suave) forwards;
+}
+
+.leave-pop {
+  animation: leave-pop 0.18s var(--ease) forwards;
+}
+
+.popover-reset[popover]:not(:popover-open) {
+  display: none;
+}
+
+.popover-reset.fixed {
+  inset: 0;
+}
+
+/* Section title of the side bars: normal sentence, not tiny capitals. */
+.side-head {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--accent) 20%, transparent),
+    color-mix(in oklab, var(--accent-2) 8%, transparent) 70%,
+    transparent
+  );
+}
+
+.section-text {
+  color: color-mix(in oklab, var(--accent) 80%, var(--fg));
+}
+
+.section-voice {
+  color: color-mix(in oklab, var(--accent-2) 80%, var(--fg));
+}
+
+.chan-text .nav-icon {
+  color: color-mix(in oklab, var(--accent) 65%, var(--dim));
+}
+
+.chan-voice .nav-icon {
+  color: color-mix(in oklab, var(--accent-2) 70%, var(--dim));
+}
+
+.chan-voice.active::before {
+  background: var(--accent-2);
+}
+
+.chan-voice.active .nav-icon {
+  color: var(--accent-2);
+}
+
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.menu-icon {
+  display: flex;
+  height: 2.4rem;
+  width: 2.4rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.9);
+  transition: transform 0.25s var(--ease);
+}
+
+.status-sent {
+  border: 1.5px solid var(--dim);
+}
+
+.status-delivered {
+  background: var(--dim);
+}
+
+.status-read {
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* The shield button of a conversation whose safety number was verified: it lights up in the accent color. */
+.shield-verified {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+/* Link form of the activities. */
+.act-form {
+  padding: 0.5rem 0.4rem 0.3rem;
+}
+
+.act-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 2.9rem;
+  padding: 0 0.85rem;
+  border-radius: var(--r-lg);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: var(--cur-text, text);
+  transition:
+    border-color 0.2s var(--ease-suave),
+    box-shadow 0.2s var(--ease-suave);
+}
+
+.act-link:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+
+/* Name of an encryption system inside a text: a link to its document. */
+.crypto-inline {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: var(--cur-pointer, pointer);
+}
+
+.crypto-inline:hover {
+  text-decoration-color: var(--accent);
+}
+
+.drop-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.drop-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.act-form {
+  padding: 0.3rem 0.25rem 0.15rem;
+}
+
+.act-link {
+  height: 2.5rem;
+  border-radius: calc(var(--r) * 0.7);
+}
+
+.chan-text,
+.chan-voice {
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+
+.chan-text:hover,
+.chan-voice:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+}
+
+.chan-text.active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 16%, transparent),
+    color-mix(in oklab, var(--accent) 4%, transparent)
+  );
+}
+
+.chan-voice.active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent-2) 16%, transparent),
+    color-mix(in oklab, var(--accent-2) 4%, transparent)
+  );
+}
+
+@layer components {
+  .panel {
+    background: color-mix(in oklab, var(--ink-850) 92%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 30px -16px rgba(0, 0, 0, 0.6);
+  }
+  .panel-flat {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+  }
+  /* the big blocks of the interface let the animated background show through */
+  .surface,
+  .panel-glass {
+    background: color-mix(in oklab, var(--ink-900) var(--glass, 64%), transparent);
+    /* one pass less than with saturate(): the blur over a moving background is the most expensive thing the page draws */
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .panel-glass {
+    background: color-mix(in oklab, var(--ink-850) var(--glass, 64%), transparent);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.95rem;
+    border-radius: var(--r);
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--fg);
+    white-space: nowrap;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .btn:active {
+    transform: scale(0.96);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    filter: brightness(1.1);
+    box-shadow: 0 6px 22px -8px var(--accent);
+  }
+  .btn-primary:active {
+    transform: translateY(0) scale(0.97);
+  }
+  .btn-danger {
+    background: #dc2626;
+    color: #fff;
+  }
+  .btn-danger:hover {
+    background: #ef4444;
+    box-shadow: 0 6px 22px -8px #ef4444;
+  }
+  .btn-soft-accent {
+    background: color-mix(in oklab, var(--accent) 13%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 38%, transparent);
+    color: var(--accent);
+  }
+  .btn-soft-accent:hover {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  }
+  .btn-soft-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+  }
+  .btn-soft-danger:hover {
+    background: rgba(239, 68, 68, 0.24);
+  }
+  .btn-ghost {
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+  .btn-sm {
+    height: 1.9rem;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+  }
+  .btn-icon {
+    width: 2.25rem;
+    padding: 0;
+  }
+  /* a closed section of the Spinly window that opens smoothly */
+  .fold {
+    overflow: hidden;
+    border-radius: var(--r);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .fold-head {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    text-align: left;
+    transition: background-color 0.25s var(--ease-suave);
+  }
+  .fold-head:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .fold-chevron {
+    transition: transform 0.3s var(--ease-suave);
+  }
+  .fold.is-open .fold-chevron {
+    transform: rotate(180deg);
+  }
+  .fold-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s var(--ease-suave);
+  }
+  .fold.is-open .fold-body {
+    grid-template-rows: 1fr;
+  }
+  .fold-body > div {
+    overflow: hidden;
+    min-height: 0;
+  }
+  /* theme cards of the Spinly window: a strip of the theme's colors and its name */
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.4rem;
+    border-radius: calc(var(--r) * 0.5);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: left;
+    transition:
+      border-color 0.3s var(--ease-suave),
+      background-color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      color 0.3s var(--ease-suave);
+  }
+  .theme-card:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--fg);
+  }
+  .theme-card.is-on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+  .theme-strip {
+    display: flex;
+    height: 0.9rem;
+    overflow: hidden;
+    border-radius: calc(var(--r) * 0.3);
+  }
+  .theme-strip > span {
+    flex: 1;
+  }
+  /* a small title for a list: the name, a count in a pill and a hairline that fills the rest of the row */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.5rem;
+    padding: 0 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .count-pill {
+    min-width: 1.5rem;
+    padding: 0.08rem 0.5rem;
+    border-radius: calc(var(--r) * 0.35);
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-align: center;
+    letter-spacing: 0;
+  }
+  /* items of a list in a side bar breathe a little */
+  section > .nav-item + .nav-item {
+    margin-top: 0.25rem;
+  }
+  /* the two cards of the pending page */
+  .pending-card {
+    overflow: hidden;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.18);
+  }
+  .pending-head {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+  .pending-icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--r) * 0.8);
+  }
+  .pending-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 2.4rem 1.2rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .pending-empty b {
+    font-size: 0.9rem;
+    color: var(--fg);
+  }
+  .pending-empty-icon {
+    display: inline-flex;
+    width: 3.2rem;
+    height: 3.2rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--dim);
+  }
+  /* selectable option cards (fonts...): lift on hover, accent when chosen */
+  .choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 4rem;
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+    border-radius: var(--r);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      transform 0.3s var(--ease),
+      border-color 0.3s var(--ease-suave),
+      background-color 0.3s var(--ease-suave),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .choice-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .choice-card:active {
+    transform: scale(0.97);
+  }
+  .btn-icon.btn-sm {
+    width: 1.9rem;
+  }
+  .btn-active {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+  .input {
+    width: 100%;
+    height: 2.5rem;
+    padding: 0 0.85rem;
+    border-radius: var(--r);
+    color: var(--fg);
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--line);
+    outline: none;
+  }
+  .input::placeholder {
+    color: var(--dim);
+  }
+  .input:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .input:focus {
+    border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent);
+    background: rgba(0, 0, 0, 0.38);
+  }
+  textarea.input {
+    height: auto;
+    padding: 0.6rem 0.85rem;
+    resize: none;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: calc(var(--r) * 0.6);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .chip-accent {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+  .chip-violet {
+    background: rgba(124, 58, 237, 0.2);
+    color: #c4b5fd;
+  }
+  .chip-red {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+  }
+  .chip-amber {
+    background: rgba(251, 191, 36, 0.14);
+    color: #fcd34d;
+  }
+  .label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .nav-sep {
+    display: block;
+    height: 1px;
+    margin: 0.35rem 0.6rem;
+    background: var(--line);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .badge-red {
+    background: #ef4444;
+    color: #fff;
+  }
+  /* tooltip: <button class="tip" data-tip="Label" data-tip-pos="right"> is drawn by TooltipService outside the interface */
+  .tip {
+    position: relative;
+  }
+}

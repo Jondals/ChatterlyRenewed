@@ -105,7 +105,7 @@ export class AvatarComponent {
   /** Thickness of the ring of the effect: it grows with the picture, so a small avatar does not look heavy. */
   protected readonly ringPx = computed(
     function (this: AvatarComponent) {
-      return Math.max(2.5, Math.round(this.size() * 0.07 * 10) / 10);
+      return Math.max(4, Math.round(this.size() * 0.14 * 10) / 10);
     }.bind(this),
   );
   /** How far the dot of the state is from the corner: its center sits on the edge of the picture (or of the ring). */
@@ -153,7 +153,7 @@ export class AvatarComponent {
         const id = this.resolvedImage();
         untracked(
           function (this: AvatarComponent) {
-            return this.images.ensure(id);
+            return this.images.ensure(id, this.imageId() == null);
           }.bind(this),
         );
       }.bind(this),

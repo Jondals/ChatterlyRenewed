@@ -1,0 +1,419 @@
+/* Calls: the tiles of the stage, the call bar, the music card and its menus. */
+
+/* The tiles of a call: each one sits in the box the layout gives it and glides there when the layout changes. */
+.call-tile {
+  position: absolute;
+  transition:
+    left 0.45s var(--ease),
+    top 0.45s var(--ease),
+    width 0.45s var(--ease),
+    height 0.45s var(--ease),
+    opacity 0.3s var(--ease-suave);
+}
+
+.is-resizing .call-tile {
+  transition: opacity 0.3s var(--ease-suave);
+}
+
+.call-tile.is-focus {
+  z-index: 1;
+}
+
+/* full screen of the stage: the big tile fills it and the others float over it */
+.stage-host:fullscreen {
+  background: #05060a;
+}
+
+.call-tile.is-floating {
+  z-index: 5;
+  cursor: var(--cur-grab, grab);
+  touch-action: none;
+  border-radius: var(--r-lg, 14px);
+  box-shadow:
+    0 10px 30px -8px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.call-tile.is-dragging {
+  transition: opacity 0.3s var(--ease-suave);
+  cursor: var(--cur-grabbing, grabbing);
+}
+
+.call-tile.is-floating:hover .float-handle,
+.call-tile.is-dragging .float-handle {
+  opacity: 1;
+}
+
+.float-handle::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.float-handle[data-corner='nw'] {
+  left: -4px;
+  top: -4px;
+  cursor: var(--cur-move, move);
+}
+
+.float-handle[data-corner='ne'] {
+  right: -4px;
+  top: -4px;
+  cursor: var(--cur-move, move);
+}
+
+.float-handle[data-corner='sw'] {
+  left: -4px;
+  bottom: -4px;
+  cursor: var(--cur-move, move);
+}
+
+.float-handle[data-corner='se'] {
+  right: -4px;
+  bottom: -4px;
+  cursor: var(--cur-move, move);
+}
+
+.float-handle[data-corner='nw']::after {
+  left: 4px;
+  top: 4px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.float-handle[data-corner='ne']::after {
+  right: 4px;
+  top: 4px;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.float-handle[data-corner='sw']::after {
+  left: 4px;
+  bottom: 4px;
+  border-right: 0;
+  border-top: 0;
+}
+
+.float-handle[data-corner='se']::after {
+  right: 4px;
+  bottom: 4px;
+  border-left: 0;
+  border-top: 0;
+}
+
+@media (hover: none) {
+  .float-handle {
+    opacity: 1;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.tile-card:fullscreen {
+  border-radius: 0;
+  border: 0;
+  background: #000;
+}
+
+.tile-actions {
+  opacity: 0;
+  transition: opacity 0.25s var(--ease-suave);
+  z-index: 2;
+}
+
+.tile-card:hover .tile-actions,
+.tile-card:focus-within .tile-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .tile-actions {
+    opacity: 1;
+  }
+}
+
+.tile-btn {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.7);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave);
+}
+
+.tile-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* the state of a person in a tile: a small red icon, no words */
+.state-badge {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r) * 0.7);
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  backdrop-filter: blur(6px);
+}
+
+/* the buttons of the call stay still: only their color changes */
+.call-bar .btn {
+  transition:
+    background-color 0.2s var(--ease-suave),
+    color 0.2s var(--ease-suave),
+    box-shadow 0.2s var(--ease-suave);
+  transform: translateZ(0);
+}
+
+.call-bar .btn:active {
+  transform: translateZ(0) scale(0.96);
+}
+
+/* the diagnostics drawer of a call opens and closes smoothly */
+.drawer-wrap {
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 0;
+  transition: width 0.35s var(--ease);
+}
+
+.drawer-wrap.is-open {
+  width: 20rem;
+}
+
+.drawer-wrap > aside {
+  width: 20rem;
+}
+
+@media (max-width: 1023px) {
+  .drawer-wrap {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    z-index: 20;
+    width: min(24rem, 100%);
+    visibility: hidden;
+    transform: translateX(100%);
+    transition:
+      transform 0.35s var(--ease),
+      visibility 0s linear 0.35s;
+  }
+  .drawer-wrap.is-open {
+    width: min(24rem, 100%);
+    visibility: visible;
+    transform: none;
+    transition: transform 0.35s var(--ease);
+  }
+  .drawer-wrap > aside {
+    width: 100%;
+  }
+}
+
+/* Targets shown while a floating card (the call bar, the music card) is dragged. */
+.dock-zone {
+  width: 9rem;
+  height: 4.5rem;
+  border-radius: var(--r-lg);
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background-color 0.2s var(--ease-suave),
+    border-color 0.2s var(--ease-suave);
+}
+
+.music-grip {
+  cursor: var(--cur-grab, grab);
+}
+
+/* The cards of the "+" menu of the chat and of the Activities menu of the call. */
+.menu-card {
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background-color 0.22s var(--ease-suave),
+    border-color 0.22s var(--ease-suave);
+}
+
+.menu-card:last-child {
+  margin-bottom: 0;
+}
+
+.menu-card:hover {
+  background: color-mix(in oklab, var(--accent) 9%, rgba(255, 255, 255, 0.03));
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.menu-card .menu-icon {
+  height: 2.7rem;
+  width: 2.7rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.menu-card:hover .menu-icon {
+  transform: none;
+}
+
+/* The icons of the settings menu: on hover the tile grows a little, glows and a band of light crosses it (it does not turn). */
+.nav-item[role='link'] .nav-tile {
+  transition:
+    transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease-suave);
+}
+
+.nav-item[role='link']:hover .nav-tile {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, currentColor 40%, transparent),
+    0 6px 16px -6px currentColor;
+}
+
+.nav-item[role='link']:hover .nav-tile::after {
+  animation: tile-sweep 0.75s var(--ease) both;
+}
+
+/* The menus of activities: compact, with room to breathe. */
+.menu-card {
+  padding: 0.5rem 0.7rem;
+  gap: 0.7rem;
+  margin-bottom: 0.3rem;
+}
+
+.menu-card .menu-icon {
+  height: 2.3rem;
+  width: 2.3rem;
+}
+
+@layer components {
+  /* the 16:9 player of a shared video, as big as the tile allows without cropping */
+  .player-box {
+    container-type: size;
+  }
+  .player-frame {
+    width: min(100cqw, 100cqh * 16 / 9);
+    height: min(100cqh, 100cqw * 9 / 16);
+  }
+  .timeline input[type='range'] {
+    accent-color: var(--accent);
+    height: 1rem;
+    cursor: pointer;
+  }
+  /* the player of shared music: invisible and out of the way (Spotify keeps its small one) */
+  .music-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 200px;
+    height: 113px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .music-frame.is-spotify {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: 80px;
+    border: 0;
+    border-radius: calc(var(--r) * 0.6);
+  }
+  /* the three buttons under the user panel: accent tint, small lift and a soft press */
+  .dock-btn {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    transition:
+      background-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .dock-btn:hover {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+    box-shadow: 0 8px 18px -10px var(--accent);
+  }
+  .dock-btn:active {
+    transform: translateY(0) scale(0.95);
+  }
+  .dock-btn.btn-soft-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+  }
+  .dock-btn.btn-soft-danger:hover {
+    background: rgba(239, 68, 68, 0.24);
+    color: #fecaca;
+    box-shadow: 0 8px 18px -10px #ef4444;
+  }
+  .nav-tile {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--r) * 0.8);
+    transition:
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  /* hover: the tile lifts, glows in its own color and a band of light sweeps across it */
+  .nav-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 70%
+    );
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
+  .nav-item:hover .nav-tile {
+    box-shadow: 0 0 0 1px color-mix(in oklab, currentColor 35%, transparent);
+  }
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--fg);
+  }
+  .nav-item:active {
+    background: rgba(255, 255, 255, 0.09);
+  }
+  .nav-item.active {
+    background: color-mix(in oklab, var(--accent) 11%, transparent);
+    color: var(--fg);
+  }
+  .nav-item.active::before {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+  }
+  .nav-item .nav-icon {
+    color: var(--dim);
+    transition:
+      color 0.22s var(--ease),
+      transform 0.3s var(--ease);
+  }
+  .nav-item:hover .nav-icon {
+    color: var(--fg);
+  }
+  .nav-item.active .nav-icon {
+    color: var(--accent);
+  }
+}

@@ -1,5 +1,5 @@
 /**
- * Tiny markdown subset (plus colour tags) rendered as typed segments — never as HTML — so message
+ * ! Tiny markdown subset (plus colour tags) rendered as typed segments — never as HTML — so message
  * content can't inject markup: Angular renders each segment with normal, escaped bindings.
  *
  *   **bold**  _italic_  ~~strike~~  `code`  ```fenced```  https://links
@@ -41,7 +41,7 @@ function parseInline(text: string): Segment[] {
     else if (match[3]) out.push({ type: 'strike', text: token.slice(2, -2) });
     else if (match[4] || match[5]) out.push({ type: 'italic', text: token.slice(1, -1) });
     else {
-      // Trailing punctuation is almost never part of the URL.
+      // * Trailing punctuation is almost never part of the URL.
       const trimmed = token.replace(/[.,;:!?)\]]+$/, '');
       out.push({ type: 'link', href: trimmed, text: trimmed });
       if (trimmed.length < token.length)
@@ -103,7 +103,7 @@ function parseColors(input: string): Segment[] {
 }
 
 /**
- * Splits a message into code blocks and lines with marks; the result is data, never HTML, so nothing can inject code.
+ * ! Splits a message into code blocks and lines with marks; the result is data, never HTML, so nothing can inject code.
  */
 export function parseRichText(input: string): Segment[] {
   const out: Segment[] = [];

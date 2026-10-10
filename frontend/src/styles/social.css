@@ -1,0 +1,340 @@
+/* Friends, groups, members, tags and the side bars. */
+
+/* "Add friend": at the end of the row of tabs of the friends page, the same height as the tabs. */
+.friend-add {
+  height: 2.4rem;
+  margin-left: auto;
+  flex: none;
+  padding: 0 0.95rem;
+}
+
+/* Tags of a group. */
+.guild-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.05rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--tag);
+  background: color-mix(in oklab, var(--tag) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--tag) 40%, transparent);
+}
+
+@media (max-width: 640px) {
+  .friend-add {
+    width: 2.4rem;
+    padding: 0;
+  }
+}
+
+/* Friends page: the tabs live in one dark bar, "Add friend" is a dark tinted button and the search is a field. */
+.friend-tabs {
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: calc(var(--r) * 0.9);
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--line);
+}
+
+.friend-search {
+  height: 2.8rem;
+  padding: 0 1rem;
+  border-radius: calc(var(--r) * 0.9);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.friend-search:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* Sections of the members of a group, one for each tag. */
+.member-section {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.9rem 0.6rem 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tag, var(--dim));
+}
+
+.member-section-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--tag, var(--dim));
+}
+
+/* The members of a group breathe a little more. */
+.member-list > * + * {
+  margin-top: 0.3rem;
+}
+
+/* The rows of the voice channels: calmer. */
+/* The window of the tags of a group. */
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  border-radius: calc(var(--r) * 0.6);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tag-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.35rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.tag-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* The channels of a group: calmer rows, the mark of the chosen one stays inside the row. */
+.chan-item::before {
+  left: 4px;
+}
+
+@layer components {
+  /* tabs of the friends page: a pill with a tinted active tab */
+  .seg-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 2rem;
+    padding: 0 0.9rem;
+    border-radius: calc(var(--r) * 0.75);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition:
+      background-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.25s var(--ease);
+  }
+  .seg-tab:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .seg-tab:active {
+    transform: scale(0.96);
+  }
+  .seg-tab.is-on {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+  /* search box and cards of the friends page */
+  .friend-search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2.6rem;
+    padding: 0 0.4rem;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    transition:
+      border-color 0.3s var(--ease-suave),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .friend-search:focus-within {
+    border-bottom-color: var(--accent);
+    box-shadow: 0 1px 0 0 var(--accent);
+  }
+  .friend-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .friend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    border-top: 1px solid var(--line);
+    border-radius: var(--r);
+    transition:
+      background-color 0.25s var(--ease-suave),
+      border-color 0.25s var(--ease-suave),
+      transform 0.3s var(--ease);
+  }
+  .friend-row:first-child {
+    border-top-color: transparent;
+  }
+  .friend-row {
+    background: rgba(0, 0, 0, 0.2);
+    border-top-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+    margin-bottom: 0.35rem;
+  }
+  .friend-row:hover,
+  .friend-row:focus-within {
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+    border-top-color: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .friend-row:active {
+    background: color-mix(in oklab, var(--accent) 13%, transparent);
+    transform: scale(0.995);
+  }
+  .friend-row:hover + .friend-row {
+    border-top-color: transparent;
+  }
+  .friend-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .friend-act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: calc(var(--r) * 0.7);
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--fg);
+    transition:
+      background-color 0.25s var(--ease-suave),
+      color 0.25s var(--ease-suave),
+      transform 0.25s var(--ease);
+  }
+  .friend-act:hover {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+  .friend-act-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+  .friend-act-ok {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    color: var(--accent);
+  }
+  .friend-act-ok:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  /* tabs of the friends page: pills that lift on hover and fill with the accent when chosen */
+  .friend-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .friend-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.4rem;
+    padding: 0 0.55rem 0 0.95rem;
+    border-radius: calc(var(--r) * 0.6);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      background-color 0.3s var(--ease-suave),
+      border-color 0.3s var(--ease-suave),
+      color 0.3s var(--ease-suave),
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease-suave);
+  }
+  .friend-tab:hover {
+    color: var(--fg);
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  .friend-tab:active {
+    transform: scale(0.97);
+  }
+  .friend-tab.is-on {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 8px 22px -12px var(--accent);
+  }
+  .friend-tab-count {
+    min-width: 1.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: calc(var(--r) * 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-align: center;
+    transition: background-color 0.3s var(--ease-suave);
+  }
+  .friend-tab.is-on .friend-tab-count {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+  @media (max-width: 480px) {
+    .friend-tabs {
+      flex-wrap: nowrap;
+      gap: 0.35rem;
+    }
+    .friend-tab {
+      flex: 1;
+      justify-content: center;
+      padding: 0 0.45rem;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+    }
+    .friend-tab > app-icon,
+    .friend-tab-dot {
+      display: none;
+    }
+  }
+  .friend-tab-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+  }
+  /* sidebar rows: calm hover, soft active state, accent bar that grows in */
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--r);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-align: left;
+  }
+  .nav-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    width: 3px;
+    height: 60%;
+    border-radius: 3px;
+    background: var(--accent);
+    transform: translateY(-50%) scaleY(0);
+    opacity: 0;
+    transition:
+      transform 0.3s var(--ease),
+      opacity 0.2s var(--ease);
+  }
+}

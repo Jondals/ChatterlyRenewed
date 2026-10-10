@@ -31,9 +31,9 @@ import { fontClassOf } from '../util/user-font.directive';
       <article class="overflow-hidden rounded-ui-lg border border-white/8 bg-black/20">
         <app-banner class="h-24" [image]="banner()" [color]="u.bannerColor" />
         <div class="px-4 pb-4">
-          <div class="-mt-9 flex items-end justify-between">
+          <div class="-mt-8 flex items-end justify-between">
             <span class="rounded-full ring-4 ring-ink-850"
-              ><app-avatar [user]="u" [size]="72" [status]="status()" [aura]="true"
+              ><app-avatar [user]="u" [size]="56" [status]="status()" [aura]="true"
             /></span>
             <ng-content select="[actions]" />
           </div>

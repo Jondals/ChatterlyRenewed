@@ -31,7 +31,12 @@ function loadDatabase() {
 
 /** The key for a passphrase and a salt (scrypt, 32 bytes). */
 function keyFor(passphrase, salt) {
-  return scryptSync(passphrase, salt, 32, { N: 1 << 15, r: 8, p: 1, maxmem: 128 * 1024 * 1024 });
+  return scryptSync(passphrase, salt, 32, {
+    N: 1 << 15,
+    r: 8,
+    p: 1,
+    maxmem: 128 * 1024 * 1024,
+  });
 }
 
 /** Encrypts a file into `target` (magic, salt, iv, ciphertext, tag), with permissions 600. */

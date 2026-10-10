@@ -100,7 +100,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
     TranslatePipe,
   ],
   template: `
-    <div class="grid gap-8 lg:grid-cols-[1fr_18rem]">
+    <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div class="min-w-0 space-y-8">
         <!-- Pictures -->
         <section>
@@ -129,7 +129,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                 (click)="uploadAvatar()"
                 [attr.aria-label]="'Change picture' | t"
               >
-                <app-avatar [user]="preview()" [size]="84" />
+                <app-avatar [user]="preview()" [size]="72" />
                 <span
                   class="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-white opacity-0 group-hover:opacity-100"
                   ><app-icon name="upload" [size]="22"
@@ -621,7 +621,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
         </section>
       </div>
 
-      <aside class="lg:sticky lg:top-6 lg:self-start">
+      <aside class="xl:sticky xl:top-6 xl:self-start">
         <div class="label mb-2">{{ 'Preview' | t }}</div>
         <app-profile-card [user]="preview()" status="online" />
       </aside>

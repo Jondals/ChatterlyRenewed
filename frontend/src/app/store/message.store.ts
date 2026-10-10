@@ -73,6 +73,8 @@ export interface OutgoingFile {
   durationMs?: number;
   sticker?: boolean;
   gif?: boolean;
+  /** Offered for the soundboard of the others (audio and video only). */
+  soundboard?: boolean;
 }
 
 export interface ChannelState {
@@ -418,6 +420,7 @@ export class MessageStore {
           durationMs: file.durationMs,
           sticker: file.sticker,
           gif: file.gif,
+          soundboard: file.soundboard || undefined,
         });
       }
       const payload: MessagePayload = {

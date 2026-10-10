@@ -133,7 +133,7 @@ export function registerMessageRoutes(app: FastifyInstance, ctx: AppContext): vo
       const channel = requireChannel(req, reply, (req.params as { id: string }).id);
       if (!channel) return;
       const body = req.body as { delivered?: number; read?: number };
-      // A mark can never point past the newest message of the channel.
+      // ! A mark can never point past the newest message of the channel.
       const newest = (
         db
           .prepare('SELECT COALESCE(MAX(seq), 0) AS n FROM messages WHERE channel_id = ?')
@@ -564,7 +564,7 @@ export function registerMessageRoutes(app: FastifyInstance, ctx: AppContext): vo
           ],
         });
       }
-      // coturn "use-auth-secret" scheme: short-lived credentials, never a shared static password.
+      // ! coturn "use-auth-secret" scheme: short-lived credentials, never a shared static password.
       expiresAt = Math.floor(Date.now() / 1000) + config.turn.ttlSec;
       const username = `${expiresAt}:${me(req)}`;
       const credential = createHmac('sha1', config.turn.secret).update(username).digest('base64');

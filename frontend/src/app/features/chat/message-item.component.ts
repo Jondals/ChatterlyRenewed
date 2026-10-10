@@ -66,7 +66,8 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
       (contextmenu)="openMenu($event)"
       (click)="onTap($event)"
     >
-      <div class="w-9 shrink-0 pt-0.5">
+      <!-- on a phone the picture goes inline with the name (22 px): no empty column on the left of every message -->
+      <div class="w-9 shrink-0 pt-0.5 max-sm:hidden">
         @if (!compact()) {
           <app-avatar [user]="sender()" [size]="36" />
         } @else if (!bubbles()) {
@@ -76,9 +77,13 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
         }
       </div>
 
-      <div class="flex min-w-0 max-w-[85%] flex-col" [class.items-end]="bubbles() && mine()">
+      <div
+        class="flex min-w-0 max-w-[85%] flex-col max-sm:max-w-[94%]"
+        [class.items-end]="bubbles() && mine()"
+      >
         @if (!compact()) {
-          <div class="mb-2 flex items-baseline gap-3">
+          <div class="mb-2 flex items-baseline gap-3 max-sm:items-center max-sm:gap-2">
+            <app-avatar class="sm:hidden" [user]="sender()" [size]="22" />
             <button
               type="button"
               class="msg-name text-base font-semibold"
@@ -125,6 +130,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
             [class.bubble-out]="bubbles() && mine()"
             [class.bubble-in]="bubbles() && !mine()"
             [class.bubble-emoji]="bigEmoji()"
+            [class.is-single]="bigEmoji() && singleEmoji()"
             [attr.data-pop]="bigEmoji() ? emojiPop() : null"
             [class.px-0]="!bubbles()"
             [class.opacity-60]="m.pending"
@@ -328,6 +334,15 @@ export class MessageItemComponent {
     }.bind(this),
   );
   /** True when the message is just one to three emoji: they are drawn big, without a bubble. */
+  /** A message that is exactly one emoji (they get the little loop). */
+  protected readonly singleEmoji = computed(
+    function (this: MessageItemComponent) {
+      const text = this.message().text.trim();
+      return (
+        [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].length === 1
+      );
+    }.bind(this),
+  );
   protected readonly bigEmoji = computed(
     function (this: MessageItemComponent) {
       const message = this.message();

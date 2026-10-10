@@ -31,7 +31,7 @@ function drawsFlags(): boolean {
 }
 
 /**
- * Turns the flag font on when the system cannot draw flags. Windows never draws them, whatever the browser, so there
+ * ! Turns the flag font on when the system cannot draw flags. Windows never draws them, whatever the browser, so there
  * the font is always used; the pixel test is for the rest (and it can be fooled by browsers that scramble what a canvas
  * returns, which is why it does not decide on Windows).
  */

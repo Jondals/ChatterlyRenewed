@@ -29,7 +29,7 @@ async function inflateRaw(
   expected: number,
 ): Promise<Uint8Array<ArrayBuffer>> {
   if (typeof DecompressionStream === 'undefined' || !supportsRawDeflate()) {
-    // Browsers that do not know 'deflate-raw' (older Safari): the own decoder.
+    // ! Browsers that do not know 'deflate-raw' (older Safari): the own decoder.
     return inflateRawSync(data, Math.min(MAX_ENTRY_BYTES, expected + 1024));
   }
   const source = new ReadableStream<Uint8Array>({

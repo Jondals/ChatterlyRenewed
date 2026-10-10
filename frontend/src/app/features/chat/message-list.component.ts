@@ -133,9 +133,10 @@ function dayLabel(ts: number, i18n: I18nService): string {
 
     @if (!atBottom()) {
       <button
+        animate.leave="leave-pop"
         class="anim-pop absolute bottom-4 right-6 flex items-center gap-1.5 rounded-ui border border-white/10 bg-ink-800 px-3 py-1.5 text-xs font-semibold text-fg shadow-xl hover:border-accent/60 hover:text-accent"
         type="button"
-        (click)="scrollToBottom(true)"
+        (click)="jumpToLatest()"
       >
         <app-icon name="chevron-down" [size]="14" /> {{ 'Latest' | t }}
       </button>
@@ -271,7 +272,7 @@ export class MessageListComponent {
       return;
     }
     this.revealed.set(false);
-    // If the messages take long to arrive, the list is shown anyway so the screen never stays empty.
+    // ! If the messages take long to arrive, the list is shown anyway so the screen never stays empty.
     this.revealTimer = setTimeout(this.reveal.bind(this), 700);
     requestAnimationFrame(this.tryReveal.bind(this));
   }
@@ -395,6 +396,12 @@ export class MessageListComponent {
     requestAnimationFrame(function () {
       return (el.scrollTop += el.scrollHeight - before);
     });
+  }
+
+  /** The "Latest" button: the conversation glides to its end and the button fades out at once (it is not needed any more). */
+  protected jumpToLatest(): void {
+    this.atBottom.set(true);
+    this.scrollToBottom(true);
   }
 
   /** Goes to the end of the conversation, gliding or at once. */

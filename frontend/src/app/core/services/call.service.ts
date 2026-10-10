@@ -33,6 +33,7 @@ import { DirectoryService } from './directory.service';
 import { ApiError, ApiService } from './api.service';
 import { SettingsService } from './settings.service';
 import { SocketService, type ServerEvent } from './socket.service';
+import { buildVoiceChain } from '../audio-chain';
 import { SoundService, type SfxId } from './sound.service';
 import { ToastService } from './toast.service';
 
@@ -169,7 +170,7 @@ interface AudioChain {
 }
 
 /**
- * Full-mesh WebRTC calls. Media flows peer-to-peer over DTLS-SRTP, so the server never touches
+ * ! Full-mesh WebRTC calls. Media flows peer-to-peer over DTLS-SRTP, so the server never touches
  * audio/video. The signaling that sets those sessions up goes through the server but is encrypted
  * with the pair key and signed with each peer's identity key: the server can neither read it nor
  * swap DTLS fingerprints to mount a man-in-the-middle attack.
@@ -350,7 +351,7 @@ export class CallService {
             this.onState(e['roomId'] as string, e['participants'] as CallParticipant[]);
             break;
           case 'call.left':
-            // The answer to our own "leave" arrives late; it must not end the call we are joining now.
+            // ! The answer to our own "leave" arrives late; it must not end the call we are joining now.
             if (e['roomId'] === this.roomId()) {
               this.teardown();
             }
@@ -830,7 +831,12 @@ export class CallService {
    * instead of failing, and the choice goes back to "default".
    */
   private async openCamera(): Promise<MediaStream> {
-    const quality = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
+    const height = Number(this.settings.cameraQuality());
+    const quality = {
+      width: { ideal: Math.round((height * 16) / 9) },
+      height: { ideal: height },
+      frameRate: { ideal: Number(this.settings.cameraFps()) },
+    };
     const id = this.settings.cameraDeviceId();
     if (id !== 'default') {
       try {
@@ -1176,6 +1182,9 @@ export class CallService {
     );
   }
 
+  /** How loud the room is when nobody speaks (0 to 1), learned while the call goes on. */
+  private noiseFloor = 0;
+
   /** Opens the chosen microphone and connects it to the meter and to the outgoing track. */
   private async openMic(): Promise<void> {
     const deviceId = this.settings.inputDeviceId();
@@ -1184,8 +1193,8 @@ export class CallService {
       noiseSuppression: this.settings.noiseSuppression(),
       autoGainControl: this.settings.autoGain(),
     };
-    // The chosen device may be gone (unplugged, or a different browser) and some browsers refuse some options:
-    // each try asks for less, so the call never fails only because of a preference.
+    // ! The chosen device may be gone (unplugged, or a different browser) and some browsers refuse some options:
+    // ! each try asks for less, so the call never fails only because of a preference.
     const attempts: MediaStreamConstraints[] = [
       {
         audio: {
@@ -1217,9 +1226,16 @@ export class CallService {
     }
     const ctx = this.sound.context;
     this.micSource = ctx.createMediaStreamSource(this.micStream);
-    // mic → analyser (level meter) and mic → gate → outgoing track
-    this.micSource.connect(this.localAnalyser!);
-    this.micSource.connect(this.gate!);
+    // mic → voice chain (volume, rumble filter, clarity, leveler) → analyser (level meter) and → gate → outgoing track
+    const chain = buildVoiceChain(ctx, {
+      inputVolume: this.settings.inputVolume(),
+      cleanup: this.settings.voiceCleanup(),
+      leveler: this.settings.voiceLeveler(),
+      clarity: this.settings.voiceClarity(),
+    });
+    this.micSource.connect(chain.input);
+    chain.output.connect(this.localAnalyser!);
+    chain.output.connect(this.gate!);
   }
 
   /** Enables or disables the outgoing audio track according to the mute state. */
@@ -1236,7 +1252,13 @@ export class CallService {
     const speaking = new Set<string>();
     const ownLevel = this.muted() ? 0 : this.rms(this.localAnalyser);
     levels[me] = ownLevel;
-    const gateThreshold = (this.settings.inputGate() / 100) * 0.12;
+    let gateThreshold = (this.settings.inputGate() / 100) * 0.12;
+    // The strong cleanup learns how loud the room is when nobody speaks and keeps the gate above it.
+    if (this.settings.voiceCleanup() === 'strong') {
+      this.noiseFloor +=
+        (Math.min(ownLevel, 0.2) - this.noiseFloor) * (ownLevel < this.noiseFloor ? 0.3 : 0.01);
+      gateThreshold = Math.max(gateThreshold, this.noiseFloor * 2.2);
+    }
     const open = ownLevel > gateThreshold;
     if (open) this.lastSpeech.set(me, now);
     const holding = now - (this.lastSpeech.get(me) ?? 0) < 400;
@@ -1419,7 +1441,7 @@ export class CallService {
     pc.onicecandidate = function (this: CallService, { candidate }: RTCPeerConnectionIceEvent) {
       if (!candidate) return;
       // ! Defence in depth: with a relay-only policy the browser gathers nothing else, but if it ever did, an address
-      // that is not relayed must not leave this device.
+      // ! that is not relayed must not leave this device.
       if (link.relayRequired && !isRelayCandidate(candidate.candidate)) return;
       this.sendSignal(link, { candidate: candidate.toJSON() });
     }.bind(this);
@@ -1605,7 +1627,7 @@ export class CallService {
     const gate = this.links.get(from);
     const run = async function (this: CallService) {
       const aad = signalContext(roomId, from, this.auth.userId);
-      // A changed identity key is not trusted for calls: the server could have swapped it to listen in.
+      // ! A changed identity key is not trusted for calls: the server could have swapped it to listen in.
       if (!(await this.directory.isIdentityTrusted(from))) {
         this.rejectUntrusted(from);
         return;

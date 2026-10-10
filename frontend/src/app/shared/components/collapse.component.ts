@@ -24,7 +24,7 @@ import { IconComponent } from './icon.component';
         (click)="toggle()"
       >
         <span class="min-w-0 flex-1">
-          <span class="block text-sm font-semibold">{{ title() | t }}</span>
+          <span class="block truncate text-sm font-semibold">{{ title() | t }}</span>
           <span class="block truncate text-xs text-muted">{{ summary() | t }}</span>
         </span>
         <ng-content select="[preview]" />
@@ -105,7 +105,12 @@ export class CollapseComponent {
   /** A press outside the section folds it. */
   @HostListener('document:mousedown', ['$event'])
   protected closeOnOutside(event: MouseEvent): void {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
+    const target = event.target as Element;
+    if (
+      this.open() &&
+      !this.host.nativeElement.contains(target) &&
+      !target.closest?.('app-collapse')
+    ) {
       this.setOpen(false);
     }
   }

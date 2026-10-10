@@ -21,6 +21,8 @@ export interface MaintenanceReport {
   sessions: number;
   spentTokens: number;
   images: number;
+  /** Profile pictures and banners stored before they were encrypted: they are erased so the person uploads them again. */
+  plainPictures: number;
 }
 
 /**
@@ -34,6 +36,15 @@ export function runMaintenance(ctx: AppContext, now = Date.now()): MaintenanceRe
   const { db } = ctx;
   const sessions = db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now).changes;
   const spentTokens = db.prepare('DELETE FROM spent_tokens WHERE expires_at < ?').run(now).changes;
+  const plain = db
+    .prepare("SELECT id FROM images WHERE encrypted = 0 AND kind IN ('avatar','banner')")
+    .all() as { id: string }[];
+  for (const image of plain) {
+    db.prepare('UPDATE users SET avatar_image = NULL WHERE avatar_image = ?').run(image.id);
+    db.prepare('UPDATE users SET banner_image = NULL WHERE banner_image = ?').run(image.id);
+    db.prepare('DELETE FROM images WHERE id = ?').run(image.id);
+    fs.rmSync(imageFile(ctx, image.id), { force: true });
+  }
   const abandoned = db
     .prepare(
       `SELECT id FROM images
@@ -48,5 +59,10 @@ export function runMaintenance(ctx: AppContext, now = Date.now()): MaintenanceRe
     remove.run(image.id);
     fs.rmSync(imageFile(ctx, image.id), { force: true });
   }
-  return { sessions, spentTokens, images: abandoned.length };
+  return {
+    sessions,
+    spentTokens,
+    images: abandoned.length,
+    plainPictures: plain.length,
+  };
 }

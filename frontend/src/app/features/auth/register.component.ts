@@ -81,7 +81,7 @@ const COLORS = ['#4b5263', '#ef4444', '#fbbf24', '#2ef2b0', '#38e8ff'];
         <div class="mt-2 flex gap-1.5">
           @for (i of [1, 2, 3, 4]; track i) {
             <div
-              class="h-1 flex-1 rounded-full transition-all duration-500"
+              class="h-1 flex-1 rounded-full transition-[background-color,width] duration-500"
               [style.background]="score() >= i ? color() : 'rgba(255,255,255,.08)'"
             ></div>
           }

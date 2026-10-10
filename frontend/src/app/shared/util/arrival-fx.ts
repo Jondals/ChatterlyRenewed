@@ -247,7 +247,7 @@ export function startFx(canvas: HTMLCanvasElement, mode: FxMode): Fx {
       }
       const sprite = sprites.get(mote.hue);
       if (sprite) {
-        // Near the top and bottom edges the dust fades out, so it never pops in or out when it wraps around.
+        // ! Near the top and bottom edges the dust fades out, so it never pops in or out when it wraps around.
         const edge = Math.min(1, Math.max(0, Math.min(mote.y, height - mote.y) / 70));
         context.globalAlpha =
           edge * (0.18 + 0.32 * (0.5 + 0.5 * Math.sin(now / 700 + mote.sway * 3)));

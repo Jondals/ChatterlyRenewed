@@ -24,7 +24,10 @@ import { TranslatePipe } from '../../core/i18n/i18n.service';
         <s>{{ s.text }}</s>
       }
       @case ('code') {
-        <code class="rounded bg-black/35 px-1.5 py-0.5 font-mono text-[0.88em]">{{ s.text }}</code>
+        <code
+          class="rounded bg-black/35 px-1.5 py-0.5 font-[family-name:var(--font-code)] text-[0.88em]"
+          >{{ s.text }}</code
+        >
       }
       @case ('link') {
         <a

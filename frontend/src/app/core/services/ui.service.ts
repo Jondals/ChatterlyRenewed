@@ -52,7 +52,7 @@ export class UiService {
     if (!(event instanceof NavigationEnd)) {
       return;
     }
-    // Only the main part of the address counts: what is in parentheses are windows on top (the settings).
+    // * Only the main part of the address counts: what is in parentheses are windows on top (the settings).
     const url = event.urlAfterRedirects.split('(')[0];
     if (!TEMPORARY_ROUTES.test(url)) {
       this.lastRoute = url;

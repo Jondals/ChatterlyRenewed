@@ -166,6 +166,15 @@ CREATE TABLE IF NOT EXISTS images (
 );
 CREATE INDEX IF NOT EXISTS idx_images_owner ON images(owner_id);
 
+-- The key of an encrypted profile picture or banner, sealed for ONE person who may see it (the server cannot open it).
+CREATE TABLE IF NOT EXISTS image_keys (
+  image_id    TEXT NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+  viewer_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  iv          TEXT NOT NULL,
+  ciphertext  TEXT NOT NULL,
+  PRIMARY KEY (image_id, viewer_id)
+);
+
 CREATE TABLE IF NOT EXISTS files (
   id           TEXT PRIMARY KEY,
   channel_id   TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
@@ -193,6 +202,8 @@ const MIGRATIONS: [table: string, column: string, definition: string][] = [
   ['users', 'presence_visibility', "TEXT NOT NULL DEFAULT 'everyone'"],
   ['users', 'friend_requests', "TEXT NOT NULL DEFAULT 'everyone'"],
   ['users', 'searchable', 'INTEGER NOT NULL DEFAULT 1'],
+  // 1 when the bytes of the picture are ciphertext made in the browser (profile pictures and banners); 0 for group icons.
+  ['images', 'encrypted', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 /**
@@ -200,7 +211,9 @@ const MIGRATIONS: [table: string, column: string, definition: string][] = [
  * erased the envelopes of other people). The tie is cut by building the table again without it.
  */
 function untieWrappers(db: Database.Database): void {
-  const ties = db.prepare('PRAGMA foreign_key_list(guild_keys)').all() as { from: string }[];
+  const ties = db.prepare('PRAGMA foreign_key_list(guild_keys)').all() as {
+    from: string;
+  }[];
   if (
     !ties.some(function onWrapper(tie) {
       return tie.from === 'wrapper_id';

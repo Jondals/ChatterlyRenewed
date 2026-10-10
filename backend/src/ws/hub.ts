@@ -32,7 +32,7 @@ export const MAX_ROOM_SIZE = 8; // full-mesh P2P: every extra peer adds an upstr
 const MAX_CONNECTIONS_PER_USER = 8;
 
 /**
- * Tracks live sockets, presence and call rooms. It never inspects payloads of `rtc.signal`
+ * ! Tracks live sockets, presence and call rooms. It never inspects payloads of `rtc.signal`
  * messages: those are end-to-end encrypted between peers.
  */
 export class Hub {

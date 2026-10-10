@@ -138,7 +138,6 @@ export type BubbleStyle =
   | 'block'
   | 'dashed';
 export type ClickStyle =
-  | 'pop'
   | 'tap'
   | 'switch'
   | 'pluck'
@@ -212,7 +211,7 @@ export class SettingsService {
   readonly callEffectsVolume = persisted('pref.callEffectsVolume', 100);
   /** Volume of the music shared in a call (only YouTube can be controlled from outside). */
   readonly musicVolume = persisted('pref.musicVolume', 80);
-  readonly clickStyle = persisted<ClickStyle>('pref.clickStyle', 'pop');
+  readonly clickStyle = persisted<ClickStyle>('pref.clickStyle', 'soft');
   /** The sound of an incoming call. */
   readonly ringtone = persisted<RingtoneId>('pref.ringtone', 'auto');
   /** File name of the custom ringtone (empty when there is none). */
@@ -332,6 +331,20 @@ export class SettingsService {
   readonly spatialAudio = persisted('pref.spatial', true);
   /** Microphone level (0 to 100) below which the voice gate stays closed. */
   readonly inputGate = persisted('pref.inputGate', 8);
+  /** Volume of the microphone before it is sent, in percent (0 to 200). */
+  readonly inputVolume = persisted('pref.inputVolume', 100);
+  /** Extra removal of rumble, hiss and the noise around the voice, after the browser's own suppression. */
+  readonly voiceCleanup = persisted<'off' | 'light' | 'strong'>('pref.voiceCleanup', 'light');
+  /** Brings the loud and the quiet words of the voice closer. */
+  readonly voiceLeveler = persisted<'off' | 'gentle' | 'strong'>('pref.voiceLeveler', 'off');
+  /** A little more presence in the voice. */
+  readonly voiceClarity = persisted('pref.voiceClarity', false);
+  /** The quality of the camera in calls (the height of the picture in pixels). */
+  readonly cameraQuality = persisted<'480' | '720' | '1080'>('pref.cameraQuality', '720');
+  /** Pictures per second of the camera. */
+  readonly cameraFps = persisted<'15' | '30' | '60'>('pref.cameraFps', '30');
+  /** Whether your own camera is shown mirrored to you (the others always see it as it is). */
+  readonly cameraMirror = persisted('pref.cameraMirror', true);
 
   /** Brings old data up to date and starts applying the preferences to the page. */
   constructor() {

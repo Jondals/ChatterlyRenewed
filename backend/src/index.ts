@@ -9,7 +9,7 @@ import { loadConfig, relayProblem } from './config';
 async function main() {
   const config = loadConfig();
   const app = await buildApp(config);
-  // Relay-only calls without a relay are refused (fail closed); say so loudly at start, not on the first call.
+  // ! Relay-only calls without a relay are refused (fail closed); say so loudly at start, not on the first call.
   const problem = relayProblem(config);
   if (problem) app.log.error(problem);
   const shutdown = async function () {

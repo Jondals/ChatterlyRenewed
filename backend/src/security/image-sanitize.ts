@@ -180,7 +180,10 @@ function webpSize(type: string, data: Buffer): { width: number; height: number }
     data[4] === 0x01 &&
     data[5] === 0x2a
   ) {
-    return { width: data.readUInt16LE(6) & 0x3fff, height: data.readUInt16LE(8) & 0x3fff };
+    return {
+      width: data.readUInt16LE(6) & 0x3fff,
+      height: data.readUInt16LE(8) & 0x3fff,
+    };
   }
   return null;
 }
@@ -212,7 +215,7 @@ function cleanWebp(input: Buffer): CleanImage | null {
       const payload = Buffer.from(data);
       if (type === 'VP8X') {
         if (payload.length < 10) return null;
-        // Bits 2 (XMP) and 3 (EXIF) of the flags say that metadata chunks follow; they do not any more.
+        // * Bits 2 (XMP) and 3 (EXIF) of the flags say that metadata chunks follow; they do not any more.
         payload[0] = payload[0]! & ~0x0c;
       }
       size ??= webpSize(type, payload);

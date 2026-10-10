@@ -265,7 +265,7 @@ export class ParticleNetworkComponent implements OnDestroy {
   /** Starts the loop of frames (outside Angular so it does not check the whole page on every frame). */
   private startLoop(): void {
     if (this.frameId || document.hidden) return;
-    // Outside the Angular zone: animating must not trigger change detection on every frame.
+    // ! Outside the Angular zone: animating must not trigger change detection on every frame.
     this.zona.runOutsideAngular(this.loop.bind(this));
   }
 

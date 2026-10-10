@@ -1134,6 +1134,39 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                   </div>
                 }
               </div>
+              @if (musicSrc()) {
+                <div class="timeline flex items-center gap-2 border-t border-white/8 px-3 py-2">
+                  <button
+                    type="button"
+                    class="btn btn-icon btn-sm btn-ghost"
+                    [attr.title]="(paused() ? 'Play' : 'Pause') | t"
+                    [attr.aria-label]="(paused() ? 'Play' : 'Pause') | t"
+                    (click)="togglePause()"
+                  >
+                    <app-icon [name]="paused() ? 'play' : 'pause'" [size]="15" />
+                  </button>
+                  <span
+                    class="min-w-[2.7rem] text-right font-mono text-[0.625rem] tabular-nums text-muted"
+                    >{{ clock(elapsed()) }}</span
+                  >
+                  <input
+                    type="range"
+                    class="min-w-0 flex-1"
+                    min="0"
+                    step="1"
+                    [max]="duration() || 1"
+                    [value]="elapsed()"
+                    [disabled]="duration() <= 0"
+                    [attr.aria-label]="'Timeline' | t"
+                    (pointerdown)="scrubbing.set(true)"
+                    (input)="elapsed.set(+$any($event.target).value)"
+                    (change)="seekTo(+$any($event.target).value)"
+                  />
+                  <span class="min-w-[2.7rem] font-mono text-[0.625rem] tabular-nums text-muted">{{
+                    clock(duration())
+                  }}</span>
+                </div>
+              }
             </div>
           }
         }
@@ -1163,6 +1196,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
             class="absolute inset-0 h-full w-full bg-black"
             [class.object-cover]="t.kind === 'camera' && !focus"
             [class.object-contain]="t.kind === 'screen' || focus"
+            [class.-scale-x-100]="t.local && t.kind === 'camera' && settings.cameraMirror()"
             [appMediaStream]="t.stream"
             autoplay
             playsinline

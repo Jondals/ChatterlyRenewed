@@ -109,7 +109,10 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
           return socket.close(4401, 'unauthenticated');
         let userId: string;
         try {
-          const claims = app.jwt.verify(msg['token']) as { sub: string; sid?: string };
+          const claims = app.jwt.verify(msg['token']) as {
+            sub: string;
+            sid?: string;
+          };
           userId = claims.sub;
           sessionId = claims.sid ?? '';
         } catch {

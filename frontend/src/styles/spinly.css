@@ -1,0 +1,49 @@
+/* The wheel and the tournaments (Spinly). */
+
+/* Spinly surfaces: a grid of lines that drifts by itself, like the real Spinly. */
+.sp-glow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.sp-glow::before {
+  content: '';
+  position: absolute;
+  /* wider than the card by one period of the grid, so it can slide by exactly that and start again without a jump */
+  inset: -38px;
+  z-index: -1;
+  pointer-events: none;
+  background-color: rgba(2, 4, 8, 0.5);
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size: 36px 36px;
+  filter: blur(1.1px);
+  will-change: transform;
+  animation: grid-drift 16s linear infinite;
+}
+
+/* The heads of the Spinly cards (chat and call): a soft band of the accent color. */
+.sp-head {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 16%, transparent),
+    transparent 75%
+  );
+}
+
+/* Folds that open and close smoothly (the bracket of a finished tournament). */
+.bracket-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.45s var(--ease),
+    opacity 0.3s var(--ease-suave);
+}
+
+.bracket-fold.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
