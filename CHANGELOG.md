@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.21.1
+
+- **The camera works when it is turned on while the other person has theirs on, and when it is turned off and on again.** The test of the app now reproduces what happened (a camera that was turned on while the other one was already on never reached the other person) and passes with the fix of 2.21.0: a camera or a screen goes through a new transceiver each time. The test turns the camera off and on four times at different speeds, then both cameras on at once, and turns both off and on together three times, and checks that each person sees the other one move every time.
+
 ## 2.21.0
 
 - **A long string without spaces no longer leaves its bubble** (`aaaa…`): the bubble breaks it at any point.

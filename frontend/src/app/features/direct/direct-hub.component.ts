@@ -587,6 +587,13 @@ export class DirectHubComponent {
         }.bind(this),
       },
       {
+        label: 'View profile',
+        icon: 'user',
+        action: function (this: DirectHubComponent) {
+          return this.ui.profileUserId.set(u.id);
+        }.bind(this),
+      },
+      {
         label: 'Set nickname',
         icon: 'edit',
         separator: true,

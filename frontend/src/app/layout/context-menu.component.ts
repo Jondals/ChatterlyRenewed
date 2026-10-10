@@ -49,30 +49,47 @@ const EDGE_GAP = 8;
   styles: `
     .ctx-menu {
       position: fixed;
-      min-width: 11.5rem;
-      padding: 0.3rem;
-      border-radius: var(--r);
+      min-width: 12.5rem;
+      padding: 0.35rem;
+      border-radius: calc(var(--r) * 1.2);
       border: 1px solid var(--line);
-      background: var(--ink-800);
-      box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+      background: color-mix(in oklab, var(--ink-800) 94%, transparent);
+      backdrop-filter: blur(14px);
+      box-shadow:
+        0 18px 40px -12px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
       animation: pop-in 0.14s var(--ease) both;
     }
     .ctx-item {
       display: flex;
       width: 100%;
       align-items: center;
-      gap: 0.6rem;
-      padding: 0.45rem 0.6rem;
+      gap: 0.65rem;
+      padding: 0.5rem 0.65rem;
       border-radius: calc(var(--r) * 0.7);
       font-size: 0.85rem;
       font-weight: 500;
       color: var(--fg);
       text-align: left;
+      transition:
+        background 0.12s var(--ease),
+        color 0.12s var(--ease);
     }
-    .ctx-item:hover {
-      background: rgba(255, 255, 255, 0.08);
+    .ctx-item app-icon {
+      color: var(--muted, rgba(255, 255, 255, 0.55));
+      transition: color 0.12s var(--ease);
     }
-    .ctx-item.danger {
+    .ctx-item:hover,
+    .ctx-item:focus-visible {
+      background: color-mix(in oklab, var(--accent) 18%, transparent);
+      outline: none;
+    }
+    .ctx-item:hover app-icon,
+    .ctx-item:focus-visible app-icon {
+      color: var(--accent);
+    }
+    .ctx-item.danger,
+    .ctx-item.danger app-icon {
       color: #fca5a5;
     }
     .ctx-item.danger:hover {

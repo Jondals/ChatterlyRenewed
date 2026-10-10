@@ -821,8 +821,16 @@ export class ContextSidebarComponent {
   protected openFriendMenu(event: MouseEvent, u: User): void {
     const items: MenuItem[] = [
       {
+        label: 'View profile',
+        icon: 'user',
+        action: function (this: ContextSidebarComponent) {
+          return this.ui.profileUserId.set(u.id);
+        }.bind(this),
+      },
+      {
         label: 'Set nickname',
         icon: 'edit',
+        separator: true,
         action: function (this: ContextSidebarComponent) {
           return void this.directory.askNickname(u);
         }.bind(this),

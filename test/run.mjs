@@ -1160,6 +1160,90 @@ async function main() {
     }),
     'Bob decrypts and shows the video of Alice',
   );
+  // The camera is turned off and on again several times, quickly and slowly: every time the other person must see it move.
+  const movingVideo = async function (page, label) {
+    const ok = await page
+      .waitForFunction(
+        function () {
+          return [...document.querySelectorAll('video')].some(function (v) {
+            if (v.readyState < 2 || v.videoWidth === 0) return false;
+            const now = v.currentTime;
+            if (v.__last === undefined || v.__last === now) {
+              v.__last = now;
+              return false;
+            }
+            return true;
+          });
+        },
+        null,
+        { timeout: 9000, polling: 400 },
+      )
+      .then(
+        function () {
+          return true;
+        },
+        function () {
+          return false;
+        },
+      );
+    check(ok, label);
+  };
+  for (const pause of [1200, 150, 600, 150]) {
+    await a.click('[data-tip="Turn camera off"]');
+    await a.waitForTimeout(pause);
+    await a.click('[data-tip="Turn camera on"]');
+    await movingVideo(
+      b,
+      'Bob sees the camera of Alice move after turning it off and on (' + pause + ' ms)',
+    );
+  }
+  // Both cameras at the same time, turned off and on together (the two sides negotiate at once).
+  const remoteMoving = function (page, label) {
+    return page
+      .waitForFunction(
+        function () {
+          return [...document.querySelectorAll('video')].some(function (v) {
+            if (v.muted || v.readyState < 2 || v.videoWidth === 0) return false;
+            const now = v.currentTime;
+            const moved = v.__seen !== undefined && v.__seen !== now;
+            v.__seen = now;
+            return moved;
+          });
+        },
+        null,
+        { timeout: 9000, polling: 400 },
+      )
+      .then(
+        function () {
+          return check(true, label);
+        },
+        function () {
+          return check(false, label);
+        },
+      );
+  };
+  await b.click('[data-tip="Turn camera on"]');
+  await remoteMoving(a, 'Alice sees the camera of Bob');
+  for (const pause of [900, 100, 400]) {
+    await Promise.all([
+      a.click('[data-tip="Turn camera off"]'),
+      b.click('[data-tip="Turn camera off"]'),
+    ]);
+    await a.waitForTimeout(pause);
+    await Promise.all([
+      a.click('[data-tip="Turn camera on"]'),
+      b.click('[data-tip="Turn camera on"]'),
+    ]);
+    await remoteMoving(
+      a,
+      'Alice sees Bob after both turned the camera off and on together (' + pause + ' ms)',
+    );
+    await remoteMoving(
+      b,
+      'Bob sees Alice after both turned the camera off and on together (' + pause + ' ms)',
+    );
+  }
+  await b.click('[data-tip="Turn camera off"]');
   await a.click('button[aria-label="Hang up"]');
   await b.waitForTimeout(800);
   await b.click('button[aria-label="Hang up"]');

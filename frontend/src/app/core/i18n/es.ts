@@ -189,6 +189,7 @@ export const ES: Record<string, string> = {
   'Whoosh': 'Ráfaga',
   'Drum roll': 'Redoble',
   'Wave': 'Ola',
+  'View profile': 'Ver perfil',
   'Set nickname': 'Poner apodo',
   'Remove nickname': 'Quitar apodo',
   'Only you see this nickname. Leave it empty to remove it.':
