@@ -173,7 +173,7 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
                     }
                     @for (m of sec.items; track m.user.id; let i = $index) {
                       <div
-                        class="nav-item chan-item group anim-fade-in !cursor-pointer"
+                        class="nav-item chan-item group anim-fade-in cursor-pointer"
                         role="button"
                         tabindex="0"
                         [style.--d]="i * 25 + 'ms'"

@@ -107,7 +107,7 @@ import { SocialStore } from '../../store/social.store';
       >
         <div class="max-h-80 space-y-1 overflow-y-auto">
           @for (u of invitable(); track u.id) {
-            <div class="nav-item !cursor-default !py-2">
+            <div class="nav-item cursor-default !py-2">
               <app-avatar [user]="u" [size]="34" [status]="social.statusOf(u.id)" />
               <span class="min-w-0 flex-1"
                 ><span

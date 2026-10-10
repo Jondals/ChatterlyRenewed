@@ -1,5 +1,48 @@
 # Changelog
 
+## 2.20.0
+
+- **Security: rate limits.** The counter of the rate limit was kept per address and shared by every route, so a route with a limit of its own (20 uploads or link previews a minute) was refused as soon as the same address had made 20 requests of any kind. Each route with its own limit has its own counter now (a test covers it).
+- **Security: profile pictures.** A person who is no longer a friend, does not share a server and has no conversation with the owner loses the picture at once, even if the key that was sealed for them is still stored (before, the key was enough). The endpoint of the key alone was removed (the picture and its key come in one answer). The dependencies have no known vulnerabilities (`pnpm audit`).
+- **Sounds as OGG.** Every sound is an OGG Vorbis file now (513 KB became 299 KB): the interface sounds are about 4 to 6 KB each, the ringtones 33 to 80 KB. The README of the folder says how to replace one. There are no images of the site that gain with WebP: the icons must be PNG (the phone and the manifest ask for it), the share picture JPG (the networks that read it do not all understand WebP) and the logo is a 481 byte SVG.
+- **The first press sounds.** The sounds are downloaded and decoded while the page starts (an audio context that only decodes needs no press), so the first click has its sound. Before, they started loading with that first press and it stayed silent.
+- Voice & video settings: the duplicate "Call sound effects" slider is gone (the volume of the soundboard is in Sounds & notifications and in the soundboard itself).
+- Camera: with "Mirror my camera" on, the corners of the tile stay rounded.
+- Settings: more room under the titles of the cards and under the last row.
+- Call, drawer of data: it shows three small figures (loss, jitter, cipher), a small graph of the latency, and the microphone and the camera as closed folds with a summary (the level; the quality and the frames per second), instead of every option at once.
+- Chat: the gradient of the bar of formatting is now the same editor as About me (quick gradients, up to five colors, markers to drag) in a panel under the bar, with Apply.
+- Code: unused functions removed (`allMatches`, `sanitizeSpin`, `colorTag`, `gradientTag`, `CURSOR_NAMES`, `initialRingtone` and some variables).
+
+## 2.19.1
+
+- Soundboard: the volume goes from 0 to 100 %.
+- Chats: opening another conversation shows it at its end at once (it was gliding from the top to the bottom, because its messages arrived before the list was hidden).
+- Folds inside a card (Cursor, Theme, Background, Name font, Profile effect) are rows of the card now. They were still boxes, because the utility classes of the fold won over the rule of the card; the rule is important now.
+- Name fonts: pressing one no longer turns all of them into that font (every preview was given the chosen font); each shows its own.
+- Gradients: the quick angles are gone, the bar is thin, its markers stay inside the box, and when the gradient of the name or the banner is on, the single color square disappears (the gradient is the color). In About me the panels of color and gradient open in the flow under the toolbar, so they do not fall out of the page and the text that is being written stays in sight.
+- My profile: the page keeps the room of the scroll bar (it shrank when a fold made the page longer and the bar appeared).
+- Call, drawer of data: it is "Call data"; the spatial position is gone; the microphone has the toggles of the browser, the voice options (clear voice, extra noise removal, leveler), the level, the volume of the microphone and the gate; the camera has quality, frames per second and the mirror.
+- Call: while the encryption is being set up the chip shows a shield (it said "Securing…").
+- Introduction: it plays once each time the browser is opened (the first visit and a new window), not when the page is reloaded. Settings > Appearance > Motion has "Watch it again".
+- Groups: the names of the tags in the list of members are shown as they were written (they were forced to capitals).
+
+## 2.19.0
+
+- **Soundboard with your own categories.** The "Default" tab is gone and the app brings only **six** effects (air horn, boing, sad trombone, ta-da, rimshot, applause). You can create categories (the "+" next to "All"), rename or delete them, and move a sound to one from its tile. "All" shows the six, your sounds without a category and then each category with its title. Nothing is drawn all at once: a screen of tiles first and more while you scroll.
+- **Emoji picker:** every list draws one screen and only more when the end is near (before, a category filled itself little by little in the background and a change of tab lagged). The tab "All" has "Frequently used" at the top.
+- **Sounds & notifications:** the order of the volumes is now interface sounds, music, effects and soundboard.
+- **Sliders with words:** one component (`step-slider`) puts each word exactly under the place where the thumb stops; the first and the last line up with the ends and nothing hangs out of the box. The blur and the text size show only the ends and the value. **Text size** changes the page when the slider is let go (before everything, the slider included, grew and shrank under the thumb while it was dragged).
+- **Corner style:** a preview and seven choices (the slider repeated them). A fold inside a card is now a row of the card (a line above it) instead of a second box inside the box (Cursor, Name font, Profile effect, Theme...). The theme cards no longer pile up their text when one is chosen (the name has its own line and the check mark does not take its room).
+- **My profile:** the profile effects and the name fonts show **three per row**, "Delete account" is under the preview, and the folds no longer narrow the page when they open.
+- **Chat:** the bubbles have more room at the bottom. The option "Message style" (bubbles or flat) was removed: it is always bubbles. The "Latest" button glides down in a fixed time (slow start, fast middle, soft landing) and fades and sinks while it does.
+- **Cursor:** over the members of a group the system cursor showed (a Tailwind `!cursor-pointer` was stronger than the themed cursor); now the themed one stays.
+- **About:** the links to CHANGELOG and CONTRIBUTING pointed to a branch that does not exist (`main`; the repository uses `master`): they go to `HEAD` now.
+- **Spinly (Integrations):** only the number of themes and presets imported is shown, not each one. A title of a fold can use two lines ("How do I get my WhatsApp stickers?" lost its question mark).
+- The encryption fingerprints (safety number, raw fingerprints and the one in Privacy & security) are in bold again.
+- Animations: the lit grid of the background (two layers of a mask that was animated and painted the whole screen on every frame) is now a still mask with a band of light that slides (a transform).
+- Phone: the soundboard, the sliders and the profile page fit in 390 px.
+- Comments: more Better Comments tags (`?` for the reasons).
+
 ## 2.18.0
 
 - **Profile pictures and banners are now really end-to-end encrypted.** Until now they were stored in clear (the old text said so, but it was easy to think otherwise). Now the browser encrypts each picture with its own random AES-256-GCM key before uploading it; the server keeps only ciphertext and refuses to hand it to anybody who does not hold a key. The key is sealed, in the browser of the owner, for every person who may see the picture (friends, people who share a server, direct conversations) with the same pair key the direct messages use, and the viewer's browser opens it and decrypts the picture. A new contact gets the key the next time the owner is online (the browser offers it every few minutes while the page is open). Pictures and banners uploaded before this release were erased by the server at start (nothing can encrypt them without their owner): upload them again. Group icons stay readable by the members (documented in the README and SECURITY).

@@ -546,18 +546,35 @@ label,
   background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
 }
 
+/*
+ * The lit grid: the lines are a STILL mask, and what shows through them is a band of light that slides (a transform: the
+ * browser moves the layer, nothing is drawn again). Before, the mask itself was animated and the whole screen was
+ * painted again on every frame.
+ */
 .grid-lit {
   --gl: color-mix(in oklab, var(--accent) 85%, white);
-  mask-image: linear-gradient(115deg, transparent 38%, #000 50%, transparent 62%);
-  mask-size: 260% 100%;
-  mask-repeat: no-repeat;
+  background-image: none;
+  overflow: hidden;
+  mask-image:
+    linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px);
+  mask-size: 56px 56px;
   filter: drop-shadow(0 0 3px var(--accent));
+}
+.grid-lit::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 260%;
+  background: linear-gradient(115deg, transparent 38%, var(--gl) 50%, transparent 62%);
+  will-change: transform;
   animation: grid-wave calc(var(--bg-speed, 1) * 9s) linear infinite;
 }
 
 .grid-lit-2 {
   --gl: color-mix(in oklab, var(--accent-2) 85%, white);
-  mask-image: linear-gradient(65deg, transparent 40%, #000 50%, transparent 60%);
+}
+.grid-lit-2::before {
+  background: linear-gradient(65deg, transparent 40%, var(--gl) 50%, transparent 60%);
   animation-duration: calc(var(--bg-speed, 1) * 14s);
   animation-direction: reverse;
 }
@@ -569,6 +586,11 @@ label,
 
 .leave-pop {
   animation: leave-pop 0.18s var(--ease) forwards;
+}
+
+/* the "Latest" button of a chat: it fades and sinks while the chat glides down */
+.leave-latest {
+  animation: leave-latest 0.5s var(--ease-suave) forwards;
 }
 
 .popover-reset[popover]:not(:popover-open) {

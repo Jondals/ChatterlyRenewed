@@ -465,16 +465,23 @@
 
 @keyframes grid-wave {
   from {
-    mask-position: 130% 0;
+    transform: translateX(-3.85%);
   }
   to {
-    mask-position: -130% 0;
+    transform: translateX(-57.7%);
   }
 }
 
 @keyframes leave-fade {
   to {
     opacity: 0;
+  }
+}
+
+@keyframes leave-latest {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
   }
 }
 

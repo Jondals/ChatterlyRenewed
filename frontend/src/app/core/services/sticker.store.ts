@@ -244,7 +244,7 @@ export class StickerStore {
       canvas.height = Math.max(1, Math.round(bitmap.height * scale));
       canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       bitmap.close();
-      // A browser that protects against fingerprinting gives back one flat color instead of the picture: then the
+      // ? A browser that protects against fingerprinting gives back one flat color instead of the picture: then the
       // ! picture is kept as it was chosen (when it is small), never as a flat square.
       if (readCanvas(canvas) !== 'picture') {
         return blob.type.startsWith('image/') && blob.size <= MAX_STICKER_BYTES ? blob : null;
@@ -389,7 +389,7 @@ export class StickerStore {
     for (const emoji of STARTER) {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 256;
-      // Nothing real drawn (no emoji font, a protected canvas): the emoji becomes a vector picture instead of a blank or flat square.
+      // ? Nothing real drawn (no emoji font, a protected canvas): the emoji becomes a vector picture instead of a blank or flat square.
       if (!(await this.drawEmoji(canvas, emoji))) {
         blobs.push(emojiSvg(emoji));
         continue;

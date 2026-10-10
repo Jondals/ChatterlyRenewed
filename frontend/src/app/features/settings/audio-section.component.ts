@@ -104,26 +104,6 @@ import { decibels } from '../../shared/util/audio-level';
     </section>
 
     <section class="settings-card">
-      <label class="block text-sm"
-        ><span class="flex items-center justify-between gap-3"
-          ><span class="font-semibold">{{ 'Call sound effects' | t }}</span
-          ><b class="font-mono text-xs text-accent">{{ s.callEffectsVolume() }}%</b></span
-        >
-        <span class="mt-0.5 block text-xs text-muted">{{
-          'Volume of the soundboard effects that you and the others play in a call.' | t
-        }}</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          class="mt-2 w-full accent-[var(--accent)]"
-          [value]="s.callEffectsVolume()"
-          (input)="s.callEffectsVolume.set(+$any($event.target).value)"
-          [attr.aria-label]="'Call sound effects' | t"
-      /></label>
-    </section>
-
-    <section class="settings-card">
       <h2 class="settings-card-title">{{ 'Microphone processing' | t }}</h2>
       <app-setting-row
         title="Noise suppression"

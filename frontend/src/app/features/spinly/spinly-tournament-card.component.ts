@@ -811,7 +811,6 @@ export class SpinlyTournamentCardComponent implements OnInit {
   private celebrate(): void {
     this.played = true;
     this.sound.play('success');
-    this.sound.sfx('sparkle');
     this.finished.emit(this.names());
   }
 

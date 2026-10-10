@@ -44,7 +44,9 @@ import { describeError, passwordScore } from '../../shared/util/errors';
             | t
         }}
       </p>
-      <div class="flex items-center gap-2 rounded-ui bg-black/30 p-3 font-mono text-xs">
+      <div
+        class="flex items-center gap-2 rounded-ui bg-black/30 p-3 font-mono text-sm font-bold tracking-wider"
+      >
         <span class="selectable min-w-0 flex-1 break-all text-accent">{{ fingerprintText() }}</span>
         <button
           class="btn btn-icon btn-sm tip"

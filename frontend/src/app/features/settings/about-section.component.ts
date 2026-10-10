@@ -437,12 +437,12 @@ export class AboutSectionComponent {
     {
       label: 'What is new',
       name: 'Changelog',
-      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/main/CHANGELOG.md',
+      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/HEAD/CHANGELOG.md',
     },
     {
       label: 'Contribute',
       name: 'CONTRIBUTING',
-      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/main/.github/CONTRIBUTING.md',
+      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/HEAD/.github/CONTRIBUTING.md',
     },
   ];
   /** A text with the names of the encryption systems as links to their documents. */
@@ -479,7 +479,7 @@ export class AboutSectionComponent {
       icon: 'shield-check',
       title: 'No tracking',
       text: 'No ads, no analytics, no profile of you. Messages are unreadable for the server.',
-      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/main/SECURITY.md',
+      url: 'https://github.com/Jondals/ChatterlyRenewed/blob/HEAD/SECURITY.md',
     },
   ];
   /** The logos as trusted HTML: they are constants of this code (see tech-logos.ts). */

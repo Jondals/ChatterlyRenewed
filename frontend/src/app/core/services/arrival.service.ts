@@ -18,6 +18,9 @@ export interface Arrival {
 /** The longest the caller waits for the animation to reach its reveal point (if the component fails to load). */
 const GIVE_UP_MS = 4000;
 
+/** The mark that says the introduction already played in this session of the browser. */
+const INTRO_SEEN = 'chatterly.introSeen';
+
 /** Plays the arrival animations and says when the page underneath can change. */
 @Injectable({ providedIn: 'root' })
 export class ArrivalService {
@@ -69,16 +72,29 @@ export class ArrivalService {
   }
 
   /**
-   * Every time the page is loaded (the first visit and every reload) the introduction plays. Until it is on screen
-   * the page is covered by a dark layer that comes inside the HTML, so the first thing seen is never the sign-in page.
+   * The introduction plays once each time the browser is opened (the first visit, a new window): not when the page is
+   * reloaded, which keeps the mark of the session. Until it is on screen the page is covered by a dark layer that comes
+   * inside the HTML, so the first thing seen is never the sign-in page.
    */
   maybeIntro(): void {
-    if (this.wanted()) {
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem(INTRO_SEEN) === '1';
+      sessionStorage.setItem(INTRO_SEEN, '1');
+    } catch {
+      /* no storage: the introduction plays, as it would the first time */
+    }
+    if (this.wanted() && !seen) {
       void this.play('intro');
       setTimeout(this.dropCover, 6000);
     } else {
       this.dropCover();
     }
+  }
+
+  /** Plays the introduction again, because the person asked for it (in the settings). */
+  replayIntro(): Promise<void> {
+    return this.play('intro');
   }
 
   /** Removes the dark layer of the HTML (the animation took its place, or there will be none). */

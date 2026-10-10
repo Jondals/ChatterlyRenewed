@@ -89,6 +89,8 @@ export class AppComponent {
     window.setTimeout(this.loadExtras.bind(this), 0);
     // The very first visit opens with a short animation (nothing is shown to people who are already signed in).
     window.setTimeout(this.arrival.maybeIntro.bind(this.arrival), 0);
+    // The sounds load while the page starts, so the first press already has its sound.
+    window.setTimeout(this.sound.preload.bind(this.sound), 800);
     // ! Not passive: the page must not scroll while the wheel turns over a slider.
     document.addEventListener('wheel', this.wheelHandler, { passive: false });
     document.addEventListener('pointerdown', this.onFingerDown.bind(this), { passive: true });
@@ -186,7 +188,7 @@ export class AppComponent {
   }
 
   /**
-   * The mouse wheel over a slider moves it one step (up raises it, down lowers it) instead of scrolling the
+   * ? The mouse wheel over a slider moves it one step (up raises it, down lowers it) instead of scrolling the
    * page. The step is the slider's own (1 when it has none).
    */
   private onWheel(event: WheelEvent): void {

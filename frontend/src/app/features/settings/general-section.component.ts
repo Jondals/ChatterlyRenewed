@@ -123,6 +123,23 @@ const FLAGS: Record<string, string> = {
           />
         </app-setting-row>
         <app-setting-row
+          title="Music volume"
+          hint="The song shared in a call. Only YouTube can be controlled from here; Spotify uses its own player volume."
+        >
+          <div class="flex items-center gap-3">
+            <app-icon name="music" [size]="16" class="text-muted" /><input
+              type="range"
+              min="0"
+              max="100"
+              class="w-44 accent-[var(--accent)]"
+              [value]="s.musicVolume()"
+              (input)="s.musicVolume.set(+$any($event.target).value)"
+            /><span class="w-9 text-right font-mono text-xs text-muted"
+              >{{ s.musicVolume() }}%</span
+            >
+          </div>
+        </app-setting-row>
+        <app-setting-row
           title="Effects volume"
           hint="Message pings, button clicks, mute tones and the soundboard."
         >
@@ -148,29 +165,12 @@ const FLAGS: Record<string, string> = {
             <app-icon name="volume" [size]="16" class="text-muted" /><input
               type="range"
               min="0"
-              max="200"
+              max="100"
               class="w-44 accent-[var(--accent)]"
               [value]="s.callEffectsVolume()"
               (input)="s.callEffectsVolume.set(+$any($event.target).value)"
             /><span class="w-9 text-right font-mono text-xs text-muted"
               >{{ s.callEffectsVolume() }}%</span
-            >
-          </div>
-        </app-setting-row>
-        <app-setting-row
-          title="Music volume"
-          hint="The song shared in a call. Only YouTube can be controlled from here; Spotify uses its own player volume."
-        >
-          <div class="flex items-center gap-3">
-            <app-icon name="music" [size]="16" class="text-muted" /><input
-              type="range"
-              min="0"
-              max="100"
-              class="w-44 accent-[var(--accent)]"
-              [value]="s.musicVolume()"
-              (input)="s.musicVolume.set(+$any($event.target).value)"
-            /><span class="w-9 text-right font-mono text-xs text-muted"
-              >{{ s.musicVolume() }}%</span
             >
           </div>
         </app-setting-row>

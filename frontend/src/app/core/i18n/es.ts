@@ -1397,4 +1397,18 @@ export const ES: Record<string, string> = {
   'Let the others add it to their soundboard':
     'Deja que los demás lo añadan a su tablero de sonidos',
   'For the soundboard': 'Para el tablero',
+  'New category': 'Nueva categoría',
+  'Rename': 'Renombrar',
+  'Delete category': 'Borrar categoría',
+  'Move to a category': 'Mover a una categoría',
+  'Sounds can be sorted in categories of your own.':
+    'Los sonidos se pueden ordenar en categorías propias.',
+  'Its sounds are kept: they go back to All.': 'Sus sonidos se conservan: vuelven a Todos.',
+  'No category': 'Sin categoría',
+  'End-to-end encryption': 'Cifrado de extremo a extremo',
+  'Call data': 'Datos de la llamada',
+  'Introduction': 'Introducción',
+  'The animation that plays once each time you open the browser.':
+    'La animación que sale una vez cada vez que abres el navegador.',
+  'Watch it again': 'Verla otra vez',
 };

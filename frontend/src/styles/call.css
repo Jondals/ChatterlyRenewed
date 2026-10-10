@@ -417,3 +417,67 @@
     color: var(--accent);
   }
 }
+
+/* The rows of the drawer of data of a call: the name on the left and the control on the right (or under it). */
+.drawer-rows {
+  display: grid;
+  gap: 0.7rem;
+  font-size: 0.75rem;
+}
+.drawer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.drawer-block {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+/* A figure of the quality of a call: the number big, its name small under it. */
+.drawer-stat {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.3rem;
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.04);
+}
+.drawer-stat b {
+  font-size: 0.8125rem;
+}
+.drawer-stat span {
+  font-size: 0.625rem;
+  color: var(--muted);
+}
+
+/* The options of the microphone and of the camera are closed until the person opens them. */
+.drawer-fold {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.drawer-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: var(--cur-pointer, pointer);
+  list-style: none;
+}
+.drawer-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.drawer-fold > summary:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.drawer-fold[open] > summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.drawer-fold > .drawer-rows {
+  padding: 0.8rem;
+}

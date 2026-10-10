@@ -36,7 +36,7 @@ import { ModalComponent } from '../../shared/components/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { DeviceMenuComponent } from './device-menu.component';
 import { PersonMenuComponent } from './person-menu.component';
-import { ToggleComponent } from '../../shared/components/controls.component';
+import { SegmentedComponent, ToggleComponent } from '../../shared/components/controls.component';
 import { MediaStreamDirective } from '../../shared/util/media-stream.directive';
 import { GuildStore } from '../../store/guild.store';
 import { MessageStore } from '../../store/message.store';
@@ -93,6 +93,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
     SpinlyCallPanelComponent,
     SpinlyLogoComponent,
     ToggleComponent,
+    SegmentedComponent,
     DecimalPipe,
     NgTemplateOutlet,
     TranslatePipe,
@@ -110,7 +111,12 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
             [class.chip-red]="call.mediaEncryption() === 'failing'"
             (click)="verifyOpen.set(true)"
           >
-            <app-icon name="lock" [size]="11" />
+            <app-icon
+              [name]="call.mediaEncryption() === 'pending' ? 'shield' : 'lock'"
+              [size]="11"
+              [class.animate-pulse]="call.mediaEncryption() === 'pending'"
+            />
+            <span class="sr-only sm:hidden">{{ 'End-to-end encryption' | t }}</span>
             <span class="max-sm:hidden">
               @switch (call.mediaEncryption()) {
                 @case ('active') {
@@ -118,9 +124,6 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                 }
                 @case ('failing') {
                   {{ 'Encryption problem' | t }}
-                }
-                @default {
-                  {{ 'Securing…' | t }}
                 }
               }
             </span>
@@ -732,7 +735,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
               <div
                 class="flex shrink-0 items-center justify-between border-b border-white/6 px-4 py-2.5"
               >
-                <span class="text-sm font-semibold">{{ 'Stats' | t }}</span>
+                <span class="text-sm font-semibold">{{ 'Call data' | t }}</span>
                 <button
                   class="btn btn-icon btn-sm btn-ghost"
                   type="button"
@@ -745,15 +748,21 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
               @switch (tab) {
                 @case ('stats') {
                   <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-                    <div class="text-xs text-muted">
-                      {{ 'Packet loss' | t }} <b class="text-fg">{{ call.stats().lossPct }}%</b> ·
-                      {{ 'Jitter' | t }}
-                      <b class="text-fg">{{ call.stats().jitterMs ?? '—' }} ms</b> ·
-                      {{ 'Transport' | t }} <b class="text-fg">DTLS-SRTP {{ cipherLabel() }}</b>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                      <div class="drawer-stat">
+                        <b>{{ call.stats().lossPct }}%</b><span>{{ 'Packet loss' | t }}</span>
+                      </div>
+                      <div class="drawer-stat">
+                        <b>{{ call.stats().jitterMs ?? '—' }} ms</b><span>{{ 'Jitter' | t }}</span>
+                      </div>
+                      <div class="drawer-stat">
+                        <b>{{ cipherLabel() }}</b
+                        ><span>DTLS-SRTP</span>
+                      </div>
                     </div>
                     <div class="rounded-ui border border-white/6 p-3">
                       <div class="label">{{ 'Latency' | t }}</div>
-                      <svg viewBox="0 0 200 70" preserveAspectRatio="none" class="my-2 h-24 w-full">
+                      <svg viewBox="0 0 200 70" preserveAspectRatio="none" class="my-2 h-16 w-full">
                         <defs>
                           <linearGradient id="lat" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0" stop-color="var(--accent)" stop-opacity=".35" />
@@ -780,92 +789,70 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                         >
                       </div>
                     </div>
-                    <div class="rounded-ui border border-white/6 p-3">
-                      <div class="label">{{ 'Spatial placement' | t }}</div>
-                      <svg viewBox="-60 -60 120 120" class="my-2 h-32 w-full">
-                        <circle
-                          r="48"
-                          fill="none"
-                          stroke="rgba(255,255,255,.1)"
-                          stroke-dasharray="3 4"
-                        />
-                        <circle r="26" fill="none" stroke="rgba(255,255,255,.07)" />
-                        <circle r="7" fill="var(--accent)" />
-                        <text
-                          y="2.6"
-                          text-anchor="middle"
-                          font-size="5.5"
-                          fill="#06070b"
-                          font-weight="700"
+                    <details class="drawer-fold">
+                      <summary>
+                        <span>{{ 'Microphone' | t }}</span>
+                        <span class="font-mono text-[0.6875rem] font-normal text-muted"
+                          >{{ dbfs(myLevel()) }} dB</span
                         >
-                          {{ 'YOU' | t }}
-                        </text>
-                        @for (p of placements(); track p.id) {
-                          <g
-                            [attr.transform]="'translate(' + p.x + ',' + p.y + ')'"
-                            style="transition: transform .5s"
-                          >
-                            <circle
-                              r="9"
-                              [attr.fill]="p.speaking ? 'var(--accent)' : '#7c3aed'"
-                              opacity=".9"
-                            />
-                            <text
-                              y="2.5"
-                              text-anchor="middle"
-                              font-size="6.5"
-                              fill="#fff"
-                              font-weight="700"
-                            >
-                              {{ p.initials }}
-                            </text>
-                          </g>
-                        }
-                      </svg>
-                      <label class="block text-xs text-muted"
-                        >{{ 'Spread' | t }}
-                        <b class="float-right text-fg"
-                          >{{ call.spread() * 100 | number: '1.0-0' }}%</b
-                        >
-                        <input
-                          type="range"
-                          min="0.4"
-                          max="1.3"
-                          step="0.05"
-                          class="mt-1 w-full accent-[var(--accent)]"
-                          [value]="call.spread()"
-                          (input)="call.spread.set(+$any($event.target).value)"
-                      /></label>
-                    </div>
-                    <div class="rounded-ui border border-white/6 p-3">
-                      <div class="label">{{ 'Microphone' | t }}</div>
-                      <div class="mt-3 space-y-2.5 text-xs">
-                        <label class="flex items-center justify-between gap-2"
-                          >{{ 'Noise suppression' | t }}
-                          <input
-                            type="checkbox"
-                            class="h-4 w-4 accent-[var(--accent)]"
+                      </summary>
+                      <div class="drawer-rows">
+                        <div class="drawer-row">
+                          <span>{{ 'Noise suppression' | t }}</span>
+                          <app-toggle
                             [checked]="settings.noiseSuppression()"
-                            (change)="setDsp('noise', $any($event.target).checked)"
-                        /></label>
-                        <label class="flex items-center justify-between gap-2"
-                          >{{ 'Echo cancellation' | t }}
-                          <input
-                            type="checkbox"
-                            class="h-4 w-4 accent-[var(--accent)]"
+                            (checkedChange)="setDsp('noise', $event)"
+                            [label]="'Noise suppression' | t"
+                          />
+                        </div>
+                        <div class="drawer-row">
+                          <span>{{ 'Echo cancellation' | t }}</span>
+                          <app-toggle
                             [checked]="settings.echoCancellation()"
-                            (change)="setDsp('echo', $any($event.target).checked)"
-                        /></label>
-                        <label class="flex items-center justify-between gap-2"
-                          >{{ 'Auto gain' | t }}
-                          <input
-                            type="checkbox"
-                            class="h-4 w-4 accent-[var(--accent)]"
+                            (checkedChange)="setDsp('echo', $event)"
+                            [label]="'Echo cancellation' | t"
+                          />
+                        </div>
+                        <div class="drawer-row">
+                          <span>{{ 'Auto gain' | t }}</span>
+                          <app-toggle
                             [checked]="settings.autoGain()"
-                            (change)="setDsp('agc', $any($event.target).checked)"
-                        /></label>
+                            (checkedChange)="setDsp('agc', $event)"
+                            [label]="'Auto gain' | t"
+                          />
+                        </div>
+                        <div class="drawer-row">
+                          <span>{{ 'Clearer voice' | t }}</span>
+                          <app-toggle
+                            [checked]="settings.voiceClarity()"
+                            (checkedChange)="
+                              settings.voiceClarity.set($event); call.changeInputDevice()
+                            "
+                            [label]="'Clearer voice' | t"
+                          />
+                        </div>
+                        <div class="drawer-block">
+                          <span>{{ 'Extra noise removal' | t }}</span>
+                          <app-segmented
+                            [options]="cleanupOptions"
+                            [value]="settings.voiceCleanup()"
+                            (valueChange)="
+                              settings.voiceCleanup.set($any($event)); call.changeInputDevice()
+                            "
+                          />
+                        </div>
+                        <div class="drawer-block">
+                          <span>{{ 'Voice leveler' | t }}</span>
+                          <app-segmented
+                            [options]="levelerOptions"
+                            [value]="settings.voiceLeveler()"
+                            (valueChange)="
+                              settings.voiceLeveler.set($any($event)); call.changeInputDevice()
+                            "
+                          />
+                        </div>
                         <div>
-                          <div class="mb-1 flex justify-between text-muted">
+                          <div class="mb-1 flex justify-between text-xs text-muted">
                             <span>{{ 'Level' | t }}</span
                             ><b class="text-fg">{{ dbfs(myLevel()) }} dB</b>
                           </div>
@@ -876,7 +863,19 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                             ></div>
                           </div>
                         </div>
-                        <label class="block text-muted"
+                        <label class="block text-xs text-muted"
+                          >{{ 'Microphone volume' | t }}
+                          <b class="float-right text-fg">{{ settings.inputVolume() }}%</b>
+                          <input
+                            type="range"
+                            min="0"
+                            max="200"
+                            class="mt-1 w-full accent-[var(--accent)]"
+                            [value]="settings.inputVolume()"
+                            (input)="settings.inputVolume.set(+$any($event.target).value)"
+                            (change)="call.changeInputDevice()"
+                        /></label>
+                        <label class="block text-xs text-muted"
                           >{{ 'Input gate' | t }}
                           <b class="float-right text-fg">{{ settings.inputGate() }}%</b>
                           <input
@@ -888,7 +887,45 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                             (input)="settings.inputGate.set(+$any($event.target).value)"
                         /></label>
                       </div>
-                    </div>
+                    </details>
+                    <details class="drawer-fold">
+                      <summary>
+                        <span>{{ 'Camera' | t }}</span>
+                        <span class="font-mono text-[0.6875rem] font-normal text-muted"
+                          >{{ settings.cameraQuality() }}p · {{ settings.cameraFps() }}</span
+                        >
+                      </summary>
+                      <div class="drawer-rows">
+                        <div class="drawer-block">
+                          <span>{{ 'Quality' | t }}</span>
+                          <app-segmented
+                            [options]="qualityOptions"
+                            [value]="settings.cameraQuality()"
+                            (valueChange)="
+                              settings.cameraQuality.set($any($event)); call.changeCamera()
+                            "
+                          />
+                        </div>
+                        <div class="drawer-block">
+                          <span>{{ 'Frames per second' | t }}</span>
+                          <app-segmented
+                            [options]="fpsOptions"
+                            [value]="settings.cameraFps()"
+                            (valueChange)="
+                              settings.cameraFps.set($any($event)); call.changeCamera()
+                            "
+                          />
+                        </div>
+                        <div class="drawer-row">
+                          <span>{{ 'Mirror my camera' | t }}</span>
+                          <app-toggle
+                            [checked]="settings.cameraMirror()"
+                            (checkedChange)="settings.cameraMirror.set($event)"
+                            [label]="'Mirror my camera' | t"
+                          />
+                        </div>
+                      </div>
+                    </details>
                   </div>
                 }
               }
@@ -1176,7 +1213,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
     <!-- One participant: every overlay is absolutely positioned, so muting never moves anything. -->
     <ng-template #tileTpl let-t let-small="small" let-focus="focus" let-short="short">
       <article
-        class="tile-card anim-fade-in group relative h-full w-full cursor-pointer overflow-hidden rounded-ui-lg border bg-ink-900"
+        class="tile-card anim-fade-in group isolate relative h-full w-full cursor-pointer overflow-hidden rounded-ui-lg border bg-ink-900"
         (click)="t.kind !== 'activity' && clickTile(t)"
         (contextmenu)="t.kind !== 'activity' && openTileMenu($event, t)"
         (dblclick)="toggleFullscreen($event, t)"
@@ -1193,7 +1230,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
           />
         } @else if (t.stream) {
           <video
-            class="absolute inset-0 h-full w-full bg-black"
+            class="absolute inset-0 h-full w-full rounded-[inherit] bg-black"
             [class.object-cover]="t.kind === 'camera' && !focus"
             [class.object-contain]="t.kind === 'screen' || focus"
             [class.-scale-x-100]="t.local && t.kind === 'camera' && settings.cameraMirror()"
@@ -2598,25 +2635,27 @@ export class VoiceStageComponent {
     }.bind(this),
   );
 
-  protected readonly placements = computed(
-    function (this: VoiceStageComponent) {
-      const angles = this.call.angles();
-      const speaking = this.call.speaking();
-      return Object.entries(angles).map(
-        function (this: VoiceStageComponent, [id, angle]: [string, number]) {
-          const rad = (angle * Math.PI) / 180;
-          const user = this.directory.get(id);
-          return {
-            id,
-            x: Math.sin(rad) * 38,
-            y: -Math.cos(rad) * 38,
-            speaking: speaking.has(id),
-            initials: (user?.displayName ?? '?').slice(0, 2).toUpperCase(),
-          };
-        }.bind(this),
-      );
-    }.bind(this),
-  );
+  /** The choices of the drawer of data (the same ones as in the settings of voice and video). */
+  protected readonly cleanupOptions = [
+    { id: 'off', label: 'Off' },
+    { id: 'light', label: 'Light' },
+    { id: 'strong', label: 'Strong' },
+  ];
+  protected readonly levelerOptions = [
+    { id: 'off', label: 'Off' },
+    { id: 'gentle', label: 'Gentle' },
+    { id: 'strong', label: 'Strong' },
+  ];
+  protected readonly qualityOptions = [
+    { id: '480', label: '480p' },
+    { id: '720', label: '720p' },
+    { id: '1080', label: '1080p' },
+  ];
+  protected readonly fpsOptions = [
+    { id: '15', label: '15' },
+    { id: '30', label: '30' },
+    { id: '60', label: '60' },
+  ];
 
   protected readonly latencyStats = computed(
     function (this: VoiceStageComponent) {

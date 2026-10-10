@@ -158,7 +158,7 @@ export class ImageService {
   }
 
   /**
-   * The picture could not be opened (usually its owner has not sealed the key for this person yet because they have
+   * ? The picture could not be opened (usually its owner has not sealed the key for this person yet because they have
    * not been online since): it is asked for again after a while, up to ten times.
    */
   private retryLater(id: string, sealed: boolean): void {

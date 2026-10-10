@@ -196,7 +196,6 @@ export class SpinlyWheelCardComponent implements OnInit {
     }
     this.stoppedKey.set(key);
     this.sound.play('success');
-    this.sound.sfx('sparkle');
     this.finished.emit(this.winnerName());
   }
 }

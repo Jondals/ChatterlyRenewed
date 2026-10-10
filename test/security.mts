@@ -26,6 +26,7 @@ import { loadConfig, relayProblem, type AppConfig } from '../backend/src/config'
 import { openDatabase, SCHEMA_VERSION } from '../backend/src/db';
 import { runMaintenance, IMAGE_GRACE_MS } from '../backend/src/maintenance';
 import { assertFetchable, isPrivateAddress, metaTags } from '../backend/src/routes/preview';
+import { canSeeProfile } from '../backend/src/models';
 import { sanitizeImage } from '../backend/src/security/image-sanitize';
 import {
   MediaKeyChain,
@@ -925,7 +926,8 @@ async function checkImages(): Promise<void> {
   );
 
   step('pictures: the routes');
-  const app = await makeApp();
+  // (the global limit of requests is lifted here: this block makes more than the real limit allows in a minute)
+  const app = await makeApp({ rateLimit: { max: 100000, authMax: 100000, windowMs: 60_000 } });
   const alice = await signUp(app, 'alice');
   const bob = await signUp(app, 'bob');
   const upload = async function (who: Account | null, body: Buffer, kind = 'group') {
@@ -1042,23 +1044,33 @@ async function checkImages(): Promise<void> {
     (await call(app, bob, 'GET', `/api/images/${avatarId}`)).rawPayload.equals(secretPicture),
     'with a key sealed for them, a friend downloads the ciphertext',
   );
+  const opened = (await call(app, bob, 'GET', `/api/images/${avatarId}/open`)).json();
   check(
-    (await call(app, bob, 'GET', `/api/images/${avatarId}/key`)).json().ownerEcdh ===
+    opened.ownerEcdh ===
       (
         app.ctx.db.prepare('SELECT pub_ecdh AS k FROM users WHERE id = ?').get(alice.id) as {
           k: string;
         }
-      ).k,
-    'and gets the key sealed for them with the public key of the owner',
+      ).k && Buffer.from(opened.data, 'base64').equals(secretPicture),
+    'and gets, in one answer, the picture and the key sealed for them with the public key of the owner',
   );
   check(
     (await call(app, carolStranger, 'GET', `/api/images/${avatarId}`)).statusCode === 404,
     'a stranger still gets nothing',
   );
   check(
-    (await call(app, carolStranger, 'GET', `/api/images/${avatarId}/key`)).statusCode === 404,
+    (await call(app, carolStranger, 'GET', `/api/images/${avatarId}/open`)).statusCode === 404,
     'and no key',
   );
+  check(canSeeProfile(app.ctx.db, alice.id, bob.id), 'a friend may see the pictures');
+  await call(app, alice, 'DELETE', `/api/friends/${bob.id}`);
+  // (the direct conversation of the two is kept after the friendship ends, and it also counts: take it out for this check)
+  app.ctx.db.prepare('DELETE FROM dm_members WHERE user_id IN (?, ?)').run(alice.id, bob.id);
+  check(
+    !canSeeProfile(app.ctx.db, alice.id, bob.id),
+    'a person who is no longer a friend may not see them, although their key is still stored',
+  );
+  await befriend(app, alice, bob);
   check(
     (await call(app, bob, 'PATCH', '/api/me', { avatarImage: avatarId })).statusCode === 400,
     "nobody can use another person's picture as theirs",
@@ -1086,6 +1098,22 @@ async function checkImages(): Promise<void> {
       ).a === null,
     'and its owner is left without it, to upload it again',
   );
+
+  step('rate limits: a route with a limit of its own has its own counter');
+  const limited = await makeApp();
+  const heavy = await signUp(limited, 'heavy');
+  for (let i = 0; i < 30; i++) await call(limited, heavy, 'GET', '/api/friends');
+  const uploaded = await limited.inject({
+    method: 'POST',
+    url: '/api/images?kind=group',
+    headers: { ...bearer(heavy), 'content-type': 'application/octet-stream' },
+    payload: pngWithMetadata(),
+  });
+  check(
+    uploaded.statusCode === 201,
+    'an upload is not refused because the same address made 30 other requests in the minute',
+  );
+  await limited.close();
 
   step('maintenance: abandoned uploads and dead sessions');
   const addPicture = function (age: number): string {

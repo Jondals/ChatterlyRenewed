@@ -123,7 +123,7 @@ export function registerGuildRoutes(app: FastifyInstance, ctx: AppContext): void
   }
 
   /**
-   * Loads the group and requires the caller to be its owner (403 otherwise): only the owner manages channels, members and tags.
+   * ? Loads the group and requires the caller to be its owner (403 otherwise): only the owner manages channels, members and tags.
    */
   function requireOwner(req: FastifyRequest, reply: FastifyReply): GuildRow | undefined {
     const guild = requireMember(req, reply);

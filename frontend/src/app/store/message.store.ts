@@ -260,7 +260,7 @@ export class MessageStore {
   }
 
   /**
-   * Finds the keys that open a channel; when the groups or friends are not loaded yet it loads them first, because without them nothing can be decrypted.
+   * ? Finds the keys that open a channel; when the groups or friends are not loaded yet it loads them first, because without them nothing can be decrypted.
    */
   private async resolveRef(channelId: string): Promise<ChannelRef> {
     let ref = this.e2ee.refFor(channelId);

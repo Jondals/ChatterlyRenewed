@@ -55,7 +55,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
         <summary class="cursor-pointer font-semibold hover:text-fg">
           {{ 'Show raw identity fingerprints' | t }}
         </summary>
-        <div class="mt-2 space-y-2 font-mono text-[0.6875rem]">
+        <div class="mt-2 space-y-2 break-all font-mono text-xs font-bold tracking-wider">
           <div>
             <b class="text-fg">{{ 'You' | t }}</b
             ><br />{{ mine() }}

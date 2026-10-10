@@ -24,61 +24,49 @@ interface SoundDef {
 /** Every sound by the name it is used with. */
 export const SOUNDS = {
   // ---- interface (ui/)
-  messageReceived: { file: 'ui/message-received.wav' },
-  messageSent: { file: 'ui/message-sent.wav' },
-  menuOpen: { file: 'ui/menu-open.wav' },
-  toggleSwitch: { file: 'ui/toggle-switch.wav' },
-  noticeSuccess: { file: 'ui/notice-success.wav' },
-  noticeError: { file: 'ui/notice-error.wav' },
+  messageReceived: { file: 'ui/message-received.ogg' },
+  messageSent: { file: 'ui/message-sent.ogg' },
+  menuOpen: { file: 'ui/menu-open.ogg' },
+  toggleSwitch: { file: 'ui/toggle-switch.ogg' },
+  noticeSuccess: { file: 'ui/notice-success.ogg' },
+  noticeError: { file: 'ui/notice-error.ogg' },
   // ---- the sound of pressing a button, one per style (ui/)
-  clickSoft: { file: 'ui/click-soft.wav' },
-  clickDrop: { file: 'ui/click-drop.wav' },
-  clickGlass: { file: 'ui/click-glass.wav' },
-  clickTypewriter: { file: 'ui/click-typewriter.wav' },
-  clickMarimba: { file: 'ui/click-marimba.wav' },
-  clickKalimba: { file: 'ui/click-kalimba.wav' },
+  clickSoft: { file: 'ui/click-soft.ogg' },
+  clickDrop: { file: 'ui/click-drop.ogg' },
+  clickGlass: { file: 'ui/click-glass.ogg' },
+  clickTypewriter: { file: 'ui/click-typewriter.ogg' },
+  clickMarimba: { file: 'ui/click-marimba.ogg' },
+  clickKalimba: { file: 'ui/click-kalimba.ogg' },
   clickTap: { file: 'ui/click-tap.ogg', trim: 0.09 },
   clickSwitch: { file: 'ui/click-switch.ogg', trim: 0.09 },
   clickPluck: { file: 'ui/click-pluck.ogg', trim: 0.1 },
   clickBubble: { file: 'ui/click-bubble.ogg', trim: 0.1 },
   // ---- calls (call/)
-  youJoin: { file: 'call/you-join.wav' },
-  youLeave: { file: 'call/you-leave.wav' },
-  userJoined: { file: 'call/user-joined.wav' },
-  userLeft: { file: 'call/user-left.wav' },
-  micMute: { file: 'call/mic-mute.wav' },
-  micUnmute: { file: 'call/mic-unmute.wav' },
-  headphonesDeafen: { file: 'call/headphones-deafen.wav' },
-  headphonesUndeafen: { file: 'call/headphones-undeafen.wav' },
+  youJoin: { file: 'call/you-join.ogg' },
+  youLeave: { file: 'call/you-leave.ogg' },
+  userJoined: { file: 'call/user-joined.ogg' },
+  userLeft: { file: 'call/user-left.ogg' },
+  micMute: { file: 'call/mic-mute.ogg' },
+  micUnmute: { file: 'call/mic-unmute.ogg' },
+  headphonesDeafen: { file: 'call/headphones-deafen.ogg' },
+  headphonesUndeafen: { file: 'call/headphones-undeafen.ogg' },
   // ---- default ringtones (ringtones/)
-  ringtoneClassic: { file: 'ringtones/classic.mp3', gap: 0.6 },
-  ringtoneChristmas: { file: 'ringtones/christmas.mp3', gap: 0.8 },
-  ringtoneHalloween: { file: 'ringtones/halloween.mp3', gap: 0.9 },
-  ringtoneNewyear: { file: 'ringtones/newyear.mp3', gap: 0.8 },
+  ringtoneClassic: { file: 'ringtones/classic.ogg', gap: 0.6 },
+  ringtoneChristmas: { file: 'ringtones/christmas.ogg', gap: 0.8 },
+  ringtoneHalloween: { file: 'ringtones/halloween.ogg', gap: 0.9 },
+  ringtoneNewyear: { file: 'ringtones/newyear.ogg', gap: 0.8 },
   // ---- soundtracks of the animations of arriving (auth/)
-  authIntro: { file: 'auth/intro.mp3' },
-  authSignIn: { file: 'auth/sign-in-unlock.mp3' },
-  authSignOut: { file: 'auth/sign-out-lock.mp3' },
-  authSignUp: { file: 'auth/sign-up-fireworks.mp3' },
+  authIntro: { file: 'auth/intro.ogg' },
+  authSignIn: { file: 'auth/sign-in-unlock.ogg' },
+  authSignOut: { file: 'auth/sign-out-lock.ogg' },
+  authSignUp: { file: 'auth/sign-up-fireworks.ogg' },
   // ---- default effects of the soundboard (soundboard/)
-  chime: { file: 'soundboard/chime.mp3' },
-  doorbell: { file: 'soundboard/doorbell.mp3' },
-  siren: { file: 'soundboard/siren.mp3' },
-  airHorn: { file: 'soundboard/air-horn.mp3' },
-  boing: { file: 'soundboard/boing.mp3' },
-  sadTrombone: { file: 'soundboard/sad-trombone.mp3' },
-  coin: { file: 'soundboard/coin.wav' },
-  taDa: { file: 'soundboard/ta-da.mp3' },
-  drumRoll: { file: 'soundboard/drum-roll.mp3' },
-  rimshot: { file: 'soundboard/rimshot.mp3' },
-  cymbal: { file: 'soundboard/cymbal.mp3' },
-  applause: { file: 'soundboard/applause.mp3' },
-  wave: { file: 'soundboard/wave.mp3' },
-  wind: { file: 'soundboard/wind.mp3' },
-  rain: { file: 'soundboard/rain.mp3' },
-  thunder: { file: 'soundboard/thunder.mp3' },
-  sparkle: { file: 'soundboard/sparkle.mp3' },
-  spell: { file: 'soundboard/spell.mp3' },
+  airHorn: { file: 'soundboard/air-horn.ogg' },
+  boing: { file: 'soundboard/boing.ogg' },
+  sadTrombone: { file: 'soundboard/sad-trombone.ogg' },
+  taDa: { file: 'soundboard/ta-da.ogg' },
+  rimshot: { file: 'soundboard/rimshot.ogg' },
+  applause: { file: 'soundboard/applause.ogg' },
 } as const satisfies Record<string, SoundDef>;
 
 export type SoundId = keyof typeof SOUNDS;
@@ -148,6 +136,22 @@ export function loadSounds(context: BaseAudioContext, ids: readonly SoundId[]): 
     loads.push(load);
   }
   return Promise.all(loads);
+}
+
+/** The context that only decodes (it needs no gesture of the person, unlike the one that plays). */
+let decoder: OfflineAudioContext | undefined;
+
+/**
+ * Downloads and decodes some sounds before the person has pressed anything, so that the first press already sounds
+ * (before, the files started loading with that first press and it stayed silent). A decoded buffer plays in any context.
+ */
+export function preloadSounds(ids: readonly SoundId[]): Promise<unknown> {
+  try {
+    decoder ??= new OfflineAudioContext(1, 1, 44100);
+  } catch {
+    return Promise.resolve();
+  }
+  return loadSounds(decoder, ids);
 }
 
 /** Whether a sound is decoded and ready to play right now. */

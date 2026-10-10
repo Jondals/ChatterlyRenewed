@@ -398,12 +398,12 @@ async function main() {
     }, API);
     const page = await ctx.newPage();
     page.on('console', function (m) {
-      // The expected 502 (the test asks on purpose for the preview of a link that does not exist) and the permission warnings of the embedded YouTube player (they belong to the external site) are ignored.
+      // ? The expected 502 (the test asks on purpose for the preview of a link that does not exist) and the permission warnings of the embedded YouTube player (they belong to the external site) are ignored.
       if (
         m.type() === 'error' &&
         !m.text().includes('502 (Bad Gateway)') &&
         !m.text().includes('Permissions policy violation') &&
-        // The wrong password typed on purpose when the account is erased answers 401.
+        // ? The wrong password typed on purpose when the account is erased answers 401.
         !(name === 'carol' && m.text().includes('401'))
       )
         errors.push(`[${name}] ${m.text().slice(0, 300)} @ ${m.location().url}`);
@@ -561,7 +561,9 @@ async function main() {
   // custom gradient of the composer: the picker opens in view and applies the colors to the selection
   await b.fill('textarea[aria-label=Message]', 'second');
   await b.locator('textarea[aria-label=Message]').selectText();
-  await b.click('button[aria-label="First color"]');
+  await b.click('button:has-text("Gradient")');
+  await b.click('button:has-text("More options")');
+  await b.click('app-gradient-controls button[aria-label="Color"]');
   const popover = b.locator('input[aria-label="Hex color"]');
   await popover.waitFor();
   const dentro = await popover.evaluate(function (e) {
@@ -578,7 +580,7 @@ async function main() {
   await b.waitForTimeout(300);
   await b.click('textarea[aria-label=Message]');
   await b.locator('textarea[aria-label=Message]').selectText();
-  await b.click('button[title="Apply your gradient"]');
+  await b.click('app-message-input button:has-text("Apply")');
   await b.waitForTimeout(400);
   const valor = await b.inputValue('textarea[aria-label=Message]');
   check(
@@ -958,6 +960,20 @@ async function main() {
     'the menu of a person opens next to the cursor',
   );
   await a.locator('app-person-menu input[type=range]').fill('150');
+  // (the preferences are saved by an effect, a moment after the change)
+  await a
+    .waitForFunction(
+      function () {
+        return Object.values(
+          JSON.parse(localStorage.getItem('chatterly.pref.peerVolumes') ?? '{}'),
+        ).includes(150);
+      },
+      null,
+      { timeout: 3000 },
+    )
+    .catch(function () {
+      return undefined;
+    });
   const volumes = await a.evaluate(function () {
     return JSON.parse(localStorage.getItem('chatterly.pref.peerVolumes') ?? '{}');
   });
@@ -1495,18 +1511,18 @@ async function main() {
     })) === 'outline',
     'the bubble style changes',
   );
-  // the corner style is a slider with seven steps
+  // the corner style is a row of seven choices
   await a.click('button[aria-expanded]:has-text("Corner style")');
   await a.waitForTimeout(500);
-  await a.locator('input[aria-label="Corner style"]').fill('0');
+  await a.click('button[aria-label="Square"]');
   await a.waitForTimeout(200);
   check(
     (await a.evaluate(function () {
       return document.documentElement.style.getPropertyValue('--r');
     })) === '2px',
-    'the corner slider changes the rounding of the whole interface',
+    'the corner choices change the rounding of the whole interface',
   );
-  await a.locator('input[aria-label="Corner style"]').fill('3');
+  await a.click('button[aria-label="Soft"]');
   // mouse wheel over a slider: it goes up or down one step
   const deslizador = a.locator('input[type=range][min="12"][max="18"]').first();
   await deslizador.scrollIntoViewIfNeeded();
@@ -1516,7 +1532,9 @@ async function main() {
   await a.mouse.wheel(0, -100);
   await a.waitForTimeout(200);
   const valorMas = Number(await deslizador.inputValue());
-  // The whole interface follows the text size, so the slider may have moved: the pointer goes to where it is now.
+  // The whole interface follows the text size, so the slider may have moved: wait for it to settle, then the pointer goes to where it is now.
+  await a.waitForTimeout(800);
+  await deslizador.scrollIntoViewIfNeeded();
   const cajaNueva = await deslizador.boundingBox();
   await a.mouse.move(cajaNueva.x + cajaNueva.width / 2, cajaNueva.y + cajaNueva.height / 2);
   await a.mouse.wheel(0, 100);
@@ -1524,7 +1542,8 @@ async function main() {
   const valorMenos = Number(await deslizador.inputValue());
   check(
     valorMas === valorAntes + 1 && valorMenos === valorAntes,
-    'the mouse wheel raises and lowers a slider (step by step)',
+    'the mouse wheel raises and lowers a slider (step by step) ' +
+      JSON.stringify([valorAntes, valorMas, valorMenos]),
   );
   await a.click('button[aria-expanded]:has-text("Corner style")');
   await a.waitForTimeout(600);
@@ -1562,8 +1581,7 @@ async function main() {
   );
   await shot(a, '06a-tonos');
   await a.click('button:has-text("Open soundboard")');
-  await a.waitForSelector('text=Your sounds');
-  await a.click('.sb-pill:has-text("Your sounds")');
+  await a.waitForSelector('.sb-pill:has-text("All")');
   await shot(a, '06-soundboard');
   const soundChooser = a.waitForEvent('filechooser');
   await a.click('button:has-text("Add a sound")');

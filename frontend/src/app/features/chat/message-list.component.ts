@@ -133,7 +133,7 @@ function dayLabel(ts: number, i18n: I18nService): string {
 
     @if (!atBottom()) {
       <button
-        animate.leave="leave-pop"
+        animate.leave="leave-latest"
         class="anim-pop absolute bottom-4 right-6 flex items-center gap-1.5 rounded-ui border border-white/10 bg-ink-800 px-3 py-1.5 text-xs font-semibold text-fg shadow-xl hover:border-accent/60 hover:text-accent"
         type="button"
         (click)="jumpToLatest()"
@@ -170,12 +170,7 @@ export class MessageListComponent {
   protected readonly rows = computed<Row[]>(
     function (this: MessageListComponent) {
       const list = this.state().messages();
-      const me = this.auth.user()?.id;
       const i18n = this.i18n;
-      let lastMine = -1;
-      list.forEach(function (m, i) {
-        if (m.senderId === me && !m.pending && !m.failed) lastMine = i;
-      });
       return list.map(function (message, i) {
         const prev = list[i - 1];
         const label =
@@ -242,6 +237,11 @@ export class MessageListComponent {
 
   /** A message arrived or was sent: the conversation glides to its end when it should. */
   private followNewMessage(list: ViewMessage[]): void {
+    // ? Another conversation is opening: its messages arrive before the list is hidden, and gliding then would show it
+    // running from the top to the end. openConversation puts it at its end instead.
+    if (this.openedChannel !== this.channelId()) {
+      return;
+    }
     const last = list[list.length - 1];
     const id = last ? last.id : '';
     const isNew = id !== this.lastMessageId;
@@ -263,6 +263,7 @@ export class MessageListComponent {
 
   /** Another conversation was opened: hide it, and show it as soon as it is drawn and at its end (or after a short wait). */
   private openConversation(): void {
+    this.openedChannel = this.channelId();
     this.stick = true;
     this.stopFollowing();
     clearTimeout(this.revealTimer);
@@ -325,13 +326,22 @@ export class MessageListComponent {
     cancelAnimationFrame(this.glide);
   }
 
+  /** The conversation that is on screen (the list is hidden and put at its end when it changes). */
+  private openedChannel = '';
+  private glideFrom = 0;
+  private glideStart = 0;
+  private glideTime = 600;
+
   /** The reader took the scroll: the glide stops. */
   protected stopFollowing(): void {
     cancelAnimationFrame(this.glide);
     this.glide = 0;
   }
 
-  /** Glides to the end: every frame covers a part of what is left, and it follows the end if the page grows meanwhile. */
+  /**
+   * Glides to the end in a fixed time (longer when there is more to go), starting slowly, going fast in the middle and
+   * landing softly. If the list grows while it glides, the target moves with it.
+   */
   private glideToEnd(): void {
     if (this.glide) {
       return;
@@ -340,18 +350,25 @@ export class MessageListComponent {
       this.scrollToBottom(false);
       return;
     }
+    const el = this.scroller().nativeElement;
+    this.glideFrom = el.scrollTop;
+    this.glideStart = performance.now();
+    this.glideTime = Math.min(900, 380 + (el.scrollHeight - el.clientHeight - el.scrollTop) * 0.12);
     this.glide = requestAnimationFrame(this.glideStep.bind(this));
   }
 
   /** One frame of the glide. */
-  private glideStep(): void {
+  private glideStep(now: number): void {
     const el = this.scroller().nativeElement;
-    const left = el.scrollHeight - el.clientHeight - el.scrollTop;
-    if (left < 1) {
+    const progress = Math.min(1, (now - this.glideStart) / this.glideTime);
+    // ease in and out (cubic)
+    const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
+    const end = el.scrollHeight - el.clientHeight;
+    el.scrollTop = this.glideFrom + (end - this.glideFrom) * eased;
+    if (progress >= 1) {
       this.glide = 0;
       return;
     }
-    el.scrollTop += Math.max(1, left * 0.18);
     this.glide = requestAnimationFrame(this.glideStep.bind(this));
   }
 

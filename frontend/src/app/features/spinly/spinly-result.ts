@@ -51,29 +51,3 @@ export interface SpinlySpin {
   rotation: number;
   winner: string;
 }
-
-/** Validates a spin that came from outside (Spinly itself or another person in the call); null when it is not usable. */
-export function sanitizeSpin(raw: unknown): SpinlySpin | null {
-  if (typeof raw !== 'object' || raw === null) {
-    return null;
-  }
-  const record = raw as Record<string, unknown>;
-  const rotation = record['rotation'];
-  if (
-    !Array.isArray(record['options']) ||
-    typeof rotation !== 'number' ||
-    !Number.isFinite(rotation)
-  ) {
-    return null;
-  }
-  const options: { name: string; color: string }[] = [];
-  for (const item of (record['options'] as unknown[]).slice(0, MAX_NAMES)) {
-    const entry = (typeof item === 'object' && item !== null ? item : {}) as Record<
-      string,
-      unknown
-    >;
-    options.push({ name: cleanText(entry['name'], 20), color: cleanText(entry['color'], 16) });
-  }
-  const winner = cleanText(record['winner'], 20);
-  return options.length > 0 && winner ? { options, rotation, winner } : null;
-}

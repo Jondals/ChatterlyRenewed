@@ -86,7 +86,7 @@ scope.onrtctransform = function (event: any) {
       } else {
         state.stats.received++;
         // Chrome emits zero-byte frames for Opus DTX gaps without running them through the sender
-        // transform. They carry no media, so they are discarded quietly instead of counted as attacks.
+        // ? transform. They carry no media, so they are discarded quietly instead of counted as attacks.
         if (frame.data.byteLength === 0) return;
         if (!state.recv) {
           state.stats.dropped++;

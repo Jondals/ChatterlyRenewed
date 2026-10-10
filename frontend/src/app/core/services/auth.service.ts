@@ -78,7 +78,7 @@ export class AuthService {
 
   /** The server refused to renew the session: sign out on this device only. */
   private onSessionExpired(): void {
-    // While the account is being erased the server refuses the session on purpose: the page is about to be loaded again.
+    // ? While the account is being erased the server refuses the session on purpose: the page is about to be loaded again.
     if (this.erasing) {
       return;
     }

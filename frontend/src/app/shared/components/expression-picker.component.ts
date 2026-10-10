@@ -42,17 +42,11 @@ const GROUP_NAMES = [
 const SKIN_SWATCHES = ['#ffcc4d', '#f7dece', '#e0bb95', '#bf8f68', '#9b643d', '#594539'];
 const FREQ_KEY = 'chatterly.emojiFreq';
 /** Emoji drawn at once when a category opens: enough to fill the first screen, so the tab changes at once. */
-const FIRST_CHUNK = 56;
-/** Emoji drawn first in "All emoji": a bit more than one screen, the rest comes as the list is scrolled. */
-const ALL_FIRST_CHUNK = 112;
-/** Emoji added each time the end of "All emoji" is approached (twelve rows). */
-const ALL_STEP = 84;
+const FIRST_CHUNK = 42;
+/** Emoji added each time the end of what is drawn gets close (five rows). */
+const MORE_STEP = 35;
 /** How close to the end of the list (pixels) the next rows are drawn. */
-const SCROLL_AHEAD_PX = 500;
-/** Emoji added on every idle step after that (six rows of the grid). */
-const CHUNK_STEP = 42;
-/** The most an idle step may wait before it runs anyway (milliseconds), so the list always keeps filling. */
-const STEP_TIMEOUT_MS = 120;
+const SCROLL_AHEAD_PX = 320;
 
 @Component({
   selector: 'app-gif-thumb',
@@ -403,16 +397,9 @@ export class ExpressionPickerComponent {
   protected readonly hover = signal<EmojiEntry | null>(null);
   protected readonly toneOpen = signal(false);
   protected readonly activeGroup = signal<number | 'frequent' | 'all'>('all');
-  /** How many emoji of the open category are drawn so far (it grows step by step while the browser is idle). */
+  /** How many emoji of the open category are drawn so far: one screen, and more only while the list needs them. */
   private readonly shown = signal(FIRST_CHUNK);
-  private growHandle: number | undefined;
-  private growIsIdle = false;
-  /** True while "All emoji" is open: that list does not fill by itself, it grows only as the person scrolls down. */
-  private readonly onDemand = computed(
-    function (this: ExpressionPickerComponent) {
-      return !this.query().trim() && this.currentId() === 'all';
-    }.bind(this),
-  );
+  private growFrame = 0;
   private readonly destroyRef = inject(DestroyRef);
   private readonly freq = signal<Record<string, number>>(this.readFreq());
 
@@ -615,49 +602,47 @@ export class ExpressionPickerComponent {
     );
   }
 
-  /** Starts over with the first screenful of the open category and schedules the next steps. */
+  /** Starts over with the first screenful of the open list; the rest is drawn only as far as the screen needs. */
   private startGrowing(): void {
     this.stopGrowing();
-    this.shown.set(this.onDemand() ? ALL_FIRST_CHUNK : FIRST_CHUNK);
-    // A category (100 to 390 emoji) fills in the background; "All emoji" (about 1900) only when it is scrolled.
-    if (!this.onDemand()) this.scheduleStep();
+    this.shown.set(FIRST_CHUNK);
+    this.growFrame = requestAnimationFrame(this.fillScreen.bind(this));
   }
 
-  /** The list was scrolled: when "All emoji" is close to its end, the next rows are drawn (never all of them at once). */
+  /** The list was scrolled: when it is close to its end, the next rows are drawn (never all of them at once). */
   protected onScroll(): void {
-    if (!this.onDemand()) return;
+    this.drawMoreIfNeeded();
+  }
+
+  /** Draws a few more rows when the end of what is drawn is close to the visible part. Returns whether it added any. */
+  private drawMoreIfNeeded(): boolean {
     const box = this.scroller()?.nativeElement;
-    if (!box || box.scrollTop + box.clientHeight < box.scrollHeight - SCROLL_AHEAD_PX) return;
-    const total = this.visibleSections().reduce(function count(sum, section) {
-      return sum + section.items.length;
-    }, 0);
-    if (this.shown() < total) this.shown.set(Math.min(total, this.shown() + ALL_STEP));
-  }
-
-  /** Cancels the pending step. */
-  private stopGrowing(): void {
-    if (this.growHandle === undefined) return;
-    if (this.growIsIdle) cancelIdleCallback(this.growHandle);
-    else clearTimeout(this.growHandle);
-    this.growHandle = undefined;
-  }
-
-  /** Asks the browser to run the next step when it is idle (or soon, where idle callbacks do not exist). */
-  private scheduleStep(): void {
-    this.growIsIdle = typeof requestIdleCallback === 'function';
-    this.growHandle = this.growIsIdle
-      ? requestIdleCallback(this.growStep.bind(this), { timeout: STEP_TIMEOUT_MS })
-      : (setTimeout(this.growStep.bind(this), 32) as unknown as number);
-  }
-
-  /** Draws a few more emoji of the open category and schedules the next step until all of them are drawn. */
-  private growStep(): void {
-    this.growHandle = undefined;
+    if (!box || box.scrollTop + box.clientHeight < box.scrollHeight - SCROLL_AHEAD_PX) {
+      return false;
+    }
     let total = 0;
-    for (const section of this.visibleSections()) total += section.items.length;
-    if (this.shown() >= total) return;
-    this.shown.set(Math.min(total, this.shown() + CHUNK_STEP));
-    this.scheduleStep();
+    for (const section of this.visibleSections()) {
+      total += section.items.length;
+    }
+    if (this.shown() >= total) {
+      return false;
+    }
+    this.shown.set(Math.min(total, this.shown() + MORE_STEP));
+    return true;
+  }
+
+  /** After a list opens: one step per frame until the first screen is full (a tall panel needs more than the first rows). */
+  private fillScreen(): void {
+    this.growFrame = 0;
+    if (this.drawMoreIfNeeded()) {
+      this.growFrame = requestAnimationFrame(this.fillScreen.bind(this));
+    }
+  }
+
+  /** Cancels the pending frame. */
+  private stopGrowing(): void {
+    cancelAnimationFrame(this.growFrame);
+    this.growFrame = 0;
   }
 
   /** Changes between emoji, GIFs and stickers. */

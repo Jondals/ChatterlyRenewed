@@ -67,9 +67,6 @@ export const FAMILIES: string[] = ['classic', 'themed', 'solid', 'soft', 'sleek'
 /** Families shaped like an arrow: their trail comes out of the body of the arrow, not from its tip. */
 export const ARROW_FAMILIES: string[] = ['themed', 'solid', 'soft', 'sleek', 'pixel', 'classic'];
 
-/** Every cursor state that has a drawing. */
-export const CURSOR_NAMES: string[] = STATE_NAMES;
-
 /** Counter that gives each animated cursor its own filter id (many SVGs live in the page at once). */
 let filterCounter = 0;
 

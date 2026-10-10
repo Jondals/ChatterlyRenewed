@@ -15,7 +15,7 @@ const SIGNED_OUT_DELAY = 4000;
 @Injectable({ providedIn: 'root' })
 export class DelayedPreloadStrategy implements PreloadingStrategy {
   /**
-   * Returns the stream that loads a route: right away for a signed-in person, after a delay otherwise.
+   * ? Returns the stream that loads a route: right away for a signed-in person, after a delay otherwise.
    * @param route The route being considered.
    * @param load Function that downloads the route.
    */

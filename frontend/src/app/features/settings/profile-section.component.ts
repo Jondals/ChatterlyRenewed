@@ -153,12 +153,14 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
           <div class="mt-3 rounded-ui-lg border border-white/8 bg-black/10 p-3">
             <div class="flex flex-wrap items-center gap-3">
               <span class="text-xs font-semibold text-muted">{{ 'Banner color' | t }}</span>
-              <app-color-picker
-                [value]="bannerState()?.from ?? ''"
-                [size]="26"
-                label="Banner color"
-                (valueChange)="setBanner({ from: $event })"
-              />
+              @if (!bannerState()?.gradient) {
+                <app-color-picker
+                  [value]="bannerState()?.from ?? ''"
+                  [size]="26"
+                  label="Banner color"
+                  (valueChange)="setBanner({ from: $event })"
+                />
+              }
               <label class="flex cursor-pointer items-center gap-1.5 text-xs text-muted">
                 <input
                   type="checkbox"
@@ -192,7 +194,9 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
         <!-- Style -->
         <section>
           <h2 class="mb-3 text-sm font-semibold">{{ 'Name style' | t }}</h2>
-          <div class="overflow-hidden rounded-ui-lg border border-white/8 bg-black/10">
+          <div
+            class="collapse-flat overflow-hidden rounded-ui-lg border border-white/8 bg-black/10"
+          >
             <div
               class="flex items-center justify-center border-b border-white/8 px-4 py-7"
               style="background: radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%)"
@@ -225,15 +229,15 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                   >{{ draft().displayName.length }} / 32</span
                 >
               </label>
-              <div class="px-4 py-3.5">
-                <app-collapse class="@container" title="Name font" [summary]="currentFont()">
+              <div>
+                <app-collapse title="Name font" [summary]="currentFont()">
                   <span
                     preview
                     class="max-w-28 truncate text-base"
                     [class]="draft().nameFont === 'default' ? '' : 'font-name-' + draft().nameFont"
                     >{{ draft().displayName || 'Name' }}</span
                   >
-                  <div class="grid grid-cols-2 gap-3 @xl:grid-cols-3">
+                  <div class="grid grid-cols-3 gap-2.5">
                     @for (f of fonts; track f.id) {
                       <button
                         type="button"
@@ -245,7 +249,6 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                           class="max-w-full truncate text-lg leading-tight"
                           [class]="f.id === 'default' ? '' : 'font-name-' + f.id"
                           [appNameColor]="draft().profileColor"
-                          [appUserFont]="draft().nameFont"
                           >{{ draft().displayName || 'Name' }}</span
                         >
                         <span class="text-[0.6875rem] text-muted">{{ f.label | t }}</span>
@@ -262,7 +265,6 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                         <span
                           class="font-name-custom max-w-full truncate text-lg leading-tight"
                           [appNameColor]="draft().profileColor"
-                          [appUserFont]="draft().nameFont"
                           >{{ draft().displayName || 'Name' }}</span
                         >
                         <span
@@ -297,12 +299,14 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
               </div>
               <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4">
                 <span class="w-32 text-sm font-medium">{{ 'Name color' | t }}</span>
-                <app-color-picker
-                  [value]="nameState()?.from ?? '#ffffff'"
-                  [size]="34"
-                  label="Name color"
-                  (valueChange)="setName({ from: $event })"
-                />
+                @if (!nameState()?.gradient) {
+                  <app-color-picker
+                    [value]="nameState()?.from ?? '#ffffff'"
+                    [size]="34"
+                    label="Name color"
+                    (valueChange)="setName({ from: $event })"
+                  />
+                }
                 <label class="flex cursor-pointer items-center gap-2 text-sm text-muted"
                   ><input
                     type="checkbox"
@@ -330,22 +334,22 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                   </div>
                 }
               }
-              <div class="px-4 py-3.5">
-                <app-collapse class="@container" title="Profile effect" [summary]="currentAura()">
+              <div>
+                <app-collapse title="Profile effect" [summary]="currentAura()">
                   <span preview
                     ><app-avatar [user]="preview()" [size]="30" [aura]="draft().aura !== 'void'"
                   /></span>
-                  <div class="grid grid-cols-2 gap-3 @md:grid-cols-3 @2xl:grid-cols-5">
+                  <div class="grid grid-cols-3 gap-2.5">
                     @for (a of auras; track a.id) {
                       <button
                         type="button"
-                        class="choice-card !items-center !gap-3 !px-2 !py-5 text-center @container"
+                        class="choice-card !items-center !gap-2.5 !px-1.5 !py-4 text-center"
                         [class.is-on]="draft().aura === a.id"
                         (click)="patch({ aura: a.id })"
                       >
                         <app-avatar
                           [user]="auraPreview(a.id)"
-                          [size]="46"
+                          [size]="40"
                           [aura]="a.id !== 'void'"
                         />
                         <span class="text-xs font-medium">{{ a.label | t }}</span>
@@ -515,9 +519,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                 </div>
 
                 @if (bioPanel() === 'color') {
-                  <div
-                    class="anim-pop absolute left-2 top-11 z-20 w-72 rounded-ui-lg border border-white/10 bg-ink-800 p-3 shadow-2xl"
-                  >
+                  <div class="anim-fade-up m-2 rounded-ui border border-white/10 bg-ink-900/60 p-3">
                     <div class="label mb-2">{{ 'Pick a color for the selected text' | t }}</div>
                     <div class="grid grid-cols-8 gap-2">
                       @for (c of bioPalette; track c) {
@@ -554,9 +556,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                   </div>
                 }
                 @if (bioPanel() === 'gradient') {
-                  <div
-                    class="anim-pop absolute left-2 top-11 z-20 w-80 rounded-ui-lg border border-white/10 bg-ink-800 p-3 shadow-2xl"
-                  >
+                  <div class="anim-fade-up m-2 rounded-ui border border-white/10 bg-ink-900/60 p-3">
                     <div class="label mb-2">{{ 'Pick a gradient for the selected text' | t }}</div>
                     <div class="grid grid-cols-4 gap-2">
                       @for (g of quickGradients; track g.name) {
@@ -624,10 +624,9 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
       <aside class="xl:sticky xl:top-6 xl:self-start">
         <div class="label mb-2">{{ 'Preview' | t }}</div>
         <app-profile-card [user]="preview()" status="online" />
+        <app-delete-account class="block" />
       </aside>
     </div>
-
-    <app-delete-account />
 
     @if (dirty()) {
       <div class="anim-pop pointer-events-none sticky bottom-4 z-[70] mt-8 flex justify-center">

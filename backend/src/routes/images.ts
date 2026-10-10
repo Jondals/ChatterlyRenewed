@@ -13,7 +13,7 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context';
 import { callerId } from '../validation';
-import { profileAudience } from '../models';
+import { canSeeProfile, profileAudience } from '../models';
 import { sanitizeImage } from '../security/image-sanitize';
 
 export const IMAGE_KINDS = ['avatar', 'banner', 'group'] as const;
@@ -208,12 +208,16 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
     const id = (req.params as { id: string }).id;
     const row = db
       .prepare(
-        `SELECT k.iv, k.ciphertext, u.pub_ecdh AS owner_ecdh
+        `SELECT k.iv, k.ciphertext, u.pub_ecdh AS owner_ecdh, u.id AS owner_id
            FROM image_keys k JOIN images i ON i.id = k.image_id JOIN users u ON u.id = i.owner_id
           WHERE k.image_id = ? AND k.viewer_id = ? AND i.encrypted = 1`,
       )
-      .get(id, me(req)) as { iv: string; ciphertext: string; owner_ecdh: string } | undefined;
-    if (!row) return reply.code(404).send({ error: 'not_found' });
+      .get(id, me(req)) as
+      { iv: string; ciphertext: string; owner_ecdh: string; owner_id: string } | undefined;
+    // ! The sealed key is not enough: the person must still be somebody who may see the pictures of the owner.
+    if (!row || !canSeeProfile(db, row.owner_id, me(req))) {
+      return reply.code(404).send({ error: 'not_found' });
+    }
     try {
       const data = await fs.promises.readFile(imageFile(ctx, id));
       return {
@@ -227,35 +231,18 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
     }
   });
 
-  /** The key of a picture sealed for the caller, and the public key of the owner that opens it. */
-  app.get('/api/images/:id/key', auth, async function (req, reply) {
-    const id = (req.params as { id: string }).id;
-    const row = db
-      .prepare(
-        `SELECT k.iv, k.ciphertext, u.id AS owner_id, u.pub_ecdh AS owner_ecdh
-           FROM image_keys k JOIN images i ON i.id = k.image_id JOIN users u ON u.id = i.owner_id
-          WHERE k.image_id = ? AND k.viewer_id = ?`,
-      )
-      .get(id, me(req)) as
-      { iv: string; ciphertext: string; owner_id: string; owner_ecdh: string } | undefined;
-    if (!row) return reply.code(404).send({ error: 'not_found' });
-    return {
-      iv: row.iv,
-      ciphertext: row.ciphertext,
-      ownerId: row.owner_id,
-      ownerEcdh: row.owner_ecdh,
-    };
-  });
-
   app.get('/api/images/:id', auth, async function (req, reply) {
     const id = (req.params as { id: string }).id;
-    const row = db.prepare('SELECT mime, encrypted FROM images WHERE id = ?').get(id) as
-      { mime: string; encrypted: number } | undefined;
+    const row = db.prepare('SELECT mime, encrypted, owner_id FROM images WHERE id = ?').get(id) as
+      { mime: string; encrypted: number; owner_id: string } | undefined;
     if (!row) return reply.code(404).send({ error: 'not_found' });
     // ! An encrypted picture is handed only to the people it was sealed for: to anyone else it does not exist.
     if (
       row.encrypted &&
-      !db.prepare('SELECT 1 FROM image_keys WHERE image_id = ? AND viewer_id = ?').get(id, me(req))
+      (!db
+        .prepare('SELECT 1 FROM image_keys WHERE image_id = ? AND viewer_id = ?')
+        .get(id, me(req)) ||
+        !canSeeProfile(db, row.owner_id, me(req)))
     ) {
       return reply.code(404).send({ error: 'not_found' });
     }

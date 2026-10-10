@@ -22,6 +22,8 @@ export interface CustomSound {
   end?: number;
   duration?: number;
   createdAt: number;
+  /** The id of the category the person put it in (none: it is in "All" only). */
+  category?: string;
 }
 
 const LOCATION: StoreLocation = {
@@ -74,6 +76,21 @@ export class SoundboardStore {
   async save(clip: CustomSound): Promise<void> {
     await runInStore(LOCATION, 'readwrite', writeClip.bind(null, await packBlobs(clip)));
     this.clips.set([...this.clips(), clip]);
+  }
+
+  /** Puts a sound in a category (or takes it out of one). */
+  async setCategory(id: string, category: string | undefined): Promise<void> {
+    const clip = this.find(id);
+    if (!clip) {
+      return;
+    }
+    const next: CustomSound = { ...clip, category };
+    await runInStore(LOCATION, 'readwrite', writeClip.bind(null, await packBlobs(next)));
+    this.clips.set(
+      this.clips().map(function replace(entry) {
+        return entry.id === id ? next : entry;
+      }),
+    );
   }
 
   /** Deletes a clip. */

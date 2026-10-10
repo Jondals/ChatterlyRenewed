@@ -100,18 +100,6 @@ import { IconComponent } from './icon.component';
                 [value]="parts().angle"
                 (input)="changed.emit({ angle: +$any($event.target).value })"
             /></label>
-            <div class="flex flex-wrap gap-1.5">
-              @for (a of angles; track a) {
-                <button
-                  type="button"
-                  class="gangle"
-                  [class.is-on]="parts().angle === a"
-                  (click)="changed.emit({ angle: a })"
-                >
-                  {{ a }}°
-                </button>
-              }
-            </div>
           }
         </div>
       }
@@ -120,8 +108,8 @@ import { IconComponent } from './icon.component';
   styles: `
     .gbar {
       position: relative;
-      height: 1rem;
-      margin: 0.6rem 0.8rem;
+      height: 0.5rem;
+      margin: 0.7rem 1rem;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.14);
       box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -129,7 +117,7 @@ import { IconComponent } from './icon.component';
       transition: height 0.18s ease;
     }
     .gbar.is-editing {
-      height: 1.5rem;
+      height: 0.625rem;
     }
     .gstop {
       position: absolute;
@@ -157,20 +145,6 @@ import { IconComponent } from './icon.component';
       padding-top: 0.85rem;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .gangle {
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 0.72rem;
-      color: var(--muted, #9aa3b5);
-      transition: all 0.15s ease;
-    }
-    .gangle:hover,
-    .gangle.is-on {
-      border-color: var(--accent);
-      color: var(--fg);
-      background: color-mix(in oklab, var(--accent) 14%, transparent);
-    }
     .gchip {
       padding: 0.25rem 0.55rem;
       border-radius: 999px;
@@ -187,8 +161,6 @@ export class GradientControlsComponent {
   /** Show the place of the chosen color (where colors have no place of their own, only their order counts). */
   readonly showPosition = input(true);
   readonly changed = output<Partial<GradientParts>>();
-  /** Quick angles. */
-  protected readonly angles = [0, 45, 90, 135, 180, 270];
   protected readonly open = signal(false);
   protected readonly selected = signal(0);
   private dragging = -1;

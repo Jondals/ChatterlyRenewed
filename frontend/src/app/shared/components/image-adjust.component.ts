@@ -281,7 +281,7 @@ export class ImageAdjustComponent implements OnInit, AfterViewInit, OnDestroy {
       height,
     );
     // Browsers that protect against fingerprinting (Firefox with that option, Brave) hand back a blank canvas: then the
-    // picture that was chosen is kept as it is instead of a blank one (the server checks its type and size).
+    // ? picture that was chosen is kept as it is instead of a blank one (the server checks its type and size).
     if (this.isBlank(context, target) && this.file().size <= MAX_ORIGINAL_BYTES) {
       this.done.emit(this.file());
       return;

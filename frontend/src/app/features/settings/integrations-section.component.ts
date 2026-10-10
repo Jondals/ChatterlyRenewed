@@ -47,37 +47,6 @@ import { IconComponent } from '../../shared/components/icon.component';
               <b>{{ profile.presets.length }}</b> {{ 'presets' | t }}
             </span>
           </div>
-          <div class="grid gap-5 sm:grid-cols-2">
-            <div>
-              <div class="label mb-2">{{ 'Your themes' | t }}</div>
-              <div class="space-y-1.5">
-                @for (theme of profile.themes.slice(0, 4); track $index) {
-                  <div class="theme-card !flex-row !items-center !gap-3 !p-2 hover:!transform-none">
-                    <span class="theme-strip !h-4 w-20 shrink-0">
-                      @for (color of theme.segments.slice(0, 6); track $index) {
-                        <span [style.background]="color"></span>
-                      }
-                    </span>
-                    <span class="truncate text-xs">{{ theme.name }}</span>
-                  </div>
-                } @empty {
-                  <p class="text-xs text-muted">{{ 'Nothing here yet.' | t }}</p>
-                }
-              </div>
-            </div>
-            <div>
-              <div class="label mb-2">{{ 'Your presets' | t }}</div>
-              <div class="flex flex-wrap gap-1.5">
-                @for (preset of profile.presets.slice(0, 8); track $index) {
-                  <span class="preset-chip">
-                    {{ preset.name }} <b>{{ preset.options.length }}</b>
-                  </span>
-                } @empty {
-                  <p class="text-xs text-muted">{{ 'Nothing here yet.' | t }}</p>
-                }
-              </div>
-            </div>
-          </div>
           <div class="flex flex-wrap items-center gap-3 border-t border-white/8 pt-4">
             <p class="flex min-w-[14rem] flex-1 items-center gap-1.5 text-[0.6875rem] text-dim">
               <app-icon name="lock" [size]="11" class="shrink-0" />

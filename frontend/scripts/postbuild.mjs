@@ -215,7 +215,7 @@ function preloadFont(html) {
 }
 
 /**
- * What people who are already signed in see while the app starts instead of an empty dark page: the logo of
+ * ? What people who are already signed in see while the app starts instead of an empty dark page: the logo of
  * Chatterly-Renewed, breathing. It lives inside <app-root>, so Angular removes it when the app draws itself, and its
  * little stylesheet is inline (it is not part of the bundle). Only shown when the "has-session" mark is on.
  */

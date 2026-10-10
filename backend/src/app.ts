@@ -114,6 +114,19 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
     allowedHeaders: ['Authorization', 'Content-Type'],
     maxAge: 600,
   });
+  // ! The counter of the rate limit is kept per address and, unless the route says otherwise, SHARED by every route: a route
+  // with its own limit (20 uploads a minute) was refused as soon as the same address had made 20 requests of ANY kind.
+  // Each route that has a limit of its own gets its own counter.
+  app.addHook('onRoute', function ownCounter(route) {
+    const limit = route.config?.rateLimit;
+    if (limit && typeof limit === 'object' && !('groupId' in limit)) {
+      const methods = Array.isArray(route.method) ? route.method.join(',') : route.method;
+      route.config = {
+        ...route.config,
+        rateLimit: { ...limit, groupId: methods + ' ' + route.url },
+      };
+    }
+  });
   await app.register(rateLimit, {
     global: true,
     max: config.rateLimit.max,

@@ -44,21 +44,6 @@ function initialAnimations(): 'off' | 'quick' | 'full' {
   }
 }
 
-/** The ringtone to start with: what the person had chosen before the automatic one existed (the old "Normal" becomes automatic). */
-function initialRingtone(): RingtoneId {
-  try {
-    const old = JSON.parse(localStorage.getItem('chatterly.pref.ringtone') ?? 'null') as
-      | string
-      | null;
-    if (old && old !== 'classic') {
-      return old as RingtoneId;
-    }
-  } catch {
-    // Damaged storage: the automatic ringtone it is.
-  }
-  return 'auto';
-}
-
 /** The corner styles of the interface, from square to bubbly: the radius of small and of large elements, in pixels. */
 export const CORNER_STEPS: { name: string; small: number; large: number }[] = [
   { name: 'Square', small: 2, large: 3 },
@@ -209,6 +194,8 @@ export class SettingsService {
   readonly clickName = persisted('pref.clickName', '');
   /** Volume (0 to 100) of the soundboard effects of a call, on top of the general volume. */
   readonly callEffectsVolume = persisted('pref.callEffectsVolume', 100);
+  /** The categories the person made to sort the sounds of the soundboard. */
+  readonly soundCategories = persisted<{ id: string; name: string }[]>('pref.soundCategories', []);
   /** Volume of the music shared in a call (only YouTube can be controlled from outside). */
   readonly musicVolume = persisted('pref.musicVolume', 80);
   readonly clickStyle = persisted<ClickStyle>('pref.clickStyle', 'soft');
@@ -357,6 +344,10 @@ export class SettingsService {
 
   /** Brings preferences saved by older versions up to date (renamed fields, removed themes). */
   private upgradeOldData(): void {
+    // The flat message list no longer exists: the chat is always bubbles.
+    if (this.chatStyle() !== 'bubbles') {
+      this.chatStyle.set('bubbles');
+    }
     // The Slate theme no longer exists: whoever had it goes back to Midnight.
     if ((this.theme() as string) === 'slate') {
       this.theme.set('midnight');

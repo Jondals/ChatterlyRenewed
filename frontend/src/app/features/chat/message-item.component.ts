@@ -34,7 +34,6 @@ import { LinkCardComponent } from './link-card.component';
 import { StatusMarkComponent } from './status-mark.component';
 import { SpinlyCardComponent } from '../spinly/spinly-card.component';
 import { SpinlyMessageComponent } from '../spinly/spinly-message.component';
-import { Router } from '@angular/router';
 import { UiService } from '../../core/services/ui.service';
 import { ContextMenuService, type MenuItem } from '../../core/services/context-menu.service';
 import { fontClassOf } from '../../shared/util/user-font.directive';
@@ -126,7 +125,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
           </div>
         } @else if ((m.text || m.undecryptable) && textShown()) {
           <div
-            class="anim-pop selectable px-3 py-1.5 text-[0.95em] leading-relaxed"
+            class="anim-pop selectable px-3.5 pb-2.5 pt-2 text-[0.95em] leading-relaxed"
             [class.bubble-out]="bubbles() && mine()"
             [class.bubble-in]="bubbles() && !mine()"
             [class.bubble-emoji]="bigEmoji()"
@@ -319,7 +318,6 @@ export class MessageItemComponent {
   );
   private readonly menu = inject(ContextMenuService);
   private readonly ui = inject(UiService);
-  private readonly router = inject(Router);
   /** False when the message is only a link whose preview card already shows it (so it is not drawn twice). */
   protected readonly textShown = computed(
     function (this: MessageItemComponent) {

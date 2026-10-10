@@ -123,14 +123,6 @@ export function parseRichText(input: string): Segment[] {
   return out;
 }
 
-/** Wraps `text` in a colour tag (used by the composer toolbar). */
-export const colorTag = function (color: string, text: string) {
-  return `[c=${color}]${text}[/c]`;
-};
-export const gradientTag = function (colors: string[], text: string) {
-  return `[g=${colors.join(',')}]${text}[/g]`;
-};
-
 /** Strips tags for previews / notifications. */
 export function plainText(input: string): string {
   return input.replace(/\[(?:c|g)=[#0-9a-fA-F,]+\]|\[\/?(?:c|g|rainbow)\]/g, '');

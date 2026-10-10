@@ -135,7 +135,7 @@ const GROUPS: SectionEntry[][] = [
         </nav>
 
         <main
-          class="panel relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+          class="panel relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
           [class]="listView() ? 'max-md:hidden' : ''"
         >
           <button
@@ -149,7 +149,7 @@ const GROUPS: SectionEntry[][] = [
             <app-icon name="x" />
           </button>
           <div
-            class="mx-auto px-5 pb-10 pt-6 md:px-8"
+            class="mx-auto w-full px-5 pb-10 pt-6 md:px-8"
             [class.max-w-3xl]="section() !== 'profile'"
             [class.max-w-5xl]="section() === 'profile'"
           >

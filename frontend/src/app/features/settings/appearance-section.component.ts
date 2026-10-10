@@ -2,7 +2,8 @@
  * src/app/features/settings/appearance-section.component.ts
  * Settings - Appearance: theme, background, accent, typeface, bubbles, motion and cursors.
  */
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ArrivalService } from '../../core/services/arrival.service';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
 import { SelectComponent, type SelectOption } from '../../shared/components/select.component';
 import type { AccentId } from '../../core/models';
@@ -31,6 +32,7 @@ import {
 import { ToastService } from '../../core/services/toast.service';
 import { WallpaperStore } from '../../core/services/wallpaper.store';
 import { CollapseComponent } from '../../shared/components/collapse.component';
+import { StepSliderComponent, type StepLabel } from '../../shared/components/step-slider.component';
 import { ColorPickerComponent } from '../../shared/components/color-picker.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { BackgroundSceneComponent } from '../../shared/components/mesh-background.component';
@@ -131,6 +133,7 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
   selector: 'app-appearance-section',
   standalone: true,
   imports: [
+    StepSliderComponent,
     GradientControlsComponent,
     IconComponent,
     TranslatePipe,
@@ -150,7 +153,7 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
           ><span class="flex-1" [style.background]="currentTheme().colors[1]"></span
           ><span class="flex-1" [style.background]="currentTheme().colors[2]"></span
         ></span>
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3">
           @for (th of themes; track th.id) {
             <button
               type="button"
@@ -164,10 +167,10 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
                 ><span class="flex-1" [style.background]="th.colors[1]"></span
                 ><span class="flex-1" [style.background]="th.colors[2]"></span>
               </div>
-              <div class="flex items-center justify-between px-2.5 py-1.5 text-xs font-medium">
-                {{ th.label | t }}
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 text-xs font-medium">
+                <span class="min-w-0 flex-1 leading-tight">{{ th.label | t }}</span>
                 @if (s.theme() === th.id) {
-                  <app-icon name="check" [size]="13" class="text-accent" />
+                  <app-icon name="check" [size]="13" class="shrink-0 text-accent" />
                 }
               </div>
             </button>
@@ -182,10 +185,10 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
             <div class="flex h-12 items-center justify-center" [style.background]="s.customTheme()">
               <app-icon name="palette" [size]="18" class="text-white/70" />
             </div>
-            <div class="flex items-center justify-between px-2.5 py-1.5 text-xs font-medium">
-              {{ 'Custom' | t }}
+            <div class="flex items-center justify-between gap-2 px-2.5 py-2 text-xs font-medium">
+              <span class="min-w-0 flex-1 leading-tight">{{ 'Custom' | t }}</span>
               @if (s.theme() === 'custom') {
-                <app-icon name="check" [size]="13" class="text-accent" />
+                <app-icon name="check" [size]="13" class="shrink-0 text-accent" />
               }
             </div>
           </button>
@@ -418,100 +421,54 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
         title="Background visibility"
         hint="How much of the animated background shows through the panels."
       >
-        <div class="w-64 max-w-full">
-          <input
-            type="range"
-            min="0"
-            max="4"
-            step="1"
-            class="corner-range w-full accent-[var(--accent)]"
-            [value]="s.bgVisibility()"
-            (input)="s.bgVisibility.set(+$any($event.target).value)"
-            [attr.aria-label]="'Background visibility' | t"
-          />
-          <div class="corner-guide" aria-hidden="true">
-            @for (level of visibilityLevels; track level.id; let i = $index) {
-              <span
-                class="corner-guide-name"
-                [class.is-on]="s.bgVisibility() === i"
-                [style.left.%]="(i / (visibilityLevels.length - 1)) * 100"
-                >{{ level.label | t }}</span
-              >
-            }
-          </div>
-        </div>
+        <app-step-slider
+          label="Background visibility"
+          [max]="visibilityLevels.length - 1"
+          [value]="s.bgVisibility()"
+          [labels]="visibilityLabels"
+          (valueChange)="s.bgVisibility.set($event)"
+        />
       </app-setting-row>
       <app-setting-row
         title="Background blur"
         hint="Softens the edges of the animated shapes behind the interface."
       >
-        <div class="w-64 max-w-full">
-          <input
-            type="range"
-            min="0"
-            max="120"
-            class="corner-range w-full accent-[var(--accent)]"
-            [value]="s.bgBlur()"
-            (input)="s.bgBlur.set(+$any($event.target).value)"
-            [attr.aria-label]="'Background blur' | t"
-          />
-          <div class="corner-guide" aria-hidden="true">
-            <span class="corner-guide-name is-on" [style.left.%]="s.bgBlur() / 1.2">{{
-              s.bgBlur()
-            }}</span>
-          </div>
-        </div>
+        <app-step-slider
+          label="Background blur"
+          [max]="120"
+          [value]="s.bgBlur()"
+          [labels]="blurLabels()"
+          (valueChange)="s.bgBlur.set($event)"
+        />
       </app-setting-row>
       <app-setting-row title="Background motion">
-        <div class="w-64 max-w-full">
-          <input
-            type="range"
-            min="0"
-            [max]="motionLevels.length - 1"
-            step="1"
-            class="corner-range w-full accent-[var(--accent)]"
-            [value]="motionIndex()"
-            (input)="setMotion(motionLevels[+$any($event.target).value].id)"
-            [attr.aria-label]="'Background motion' | t"
-          />
-          <div class="corner-guide" aria-hidden="true">
-            @for (level of motionLevels; track level.id; let i = $index) {
-              <span
-                class="corner-guide-name"
-                [class.is-on]="motionIndex() === i"
-                [style.left.%]="(i / (motionLevels.length - 1)) * 100"
-                >{{ level.label | t }}</span
-              >
-            }
-          </div>
-        </div>
+        <app-step-slider
+          label="Background motion"
+          [max]="motionLevels.length - 1"
+          [value]="motionIndex()"
+          [labels]="motionLabels"
+          (valueChange)="setMotion(motionLevels[$event]!.id)"
+        />
       </app-setting-row>
       <app-setting-row
         title="Animations"
         hint="Transitions and movement of the interface (not the background)."
       >
-        <div class="w-64 max-w-full">
-          <input
-            type="range"
-            min="0"
-            [max]="animationLevels.length - 1"
-            step="1"
-            class="corner-range w-full accent-[var(--accent)]"
-            [value]="animationIndex()"
-            (input)="s.animations.set(animationLevels[+$any($event.target).value].id)"
-            [attr.aria-label]="'Animations' | t"
-          />
-          <div class="corner-guide" aria-hidden="true">
-            @for (level of animationLevels; track level.id; let i = $index) {
-              <span
-                class="corner-guide-name"
-                [class.is-on]="animationIndex() === i"
-                [style.left.%]="(i / (animationLevels.length - 1)) * 100"
-                >{{ level.label | t }}</span
-              >
-            }
-          </div>
-        </div>
+        <app-step-slider
+          label="Animations"
+          [max]="animationLevels.length - 1"
+          [value]="animationIndex()"
+          [labels]="animationLabels"
+          (valueChange)="s.animations.set(animationLevels[$event]!.id)"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Introduction"
+        hint="The animation that plays once each time you open the browser."
+      >
+        <button type="button" class="btn btn-sm" (click)="replayIntro()">
+          <app-icon name="play" [size]="14" /> {{ 'Watch it again' | t }}
+        </button>
       </app-setting-row>
     </section>
 
@@ -593,61 +550,24 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
                 </button>
               }
             </div>
-            <div>
-              <input
-                type="range"
-                min="0"
-                [max]="corners.length - 1"
-                step="1"
-                class="corner-range w-full accent-[var(--accent)]"
-                [value]="s.cornerStep()"
-                (input)="s.cornerStep.set(+$any($event.target).value)"
-                [attr.aria-label]="'Corner style' | t"
-              />
-              <div class="corner-guide" aria-hidden="true">
-                @for (g of cornerGuides; track g.index) {
-                  <span
-                    class="corner-guide-name"
-                    [class.is-on]="s.cornerStep() === g.index"
-                    [style.left.%]="(g.index / (corners.length - 1)) * 100"
-                    >{{ g.name | t }}</span
-                  >
-                }
-              </div>
-            </div>
           </div>
         </div>
       </app-collapse>
       <app-setting-row title="Text size">
-        <div class="w-64 max-w-full">
-          <input
-            type="range"
-            min="12"
-            max="18"
-            step="1"
-            class="corner-range w-full accent-[var(--accent)]"
-            [value]="s.fontSize()"
-            (input)="s.fontSize.set(+$any($event.target).value)"
-            [attr.aria-label]="'Text size' | t"
-          />
-          <div class="corner-guide" aria-hidden="true">
-            <span class="corner-guide-name is-on" [style.left.%]="((s.fontSize() - 12) / 6) * 100"
-              >{{ s.fontSize() }}px</span
-            >
-          </div>
-        </div>
+        <app-step-slider
+          label="Text size"
+          [min]="12"
+          [max]="18"
+          [value]="sizePreview() ?? s.fontSize()"
+          [labels]="sizeLabels()"
+          (valueChange)="sizePreview.set($event)"
+          (committed)="commitSize($event)"
+        />
       </app-setting-row>
     </section>
 
     <section class="settings-card">
       <h2 class="settings-card-title">{{ 'Chat' | t }}</h2>
-      <app-setting-row title="Message style" hint="Chat bubbles or a flat, IRC-like list.">
-        <app-segmented
-          [options]="chatStyles"
-          [value]="s.chatStyle()"
-          (valueChange)="setChat($event)"
-        />
-      </app-setting-row>
       <app-setting-row
         title="Actions over a message"
         hint="The bar with reactions and options that shows when you point at a message."
@@ -1010,16 +930,6 @@ export class AppearanceSectionComponent {
     { id: 'dashed', label: 'Dashed' },
   ];
   protected readonly corners = CORNER_STEPS;
-  /** The names of the old three corner styles, shown under the slider at their steps. */
-  protected readonly cornerGuides = [
-    { index: 1, name: 'Sharp' },
-    { index: 3, name: 'Soft' },
-    { index: 5, name: 'Round' },
-  ];
-  protected readonly chatStyles = [
-    { id: 'bubbles', label: 'Bubbles' },
-    { id: 'flat', label: 'Flat' },
-  ];
   protected readonly shuffleModes = [
     { id: 'reload', label: 'On every reload' },
     { id: 'interval', label: 'Every few minutes' },
@@ -1070,6 +980,15 @@ export class AppearanceSectionComponent {
     { id: 'open', label: 'Open' },
   ];
   /** Place of the chosen animations in the slider. */
+  protected readonly visibilityLabels = this.labelsOf(this.visibilityLevels);
+  protected readonly motionLabels = this.labelsOf(this.motionLevels);
+  protected readonly animationLabels = this.labelsOf(this.animationLevels);
+  /** The size being dragged (the text of the page changes only when the thumb is let go, so the slider stays still). */
+  protected readonly sizePreview = signal<number | null>(null);
+  /** The names under the blur slider: the ends and the value in use. */
+  protected readonly blurLabels = computed(this.buildBlurLabels.bind(this));
+  /** The names under the text size slider: the ends and the size in use. */
+  protected readonly sizeLabels = computed(this.buildSizeLabels.bind(this));
   protected readonly animationIndex = computed(this.findAnimationIndex.bind(this));
 
   /** The step of the slider that matches the animations setting. */
@@ -1275,10 +1194,60 @@ export class AppearanceSectionComponent {
     return url;
   }
 
-  /** Sets how messages are drawn: bubbles or a flat list. */
-  protected setChat(v: string): void {
-    this.s.chatStyle.set(v as 'bubbles' | 'flat');
+  /** The names under a slider with named steps: one at each step. */
+  private labelsOf(levels: { label: string }[]): StepLabel[] {
+    return levels.map(function name(level, at) {
+      return { at, text: level.label };
+    });
   }
+
+  /** The ends of the blur slider and, between them, the value in use. */
+  private buildBlurLabels(): StepLabel[] {
+    return this.endsAndCurrent(0, 120, this.s.bgBlur(), '0', '120', String(this.s.bgBlur()));
+  }
+
+  /** The ends of the text size slider and, between them, the size in use. */
+  private buildSizeLabels(): StepLabel[] {
+    const size = this.sizePreview() ?? this.s.fontSize();
+    return this.endsAndCurrent(12, 18, size, '12px', '18px', size + 'px');
+  }
+
+  /** Names for the two ends and for the value in use (when it is not at one of the ends). */
+  private endsAndCurrent(
+    min: number,
+    max: number,
+    value: number,
+    first: string,
+    last: string,
+    current: string,
+  ): StepLabel[] {
+    const room = (max - min) * 0.18;
+    const labels: StepLabel[] = [];
+    if (value - min > room || value === min) {
+      labels.push({ at: min, text: first });
+    }
+    if (max - value > room || value === max) {
+      labels.push({ at: max, text: last });
+    }
+    if (value > min && value < max) {
+      labels.push({ at: value, text: current });
+    }
+    return labels;
+  }
+
+  private readonly arrival = inject(ArrivalService);
+
+  /** Plays the introduction again. */
+  protected replayIntro(): void {
+    void this.arrival.replayIntro();
+  }
+
+  /** The person let go of the text size slider: now the whole page changes to the new size. */
+  protected commitSize(size: number): void {
+    this.s.fontSize.set(size);
+    this.sizePreview.set(null);
+  }
+
   /** Sets how the background changes: when the page loads or every few minutes. */
   protected setShuffle(v: string): void {
     this.s.bgShuffleMode.set(v === 'interval' ? 'interval' : 'reload');

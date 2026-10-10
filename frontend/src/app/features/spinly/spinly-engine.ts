@@ -302,11 +302,6 @@ export function playOrder(bracket: Pick<Bracket, 'rounds' | 'third'>): Match[] {
   return [...rounds.slice(0, -1).flat(), ...(third ? [third] : []), rounds[rounds.length - 1][0]];
 }
 
-/** Every match of the bracket, including the third-place match. */
-export function allMatches(bracket: Pick<Bracket, 'rounds' | 'third'>): Match[] {
-  return [...bracket.rounds.flat(), ...(bracket.third ? [bracket.third] : [])];
-}
-
 /** Rebuilds the bracket from the participants and the spins played so far. */
 export function buildBracket(
   participants: Participant[],

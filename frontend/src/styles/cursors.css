@@ -115,12 +115,3 @@
   z-index: 2147482999;
   pointer-events: none;
 }
-
-/* Tailwind's important cursor utilities would bypass the themed cursors. */
-.\!cursor-pointer {
-  cursor: var(--cur-pointer, pointer) !important;
-}
-
-.\!cursor-default {
-  cursor: var(--cur-default, default) !important;
-}

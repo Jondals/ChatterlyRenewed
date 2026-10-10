@@ -726,7 +726,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           return column('SELECT id FROM files WHERE channel_id = ?', channel);
         }),
       ];
-      // The icon of a group that goes to somebody else stays with the group: it changes hands instead of being erased.
+      // ? The icon of a group that goes to somebody else stays with the group: it changes hands instead of being erased.
       const keptIcons = [...heirs.keys()].flatMap(function iconOf(guild) {
         return column(
           'SELECT icon_image FROM guilds WHERE id = ? AND icon_image IS NOT NULL',
@@ -756,7 +756,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         for (const guild of abandonedGuilds)
           db.prepare('DELETE FROM guilds WHERE id = ?').run(guild);
         // The people of the groups keep the envelopes that this person wrapped for them: the public key goes into the
-        // envelope (it is public) because the row of the person goes now, and the owner is asked to renew the key.
+        // ? envelope (it is public) because the row of the person goes now, and the owner is asked to renew the key.
         db.prepare(
           `UPDATE guild_keys SET wrapper_pub = (SELECT pub_ecdh FROM users WHERE id = ?)
              WHERE wrapper_id = ? AND wrapper_pub IS NULL`,

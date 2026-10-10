@@ -210,3 +210,25 @@ export function profileAudience(db: Db, userId: string): string[] {
     return r.id;
   });
 }
+
+/**
+ * Whether `viewerId` may see the pictures of `ownerId` right now: the owner, or somebody who is still their friend (or
+ * has a pending request with them), shares a server with them or has a direct conversation with them. A person who is no
+ * longer in any of those loses the picture even if the key that was sealed for them is still stored.
+ */
+export function canSeeProfile(db: Db, ownerId: string, viewerId: string): boolean {
+  if (ownerId === viewerId) return true;
+  return !!db
+    .prepare(
+      `SELECT 1 FROM friendships
+        WHERE (user_a = @o AND user_b = @v) OR (user_a = @v AND user_b = @o)
+       UNION ALL
+       SELECT 1 FROM guild_members gm1 JOIN guild_members gm2 ON gm1.guild_id = gm2.guild_id
+        WHERE gm1.user_id = @o AND gm2.user_id = @v
+       UNION ALL
+       SELECT 1 FROM dm_members d1 JOIN dm_members d2 ON d1.channel_id = d2.channel_id
+        WHERE d1.user_id = @o AND d2.user_id = @v
+       LIMIT 1`,
+    )
+    .get({ o: ownerId, v: viewerId });
+}

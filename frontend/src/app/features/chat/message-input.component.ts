@@ -4,6 +4,8 @@
  */
 import { SpinlyService } from '../../core/services/spinly.service';
 import { ColorPickerComponent } from '../../shared/components/color-picker.component';
+import { GradientControlsComponent } from '../../shared/components/gradient-controls.component';
+import { sortedStops, type GradientParts } from '../../shared/util/gradient';
 import {
   Component,
   ElementRef,
@@ -61,6 +63,7 @@ const GRADIENTS = [
     SpinlyLogoComponent,
     IconComponent,
     ColorPickerComponent,
+    GradientControlsComponent,
     ExpressionPickerComponent,
     RichTextComponent,
     TranslatePipe,
@@ -321,42 +324,56 @@ const GRADIENTS = [
               [attr.aria-label]="c"
             ></button>
           }
-          @for (g of gradients; track g.name) {
-            <button
-              class="h-5 w-9 rounded-full hover:scale-110"
-              [style.background]="'linear-gradient(90deg,' + g.colors.join(',') + ')'"
-              type="button"
-              (mousedown)="$event.preventDefault()"
-              (click)="gradient(g.colors)"
-              [attr.title]="g.name | t"
-            ></button>
-          }
           <span class="mx-1 h-5 w-px bg-white/10"></span>
-          <span class="flex items-center gap-1.5 rounded-full bg-black/25 py-0.5 pl-1.5 pr-1">
-            <app-color-picker
-              [value]="gradA()"
-              [size]="20"
-              shape="round"
-              label="First color"
-              (valueChange)="gradA.set($event)"
-            />
-            <app-color-picker
-              [value]="gradB()"
-              [size]="20"
-              shape="round"
-              label="Second color"
-              (valueChange)="gradB.set($event)"
-            />
-            <button
-              class="h-5 w-12 rounded-full ring-1 ring-white/20 hover:scale-105"
-              type="button"
-              (mousedown)="$event.preventDefault()"
-              (click)="gradient([gradA(), gradB()])"
-              [style.background]="'linear-gradient(90deg,' + gradA() + ',' + gradB() + ')'"
-              [attr.title]="'Apply your gradient' | t"
-            ></button>
-          </span>
+          <button
+            type="button"
+            class="btn btn-sm btn-ghost gap-1.5"
+            [class.btn-active]="gradientOpen()"
+            (mousedown)="$event.preventDefault()"
+            (click)="gradientOpen.set(!gradientOpen())"
+          >
+            <span
+              class="h-3.5 w-6 rounded-full ring-1 ring-white/30"
+              [style.background]="gradientCss()"
+            ></span>
+            {{ 'Gradient' | t }}
+          </button>
         </div>
+        @if (gradientOpen()) {
+          <div class="anim-fade-up mb-1.5 rounded-ui border border-white/10 bg-ink-800 p-3">
+            <div class="grid grid-cols-4 gap-2">
+              @for (g of gradients; track g.name) {
+                <button
+                  class="h-6 rounded-full ring-1 ring-white/20 transition-transform hover:scale-105"
+                  [style.background]="'linear-gradient(90deg,' + g.colors.join(',') + ')'"
+                  type="button"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="gradient(g.colors); gradientOpen.set(false)"
+                  [attr.title]="g.name | t"
+                  [attr.aria-label]="g.name | t"
+                ></button>
+              }
+            </div>
+            <div class="mt-3 border-t border-white/8 pt-3">
+              <app-gradient-controls
+                [parts]="gradientParts()"
+                [showAngle]="false"
+                [showPosition]="false"
+                (changed)="gradientParts.set({ ...gradientParts(), ...$event })"
+              />
+            </div>
+            <div class="mt-3 flex justify-end">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                (mousedown)="$event.preventDefault()"
+                (click)="applyGradient()"
+              >
+                {{ 'Apply' | t }}
+              </button>
+            </div>
+          </div>
+        }
       }
 
       @if (recording()) {
@@ -567,8 +584,18 @@ export class MessageInputComponent implements OnDestroy {
     this.plusOpen.set(false);
   }
   protected readonly gradients = GRADIENTS;
-  protected readonly gradA = signal('#ff5d6c');
-  protected readonly gradB = signal('#818cf8');
+  /** Whether the panel to make a gradient is open. */
+  protected readonly gradientOpen = signal(false);
+  /** The gradient that is being made (two to five colors; their order is what counts). */
+  protected readonly gradientParts = signal<GradientParts>({
+    angle: 90,
+    stops: [
+      { color: '#ff5d6c', pos: 0 },
+      { color: '#818cf8', pos: 100 },
+    ],
+  });
+  /** The gradient being made, as the background of its button. */
+  protected readonly gradientCss = computed(this.buildGradientCss.bind(this));
   private readonly api = inject(ApiService);
   protected readonly text = signal('');
   protected readonly staged = signal<OutgoingFile[]>([]);
@@ -806,6 +833,29 @@ export class MessageInputComponent implements OnDestroy {
   /** Puts the chosen color on the selected text. */
   protected color(hex: string): void {
     this.wrap(`[c=${hex}]`, '[/c]');
+  }
+
+  /** The colors of the gradient being made, side by side, for the button. */
+  private buildGradientCss(): string {
+    return (
+      'linear-gradient(90deg,' +
+      sortedStops(this.gradientParts().stops)
+        .map(function color(stop) {
+          return stop.color;
+        })
+        .join(',') +
+      ')'
+    );
+  }
+
+  /** Puts the gradient that was made on the selected text. */
+  protected applyGradient(): void {
+    this.gradient(
+      sortedStops(this.gradientParts().stops).map(function color(stop) {
+        return stop.color;
+      }),
+    );
+    this.gradientOpen.set(false);
   }
 
   /** Puts a gradient of colors on the selected text. */

@@ -50,7 +50,7 @@ export const routes: Routes = [
     canMatch: [guestOnlyGuard],
     component: AuthShellComponent,
     children: [
-      // Signed out, the root address goes to the sign-in page (otherwise the frame would stay empty).
+      // ? Signed out, the root address goes to the sign-in page (otherwise the frame would stay empty).
       { path: '', pathMatch: 'full', redirectTo: 'login' },
       { path: 'login', component: LoginComponent },
       { path: 'register', component: RegisterComponent },

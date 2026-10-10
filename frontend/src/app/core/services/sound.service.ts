@@ -14,6 +14,7 @@ import {
 import {
   ESSENTIAL_SOUNDS,
   loadSounds,
+  preloadSounds,
   playSound,
   soundGap,
   soundLength,
@@ -40,46 +41,16 @@ export type UiSound =
   | 'exit';
 
 /** The effects of the soundboard that are built in. (Their names travel in the signals of a call, so they never change.) */
-export type SfxId =
-  | 'chime'
-  | 'doorbell'
-  | 'alarm'
-  | 'horn'
-  | 'boing'
-  | 'trombone'
-  | 'coin'
-  | 'tada'
-  | 'drumroll'
-  | 'rimshot'
-  | 'cymbal'
-  | 'applause'
-  | 'wave'
-  | 'whoosh'
-  | 'rain'
-  | 'thunder'
-  | 'sparkle'
-  | 'spell';
+export type SfxId = 'horn' | 'boing' | 'trombone' | 'tada' | 'rimshot' | 'applause';
 
 /** The built-in soundboard effects: the name that travels in a call, what is shown, and the file. */
 export const SOUNDBOARD: { id: SfxId; label: string; icon: string; sound: SoundId }[] = [
-  { id: 'chime', label: 'Chime', icon: '🔔', sound: 'chime' },
-  { id: 'doorbell', label: 'Doorbell', icon: '🚪', sound: 'doorbell' },
-  { id: 'alarm', label: 'Siren', icon: '🚨', sound: 'siren' },
   { id: 'horn', label: 'Air horn', icon: '📯', sound: 'airHorn' },
   { id: 'boing', label: 'Boing', icon: '🏀', sound: 'boing' },
   { id: 'trombone', label: 'Sad trombone', icon: '🎺', sound: 'sadTrombone' },
-  { id: 'coin', label: 'Coin', icon: '💰', sound: 'coin' },
   { id: 'tada', label: 'Ta-da!', icon: '🎉', sound: 'taDa' },
-  { id: 'drumroll', label: 'Drum roll', icon: '🥁', sound: 'drumRoll' },
   { id: 'rimshot', label: 'Rimshot', icon: '😏', sound: 'rimshot' },
-  { id: 'cymbal', label: 'Cymbal', icon: '💥', sound: 'cymbal' },
   { id: 'applause', label: 'Applause', icon: '👏', sound: 'applause' },
-  { id: 'wave', label: 'Wave', icon: '🌊', sound: 'wave' },
-  { id: 'whoosh', label: 'Wind', icon: '🌬️', sound: 'wind' },
-  { id: 'rain', label: 'Rain', icon: '🌧️', sound: 'rain' },
-  { id: 'thunder', label: 'Thunder', icon: '⛈️', sound: 'thunder' },
-  { id: 'sparkle', label: 'Sparkle', icon: '✨', sound: 'sparkle' },
-  { id: 'spell', label: 'Spell', icon: '🔮', sound: 'spell' },
 ];
 
 /** Which file each sound of the interface and of the calls plays. */
@@ -162,6 +133,13 @@ export class SoundService {
     const gain = this.masterGain();
     if (this.master) {
       this.master.gain.value = gain;
+    }
+  }
+
+  /** Starts loading the sounds of the interface when the browser is idle (no press of the person is needed for it). */
+  preload(): void {
+    if (this.audible && this.settings.sounds()) {
+      void preloadSounds(ESSENTIAL_SOUNDS);
     }
   }
 

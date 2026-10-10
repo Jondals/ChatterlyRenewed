@@ -20,7 +20,7 @@ import { IconComponent } from './icon.component';
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /**
- * Turns hue, saturation and brightness into #rrggbb (the picker works in HSV because it is how the square and the bar are drawn).
+ * ? Turns hue, saturation and brightness into #rrggbb (the picker works in HSV because it is how the square and the bar are drawn).
  */
 function hsvToHex(h: number, s: number, v: number): string {
   const f = function (n: number) {

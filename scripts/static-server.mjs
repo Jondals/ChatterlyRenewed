@@ -125,7 +125,7 @@ export function createStaticHandler(webDir) {
   }
 
   /**
-   * Answers one request: the file if it exists, otherwise index.html so the app can handle the route.
+   * ? Answers one request: the file if it exists, otherwise index.html so the app can handle the route.
    * @param {import('node:http').IncomingMessage} request
    * @param {import('node:http').ServerResponse} response
    */

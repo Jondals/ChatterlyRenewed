@@ -1,7 +1,11 @@
 /**
  * src/app/layout/soundboard-dock.component.ts
- * The soundboard of a call: many effects in folding categories and the person's own sounds. Whatever is played
- * is heard by everybody in the call (the sounds of the person are sent to the others once, encrypted).
+ * The soundboard of a call: a few effects that come with the app and the person's own sounds, which they can sort in
+ * categories of their own. Whatever is played is heard by everybody in the call (the sounds of the person are sent to
+ * the others once, encrypted).
+ *
+ * * The list is drawn little by little (one screen first, more while it is scrolled), so a soundboard with hundreds of
+ * sounds opens as fast as an empty one.
  */
 import { NgTemplateOutlet } from '@angular/common';
 import {
@@ -9,17 +13,41 @@ import {
   DestroyRef,
   EnvironmentInjector,
   HostListener,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { I18nService, TranslatePipe } from '../core/i18n/i18n.service';
-import { SettingsService } from '../core/services/settings.service';
 import { CallService } from '../core/services/call.service';
+import { ContextMenuService, type MenuItem } from '../core/services/context-menu.service';
+import { DialogService } from '../core/services/dialog.service';
+import { SettingsService } from '../core/services/settings.service';
 import { SoundboardStore, type CustomSound } from '../core/services/soundboard.store';
 import { SOUNDBOARD, SoundService, type SfxId } from '../core/services/sound.service';
 import { ToastService } from '../core/services/toast.service';
 import { UiService } from '../core/services/ui.service';
 import { IconComponent } from '../shared/components/icon.component';
+
+/** What a tile of the soundboard is: an effect of the app or a sound of the person. */
+type Tile =
+  | { kind: 'effect'; id: SfxId; icon: string; label: string }
+  | { kind: 'own'; clip: CustomSound };
+
+/** A part of the list: the sounds of one category (the first part has no title). */
+interface Part {
+  id: string;
+  name: string;
+  tiles: Tile[];
+}
+
+/** Tiles drawn when a tab opens (five rows of three, enough to fill the panel). */
+const FIRST_TILES = 15;
+/** Tiles added each time the end of the list gets close. */
+const MORE_TILES = 12;
+/** How close to the end (pixels) the next tiles are drawn. */
+const AHEAD_PX = 260;
+/** The longest name of a category. */
+const CATEGORY_NAME_MAX = 20;
 
 /** A floating soundboard available anywhere. */
 @Component({
@@ -31,7 +59,7 @@ import { IconComponent } from '../shared/components/icon.component';
       @if (ui.soundboardAnchor(); as anchor) {
         <div
           animate.leave="leave-pop"
-          class="sb-pop anim-pop fixed z-[75] flex max-h-[min(32rem,70dvh)] flex-col overflow-hidden rounded-ui-lg border border-white/10 bg-ink-800 shadow-2xl"
+          class="sb-pop anim-pop fixed z-[75] flex max-h-[min(34rem,72dvh)] flex-col overflow-hidden rounded-ui-lg border border-white/10 bg-ink-800 shadow-2xl"
           [style.left.px]="left(anchor)"
           [style.bottom.px]="bottom(anchor)"
           [style.width.px]="width()"
@@ -58,7 +86,7 @@ import { IconComponent } from '../shared/components/icon.component';
 
     <ng-template #board>
       <div class="flex items-center justify-between border-b border-white/8 px-5 py-3.5">
-        <div>
+        <div class="min-w-0">
           <div class="text-sm font-semibold">{{ 'Soundboard' | t }}</div>
           <div class="text-[0.6875rem] text-muted">
             {{
@@ -79,19 +107,38 @@ import { IconComponent } from '../shared/components/icon.component';
       </div>
 
       <div class="sb-tabs" role="tablist">
-        @for (group of groups; track group.id) {
+        <button
+          type="button"
+          role="tab"
+          class="sb-pill"
+          [class.is-on]="current() === 'all'"
+          [attr.aria-selected]="current() === 'all'"
+          (click)="open('all')"
+        >
+          <app-icon name="grid" [size]="14" />
+          {{ 'All' | t }}
+        </button>
+        @for (category of settings.soundCategories(); track category.id) {
           <button
             type="button"
             role="tab"
             class="sb-pill"
-            [class.is-on]="current() === group.id"
-            [attr.aria-selected]="current() === group.id"
-            (click)="current.set(group.id)"
+            [class.is-on]="current() === category.id"
+            [attr.aria-selected]="current() === category.id"
+            (click)="open(category.id)"
           >
-            <app-icon [name]="group.icon" [size]="14" />
-            {{ group.label | t }}
+            {{ category.name }}
           </button>
         }
+        <button
+          type="button"
+          class="sb-pill"
+          [attr.aria-label]="'New category' | t"
+          [attr.title]="'New category' | t"
+          (click)="newCategory()"
+        >
+          <app-icon name="plus" [size]="14" />
+        </button>
       </div>
 
       <div class="flex items-center gap-3 border-b border-white/8 px-5 py-2.5">
@@ -99,7 +146,7 @@ import { IconComponent } from '../shared/components/icon.component';
         <input
           type="range"
           min="0"
-          max="200"
+          max="100"
           class="min-w-0 flex-1 accent-[var(--accent)]"
           [value]="settings.callEffectsVolume()"
           (input)="settings.callEffectsVolume.set(+$any($event.target).value)"
@@ -110,76 +157,107 @@ import { IconComponent } from '../shared/components/icon.component';
         >
       </div>
 
-      <div class="min-h-0 flex-1 overflow-y-auto p-3">
+      @if (category(); as c) {
+        <div class="flex items-center gap-2 border-b border-white/8 px-5 py-2 text-xs text-muted">
+          <span class="min-w-0 flex-1 truncate font-semibold text-fg">{{ c.name }}</span>
+          <button type="button" class="btn btn-sm btn-ghost gap-1" (click)="renameCategory(c.id)">
+            <app-icon name="edit" [size]="12" /> {{ 'Rename' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-ghost btn-soft-danger gap-1"
+            (click)="deleteCategory(c.id)"
+          >
+            <app-icon name="trash" [size]="12" /> {{ 'Delete category' | t }}
+          </button>
+        </div>
+      }
+
+      <div #scroller class="min-h-0 flex-1 overflow-y-auto p-3" (scroll)="drawMore(scroller)">
         @for (tab of [current()]; track tab) {
-          <div class="sb-grid grid grid-cols-3 gap-2.5 anim-fade-in">
-            @if (tab !== 'mine') {
-              @for (effect of SOUNDBOARD; track effect.id) {
-                <button
-                  type="button"
-                  class="sb-tile"
-                  [class.is-hit]="hit() === effect.id"
-                  (click)="playBuiltin(effect.id)"
-                >
-                  <span class="emoji-glyph text-2xl leading-none">{{ effect.icon }}</span>
-                  <span class="w-full truncate text-[0.6875rem]">{{ effect.label | t }}</span>
-                </button>
+          <div class="anim-fade-in">
+            @for (part of visibleParts(); track part.id; let first = $first) {
+              @if (part.name) {
+                <div class="label mb-2 mt-3 px-1">{{ part.name }}</div>
               }
-            }
-            @if (tab !== 'default') {
-              @for (c of store.clips(); track c.id) {
-                <div class="group relative">
-                  <button
-                    type="button"
-                    class="sb-tile h-full w-full"
-                    [class.is-hit]="hit() === c.id"
-                    (click)="playClip(c)"
-                  >
-                    @if (c.emoji) {
-                      <span class="emoji-glyph text-2xl leading-none">{{ c.emoji }}</span>
-                    } @else {
-                      <app-icon name="music" [size]="22" class="text-accent" />
-                    }
-                    <span class="w-full truncate text-[0.6875rem]">{{ c.name }}</span>
+              <div class="sb-grid grid grid-cols-3 gap-2.5" [class.min-h-0]="!first">
+                @if (first) {
+                  <button type="button" class="sb-tile sb-add" (click)="upload()">
+                    <app-icon name="plus" [size]="22" class="text-muted" />
+                    <span class="text-[0.6875rem]">{{ 'Add a sound' | t }}</span>
+                    <span class="text-[0.625rem] text-dim">{{
+                      'Cut it, name it, add an emoji' | t
+                    }}</span>
                   </button>
-                  <button
-                    type="button"
-                    class="sb-act absolute left-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-accent group-hover:flex"
-                    (click)="edit(c)"
-                    [attr.aria-label]="'Edit the sound' | t"
-                  >
-                    <app-icon name="edit" [size]="11" />
-                  </button>
-                  <button
-                    type="button"
-                    class="sb-act absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
-                    (click)="store.remove(c.id)"
-                    [attr.aria-label]="'Delete' | t"
-                  >
-                    <app-icon name="x" [size]="11" />
-                  </button>
-                </div>
-              }
-            }
-            @if (tab !== 'default') {
-              <button type="button" class="sb-tile sb-add" (click)="upload()">
-                <app-icon name="plus" [size]="22" class="text-muted" />
-                <span class="text-[0.6875rem]">{{ 'Add a sound' | t }}</span>
-                <span class="text-[0.625rem] text-dim">{{
-                  'Cut it, name it, add an emoji' | t
-                }}</span>
-              </button>
+                }
+                @for (tile of part.tiles; track tileKey(tile)) {
+                  @if (tile.kind === 'effect') {
+                    <button
+                      type="button"
+                      class="sb-tile"
+                      [class.is-hit]="hit() === tile.id"
+                      (click)="playBuiltin(tile.id)"
+                    >
+                      <span class="emoji-glyph text-2xl leading-none">{{ tile.icon }}</span>
+                      <span class="w-full truncate text-[0.6875rem]">{{ tile.label | t }}</span>
+                    </button>
+                  } @else {
+                    <div class="group relative">
+                      <button
+                        type="button"
+                        class="sb-tile h-full w-full"
+                        [class.is-hit]="hit() === tile.clip.id"
+                        (click)="playClip(tile.clip)"
+                      >
+                        @if (tile.clip.emoji) {
+                          <span class="emoji-glyph text-2xl leading-none">{{
+                            tile.clip.emoji
+                          }}</span>
+                        } @else {
+                          <app-icon name="music" [size]="22" class="text-accent" />
+                        }
+                        <span class="w-full truncate text-[0.6875rem]">{{ tile.clip.name }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="sb-act absolute left-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-accent group-hover:flex"
+                        (click)="edit(tile.clip)"
+                        [attr.aria-label]="'Edit the sound' | t"
+                      >
+                        <app-icon name="edit" [size]="11" />
+                      </button>
+                      @if (settings.soundCategories().length) {
+                        <button
+                          type="button"
+                          class="sb-act absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-muted group-hover:flex"
+                          (click)="moveMenu($event, tile.clip)"
+                          [attr.aria-label]="'Move to a category' | t"
+                          [attr.title]="'Move to a category' | t"
+                        >
+                          <app-icon name="tag" [size]="11" />
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="sb-act absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-red-300 group-hover:flex"
+                        (click)="store.remove(tile.clip.id)"
+                        [attr.aria-label]="'Delete' | t"
+                      >
+                        <app-icon name="x" [size]="11" />
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
             }
           </div>
-          @if (tab !== 'default') {
-            <p class="mt-3 text-[0.6875rem] leading-snug text-dim">
-              {{
-                'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
-                  | t
-              }}
-            </p>
-          }
         }
+        <p class="mt-3 text-[0.6875rem] leading-snug text-dim">
+          {{
+            'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
+              | t
+          }}
+        </p>
       </div>
     </ng-template>
   `,
@@ -195,26 +273,215 @@ export class SoundboardDockComponent {
   protected readonly ui = inject(UiService);
   protected readonly store = inject(SoundboardStore);
   protected readonly call = inject(CallService);
+  protected readonly settings = inject(SettingsService);
   private readonly sound = inject(SoundService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
+  private readonly dialog = inject(DialogService);
+  private readonly menu = inject(ContextMenuService);
   private readonly injector = inject(EnvironmentInjector);
-  protected readonly settings = inject(SettingsService);
-  protected readonly SOUNDBOARD = SOUNDBOARD;
-  protected readonly groups = [
-    { id: 'all', label: 'All', icon: 'grid' },
-    { id: 'default', label: 'Default', icon: 'music' },
-    { id: 'mine', label: 'Your sounds', icon: 'upload' },
-  ];
-  /** The group shown: everything, the default effects or the sounds of the person. */
+  /** The tab shown: 'all' or the id of a category. */
   protected readonly current = signal('all');
   /** The sound that was just played (it lights up for a moment). */
   protected readonly hit = signal<string | null>(null);
+  /** How many tiles are drawn so far. */
+  private readonly drawn = signal(FIRST_TILES);
   private hitTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** The category of the open tab (null in "All"). */
+  protected readonly category = computed(this.findCategory.bind(this));
+  /** Every part of the open tab with all its tiles. */
+  private readonly parts = computed(this.buildParts.bind(this));
+  /** The parts cut to the tiles that are drawn so far. */
+  protected readonly visibleParts = computed(this.cutParts.bind(this));
 
   constructor() {
     void this.store.load();
     inject(DestroyRef).onDestroy(this.clearHit.bind(this));
+  }
+
+  /** The category of the open tab. */
+  private findCategory(): { id: string; name: string } | null {
+    const id = this.current();
+    return (
+      this.settings.soundCategories().find(function same(category) {
+        return category.id === id;
+      }) ?? null
+    );
+  }
+
+  /** The sounds of the open tab: in "All" the effects and the sounds without category, then each category with its title. */
+  private buildParts(): Part[] {
+    const clips = this.store.clips();
+    const categories = this.settings.soundCategories();
+    const own = function own(clip: CustomSound): Tile {
+      return { kind: 'own', clip };
+    };
+    const open = this.current();
+    if (open !== 'all') {
+      return [
+        {
+          id: open,
+          name: '',
+          tiles: clips
+            .filter(function inCategory(clip) {
+              return clip.category === open;
+            })
+            .map(own),
+        },
+      ];
+    }
+    const known = new Set(
+      categories.map(function id(category) {
+        return category.id;
+      }),
+    );
+    const main: Tile[] = SOUNDBOARD.map(function effect(entry): Tile {
+      return { kind: 'effect', id: entry.id, icon: entry.icon, label: entry.label };
+    });
+    for (const clip of clips) {
+      if (!clip.category || !known.has(clip.category)) {
+        main.push(own(clip));
+      }
+    }
+    const parts: Part[] = [{ id: 'main', name: '', tiles: main }];
+    for (const category of categories) {
+      const tiles = clips
+        .filter(function inCategory(clip) {
+          return clip.category === category.id;
+        })
+        .map(own);
+      if (tiles.length) {
+        parts.push({ id: category.id, name: category.name, tiles });
+      }
+    }
+    return parts;
+  }
+
+  /** The parts with only the first tiles (the first part always keeps its place for the button that adds a sound). */
+  private cutParts(): Part[] {
+    let left = this.drawn();
+    const out: Part[] = [];
+    for (const part of this.parts()) {
+      if (left <= 0 && out.length) {
+        break;
+      }
+      out.push({ ...part, tiles: part.tiles.slice(0, Math.max(0, left)) });
+      left -= part.tiles.length;
+    }
+    return out;
+  }
+
+  /** A key that tells a tile from the others while the list is redrawn. */
+  protected tileKey(tile: Tile): string {
+    return tile.kind === 'effect' ? 'effect:' + tile.id : 'own:' + tile.clip.id;
+  }
+
+  /** Opens a tab: the list starts again with its first tiles. */
+  protected open(tab: string): void {
+    this.current.set(tab);
+    this.drawn.set(FIRST_TILES);
+  }
+
+  /** The list was scrolled: when its end is near, more tiles are drawn. */
+  protected drawMore(box: HTMLElement): void {
+    if (box.scrollTop + box.clientHeight < box.scrollHeight - AHEAD_PX) {
+      return;
+    }
+    let total = 0;
+    for (const part of this.parts()) {
+      total += part.tiles.length;
+    }
+    if (this.drawn() < total) {
+      this.drawn.set(this.drawn() + MORE_TILES);
+    }
+  }
+
+  /** Asks for the name of a new category and opens it. */
+  protected async newCategory(): Promise<void> {
+    const name = await this.dialog.prompt(
+      this.i18n.t('New category'),
+      this.i18n.t('Sounds can be sorted in categories of your own.'),
+      '',
+      this.i18n.t('Name'),
+    );
+    const clean = (name ?? '').trim().slice(0, CATEGORY_NAME_MAX);
+    if (!clean) {
+      return;
+    }
+    const id = crypto.randomUUID();
+    this.settings.soundCategories.set([...this.settings.soundCategories(), { id, name: clean }]);
+    this.open(id);
+  }
+
+  /** Changes the name of a category. */
+  protected async renameCategory(id: string): Promise<void> {
+    const current = this.category();
+    const name = await this.dialog.prompt(
+      this.i18n.t('Rename'),
+      this.i18n.t('Sounds can be sorted in categories of your own.'),
+      current?.name ?? '',
+      this.i18n.t('Name'),
+    );
+    const clean = (name ?? '').trim().slice(0, CATEGORY_NAME_MAX);
+    if (!clean) {
+      return;
+    }
+    this.settings.soundCategories.set(
+      this.settings.soundCategories().map(function rename(category) {
+        return category.id === id ? { ...category, name: clean } : category;
+      }),
+    );
+  }
+
+  /** Deletes a category: its sounds are kept, without category. */
+  protected async deleteCategory(id: string): Promise<void> {
+    const ok = await this.dialog.confirm(
+      this.i18n.t('Delete category'),
+      this.i18n.t('Its sounds are kept: they go back to All.'),
+      { confirmLabel: this.i18n.t('Delete'), danger: true },
+    );
+    if (!ok) {
+      return;
+    }
+    for (const clip of this.store.clips()) {
+      if (clip.category === id) {
+        await this.store.setCategory(clip.id, undefined);
+      }
+    }
+    this.settings.soundCategories.set(
+      this.settings.soundCategories().filter(function keep(category) {
+        return category.id !== id;
+      }),
+    );
+    this.open('all');
+  }
+
+  /** Opens the menu that moves a sound to a category. */
+  protected moveMenu(event: MouseEvent, clip: CustomSound): void {
+    const items: MenuItem[] = [];
+    const store = this.store;
+    if (clip.category) {
+      items.push({
+        label: this.i18n.t('No category'),
+        icon: 'grid',
+        action: function none(): void {
+          void store.setCategory(clip.id, undefined);
+        },
+      });
+    }
+    for (const category of this.settings.soundCategories()) {
+      if (category.id !== clip.category) {
+        items.push({
+          label: category.name,
+          icon: 'tag',
+          action: function move(): void {
+            void store.setCategory(clip.id, category.id);
+          },
+        });
+      }
+    }
+    this.menu.open(event, items);
   }
 
   /** Width of the board when it opens from the button of the call. */
@@ -241,9 +508,10 @@ export class SoundboardDockComponent {
     clearTimeout(this.hitTimer);
   }
 
-  /** A press anywhere else closes the board (but not a press inside the window that edits a sound, which opens from it). */
+  /** A press anywhere else closes the board (but not a press inside the windows that open from it). */
   @HostListener('document:mousedown', ['$event']) closeOutside(event: MouseEvent) {
-    if (!(event.target as Element).closest('app-sound-edit')) {
+    const target = event.target as Element;
+    if (!target.closest('app-sound-edit, app-context-menu, app-toast-host')) {
       this.ui.soundboardOpen.set(false);
     }
   }
@@ -273,7 +541,7 @@ export class SoundboardDockComponent {
     void this.call.sendClip(clip);
   }
 
-  /** Adds a sound chosen by the person: it opens the window to cut and name it. */
+  /** Adds a sound chosen by the person (to the open category): it opens the window to cut and name it. */
   protected async upload(): Promise<void> {
     const file = await this.store.pickFile();
     if (!file) return;
@@ -289,7 +557,13 @@ export class SoundboardDockComponent {
         file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Sound',
       );
       if (result) {
-        await this.store.save({ id: crypto.randomUUID(), createdAt: Date.now(), ...result });
+        const open = this.current();
+        await this.store.save({
+          id: crypto.randomUUID(),
+          createdAt: Date.now(),
+          category: open === 'all' ? undefined : open,
+          ...result,
+        });
         this.toast.success(this.i18n.t('Sound added'));
       }
     } catch (e) {
@@ -315,7 +589,12 @@ export class SoundboardDockComponent {
       );
       if (result) {
         await this.store.remove(clip.id);
-        await this.store.save({ id: crypto.randomUUID(), createdAt: clip.createdAt, ...result });
+        await this.store.save({
+          id: crypto.randomUUID(),
+          createdAt: clip.createdAt,
+          category: clip.category,
+          ...result,
+        });
         this.toast.success(this.i18n.t('Sound updated'));
       }
     } catch (e) {

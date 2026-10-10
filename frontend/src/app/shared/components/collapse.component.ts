@@ -24,7 +24,7 @@ import { IconComponent } from './icon.component';
         (click)="toggle()"
       >
         <span class="min-w-0 flex-1">
-          <span class="block truncate text-sm font-semibold">{{ title() | t }}</span>
+          <span class="block text-sm font-semibold leading-snug">{{ title() | t }}</span>
           <span class="block truncate text-xs text-muted">{{ summary() | t }}</span>
         </span>
         <ng-content select="[preview]" />
