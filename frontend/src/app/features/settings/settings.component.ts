@@ -138,16 +138,19 @@ const GROUPS: SectionEntry[][] = [
           class="panel relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
           [class]="listView() ? 'max-md:hidden' : ''"
         >
-          <button
-            class="btn btn-icon btn-ghost tip sticky right-3 top-3 z-10 float-right m-3"
-            data-tip-pos="left"
-            [attr.data-tip]="'Close (Esc)' | t"
-            type="button"
-            (click)="close()"
-            [attr.aria-label]="'Close' | t"
-          >
-            <app-icon name="x" />
-          </button>
+          <!-- ! Not a float: a grid next to a float is made narrower by it, and the sticky float moved down over the page while it was scrolled (the profile narrowed). This box has no height, so nothing gives way to it. -->
+          <div class="pointer-events-none sticky top-0 z-10 flex h-0 justify-end">
+            <button
+              class="btn btn-icon btn-ghost tip pointer-events-auto mr-3 mt-3"
+              data-tip-pos="left"
+              [attr.data-tip]="'Close (Esc)' | t"
+              type="button"
+              (click)="close()"
+              [attr.aria-label]="'Close' | t"
+            >
+              <app-icon name="x" />
+            </button>
+          </div>
           <div
             class="mx-auto w-full px-5 pb-10 pt-6 md:px-8"
             [class.max-w-3xl]="section() !== 'profile'"

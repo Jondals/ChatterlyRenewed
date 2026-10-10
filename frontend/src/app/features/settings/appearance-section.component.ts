@@ -550,6 +550,14 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
                 </button>
               }
             </div>
+            <app-step-slider
+              class="!w-full"
+              label="Corner style"
+              [max]="corners.length - 1"
+              [value]="s.cornerStep()"
+              [labels]="cornerLabels"
+              (valueChange)="s.cornerStep.set($event)"
+            />
           </div>
         </div>
       </app-collapse>
@@ -930,6 +938,12 @@ export class AppearanceSectionComponent {
     { id: 'dashed', label: 'Dashed' },
   ];
   protected readonly corners = CORNER_STEPS;
+  /** The names of the three classic corner styles, under the slider at their steps. */
+  protected readonly cornerLabels: StepLabel[] = [
+    { at: 1, text: 'Sharp' },
+    { at: 3, text: 'Soft' },
+    { at: 5, text: 'Round' },
+  ];
   protected readonly shuffleModes = [
     { id: 'reload', label: 'On every reload' },
     { id: 'interval', label: 'Every few minutes' },

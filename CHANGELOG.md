@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.20.1
+
+- **My profile no longer narrows while the page is scrolled or a fold opens.** The cause was the close button of the settings: it was a sticky float, and a grid next to a float is made narrower by it, so when the float followed the scroll over the page the columns shrank. The button now lives in a box with no height, so nothing gives way to it.
+- Corner style: the slider is back, under the seven choices and with the same design as the other sliders (the names Sharp, Soft and Round under their steps).
+
 ## 2.20.0
 
 - **Security: rate limits.** The counter of the rate limit was kept per address and shared by every route, so a route with a limit of its own (20 uploads or link previews a minute) was refused as soon as the same address had made 20 requests of any kind. Each route with its own limit has its own counter now (a test covers it).
