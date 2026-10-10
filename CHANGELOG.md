@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.17.1
+
+- Calls: the microphone and the camera buttons have an arrow (like Discord) that opens the list of devices: microphone and speakers on one, cameras on the other. Choosing one switches at once, also in the middle of a call (the camera restarts with the new one; a camera that is gone falls back to the default).
+- Right click on a person in a call: a **volume slider from 0 to 200 %** for that person (double click resets it; it is kept for the next calls with them), the menu opens next to the cursor in the top layer of the browser (it was far from it because a container moved it), can be **dragged** by its title and closes with a press anywhere else, with Escape or with the cross.
+- Groups: the profile card of a member no longer shows "@username".
+- Spinly tournaments look better in the chat and in the call: the round as a chip, side cards with a colored edge, a glassy score, and a bracket with connecting lines, check marks on the winners and faded losers.
+- Sounds, softer: the sounds of joining and leaving a call were far too sharp (measured: their brightness was around 12 000 to 14 000 Hz, a whistle). Every recorded sound was measured (loudness and brightness) and only soft ones were kept; each one has a gain that brings it to the same loudness, and all of them go through a low-pass filter. Joining a call and leaving it yourself have their own deeper sounds; deafen and undeafen are two soft drops going down or up; mute and unmute are short and low.
+- Sign in and sign out: now it is a padlock that opens (sign in) or shuts (sign out), made of soft clicks and a thump, with a background of a breath of air and a slow pad of low notes that rise or fall, and a small glint of glass. The loud boom and the high sweeps are gone and the whole animation is much quieter.
+- Calls: the headphones button has its own arrow with the speakers; the microphone arrow now only lists microphones.
+
 ## 2.17.0
 
 - Emoji picker: changing category no longer freezes the page. A category draws its first screenful at once and the rest follows in small steps while the browser is idle (before, 100 to 390 emoji were created in one go). There is a new tab, "All emoji" (🌐), that shows all of them (about 1900), also drawn little by little so it never hurts performance, and it stops when the picker closes.
@@ -14,13 +24,6 @@
 - Emoji: "All emoji" does not fill by itself: it draws the first rows and more as you scroll.
 - Search engines and social networks: canonical address, Open Graph and Twitter cards with a share picture, structured data (WebApplication), web manifest and PNG icons, `sitemap.xml` and a `robots.txt` that lets crawlers see the sign-in and registration pages and nothing private. The public address comes from `SITE_URL` when building (default: the public site).
 - README in Spanish (`README.es.md`).
-- Calls: the microphone and the camera buttons have an arrow (like Discord) that opens the list of devices: microphone and speakers on one, cameras on the other. Choosing one switches at once, also in the middle of a call (the camera restarts with the new one; a camera that is gone falls back to the default).
-- Right click on a person in a call: a **volume slider from 0 to 200 %** for that person (double click resets it; it is kept for the next calls with them), the menu opens next to the cursor in the top layer of the browser (it was far from it because a container moved it), can be **dragged** by its title and closes with a press anywhere else, with Escape or with the cross.
-- Groups: the profile card of a member no longer shows "@username".
-- Spinly tournaments look better in the chat and in the call: the round as a chip, side cards with a colored edge, a glassy score, and a bracket with connecting lines, check marks on the winners and faded losers.
-- Sounds, softer: the sounds of joining and leaving a call were far too sharp (measured: their brightness was around 12 000 to 14 000 Hz, a whistle). Every recorded sound was measured (loudness and brightness) and only soft ones were kept; each one has a gain that brings it to the same loudness, and all of them go through a low-pass filter. Joining a call and leaving it yourself have their own deeper sounds; deafen and undeafen are two soft drops going down or up; mute and unmute are short and low.
-- Sign in and sign out: now it is a padlock that opens (sign in) or shuts (sign out), made of soft clicks and a thump, with a background of a breath of air and a slow pad of low notes that rise or fall, and a small glint of glass. The loud boom and the high sweeps are gone and the whole animation is much quieter.
-- Calls: the headphones button has its own arrow with the speakers; the microphone arrow now only lists microphones.
 - Comments of the audited code use the tags of the Better Comments extension (red `!` for what must never be relaxed, green `*`, blue `?`); the extension is recommended in `.vscode/extensions.json`.
 
 ## 2.16.0
