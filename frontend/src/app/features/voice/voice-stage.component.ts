@@ -454,20 +454,23 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                     >
                       <app-icon [name]="call.muted() ? 'mic-off' : 'mic'" [size]="20" />
                     </button>
-                    <app-device-menu kind="audio" />
+                    <app-device-menu kind="mic" />
                   </div>
-                  <button
-                    class="btn btn-icon h-12 w-12 tip"
-                    [class.btn-soft-danger]="call.deafened()"
-                    [attr.data-tip]="(call.deafened() ? 'Undeafen' : 'Deafen') | t"
-                    type="button"
-                    (click)="call.toggleDeafen()"
-                  >
-                    <app-icon
-                      [name]="call.deafened() ? 'headphones-off' : 'headphones'"
-                      [size]="20"
-                    />
-                  </button>
+                  <div class="flex items-stretch gap-0.5">
+                    <button
+                      class="btn btn-icon h-12 w-12 tip !rounded-r-[calc(var(--r)*.4)]"
+                      [class.btn-soft-danger]="call.deafened()"
+                      [attr.data-tip]="(call.deafened() ? 'Undeafen' : 'Deafen') | t"
+                      type="button"
+                      (click)="call.toggleDeafen()"
+                    >
+                      <app-icon
+                        [name]="call.deafened() ? 'headphones-off' : 'headphones'"
+                        [size]="20"
+                      />
+                    </button>
+                    <app-device-menu kind="speakers" />
+                  </div>
                   <span class="mx-1 h-8 w-px bg-white/10"></span>
                   <div class="flex items-stretch gap-0.5">
                     <button

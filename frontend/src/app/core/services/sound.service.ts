@@ -31,7 +31,8 @@ export type UiSound =
   | 'connect'
   | 'success'
   | 'error'
-  | 'open';
+  | 'open'
+  | 'exit';
 export type SfxId =
   | 'chime'
   | 'doorbell'
@@ -81,21 +82,40 @@ export const SOUNDBOARD: { id: SfxId; label: string; icon: string; group: string
   { id: 'spell', label: 'Spell', icon: '🔮', group: 'ambient' },
 ];
 
-/** The recorded sound of each interface sound (the synthesized one plays until it is loaded), with its speed and level. */
-const UI_SAMPLES: Partial<Record<UiSound, { id: SampleId; rate?: number; level?: number }>> = {
-  message: { id: 'message', level: 1.1 },
-  send: { id: 'send', level: 0.9 },
-  join: { id: 'join', level: 0.9 },
-  leave: { id: 'leave', level: 0.9 },
-  mute: { id: 'mute', level: 0.8 },
-  unmute: { id: 'unmute', level: 0.8 },
-  deafen: { id: 'deafen', level: 0.9 },
-  undeafen: { id: 'undeafen', level: 0.9 },
-  toggle: { id: 'toggle', level: 0.9 },
-  open: { id: 'open', level: 0.8 },
-  success: { id: 'success', level: 1 },
-  connect: { id: 'connect', level: 1 },
-  error: { id: 'error', level: 1 },
+/** One hit of a recorded interface sound: which recording, how fast, how loud and how long after the start (seconds). */
+interface Hit {
+  id: SampleId;
+  rate?: number;
+  level?: number;
+  at?: number;
+}
+
+/**
+ * The recorded sound of each interface sound (the synthesized one plays until it is loaded). All of them are soft ones
+ * (measured, see sound-samples.ts) and leveled; some are two hits, going up or down in pitch, so they say "on" or "off"
+ * without being loud. Joining a call yourself and leaving it have their own longer, deeper sounds.
+ */
+const UI_SAMPLES: Partial<Record<UiSound, Hit[]>> = {
+  message: [{ id: 'message' }],
+  send: [{ id: 'send', rate: 1.25, level: 0.8 }],
+  join: [{ id: 'join' }],
+  leave: [{ id: 'leave' }],
+  connect: [{ id: 'connect' }],
+  exit: [{ id: 'exit' }],
+  mute: [{ id: 'mute' }],
+  unmute: [{ id: 'unmute' }],
+  deafen: [
+    { id: 'deafen', rate: 0.9 },
+    { id: 'deafen', rate: 0.68, at: 0.09, level: 0.8 },
+  ],
+  undeafen: [
+    { id: 'undeafen', rate: 0.9 },
+    { id: 'undeafen', rate: 1.2, at: 0.09, level: 0.8 },
+  ],
+  toggle: [{ id: 'toggle', rate: 1.1 }],
+  open: [{ id: 'open', rate: 1.2, level: 0.8 }],
+  success: [{ id: 'success' }],
+  error: [{ id: 'error' }],
 };
 
 /** The click styles that are recorded sounds. Their sound is also what a slider plays, higher or lower along its way. */
@@ -222,14 +242,20 @@ export class SoundService {
 
   /** Plays the recorded version of an interface sound; false when there is none or it is not loaded yet. */
   private playRecorded(sound: UiSound): boolean {
-    const entry = UI_SAMPLES[sound];
-    if (!entry) {
+    const hits = UI_SAMPLES[sound];
+    if (!hits) {
       return false;
     }
-    return playSample(this.context, this.output, entry.id, {
-      rate: entry.rate,
-      gain: SAMPLE_LEVEL * (entry.level ?? 1) * this.levelScale,
-    });
+    let played = true;
+    for (const hit of hits) {
+      played =
+        playSample(this.context, this.output, hit.id, {
+          rate: hit.rate,
+          at: hit.at,
+          gain: SAMPLE_LEVEL * (hit.level ?? 1) * this.levelScale,
+        }) && played;
+    }
+    return played;
   }
 
   /** A soft tick for a step of a slider (`position` is 0 to 1): it rises in pitch as the slider goes up. */
@@ -605,6 +631,7 @@ export class SoundService {
         this.tone(440, 0.1, 'sine', 0.06, 0);
         this.tone(660, 0.16, 'sine', 0.06, 0.1);
         break;
+      case 'exit':
       case 'leave':
         this.tone(660, 0.1, 'sine', 0.06, 0);
         this.tone(440, 0.16, 'sine', 0.06, 0.1);
@@ -641,7 +668,7 @@ export class SoundService {
         this.tone(220, 0.16, 'sawtooth', 0.04, 0, 160);
         break;
       case 'connect':
-        this.arpeggio(CONNECT_NOTES, 0.14, 0.05, 0.07);
+        this.arpeggio(CONNECT_NOTES, 0.14, 0.03, 0.07);
         break;
       case 'chime':
         this.tone(1046, 0.5, 'sine', 0.045, 0);

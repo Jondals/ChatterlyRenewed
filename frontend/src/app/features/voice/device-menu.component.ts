@@ -23,8 +23,8 @@ interface Device {
   label: string;
 }
 
-/** Which devices the arrow offers: microphone and speakers, or cameras. */
-export type DeviceKind = 'audio' | 'video';
+/** Which devices the arrow offers: the microphones, the speakers, or the cameras. */
+export type DeviceKind = 'mic' | 'speakers' | 'video';
 
 @Component({
   selector: 'app-device-menu',
@@ -48,7 +48,7 @@ export type DeviceKind = 'audio' | 'video';
         role="menu"
         class="panel anim-pop absolute bottom-14 left-1/2 z-30 max-h-[60dvh] w-[19rem] -translate-x-1/2 overflow-y-auto !bg-ink-850 p-2 shadow-2xl max-md:fixed max-md:inset-x-3 max-md:bottom-28 max-md:left-3 max-md:w-auto max-md:translate-x-0"
       >
-        @if (kind() === 'audio') {
+        @if (kind() === 'mic') {
           <div class="label px-2.5 pb-1 pt-1.5">{{ 'Microphone' | t }}</div>
           @for (device of inputs(); track device.id) {
             <button
@@ -64,7 +64,8 @@ export type DeviceKind = 'audio' | 'video';
               }
             </button>
           }
-          <div class="label px-2.5 pb-1 pt-3">{{ 'Speakers' | t }}</div>
+        } @else if (kind() === 'speakers') {
+          <div class="label px-2.5 pb-1 pt-1.5">{{ 'Speakers' | t }}</div>
           @for (device of outputs(); track device.id) {
             <button
               type="button"
@@ -164,7 +165,11 @@ export class DeviceMenuComponent implements OnDestroy {
 
   /** The name of what the arrow opens (for screen readers). */
   protected label(): string {
-    return this.kind() === 'audio' ? 'Audio devices' : 'Camera';
+    return this.kind() === 'mic'
+      ? 'Microphone'
+      : this.kind() === 'speakers'
+        ? 'Speakers'
+        : 'Camera';
   }
 
   /** Opens or closes the list (reading the devices when it opens). */

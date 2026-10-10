@@ -929,8 +929,8 @@ async function main() {
   await shot(b, '03-llamada-b');
   // The arrows with the devices, and the menu of a person (volume, next to the cursor, closes with a press elsewhere).
   check(
-    (await a.locator('app-device-menu').count()) === 2,
-    'the microphone and the camera have an arrow with their devices',
+    (await a.locator('app-device-menu').count()) === 3,
+    'the microphone, the speakers and the camera have an arrow with their devices',
   );
   await a.locator('app-device-menu button').first().click();
   await a.waitForSelector('app-device-menu [role=menu]', { timeout: 5000 });

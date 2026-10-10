@@ -431,7 +431,7 @@ export class CallService {
   async leave(): Promise<void> {
     if (this.roomId() || this.status() === 'connecting') this.socket.send({ t: 'call.leave' });
     this.teardown();
-    this.sound.play('leave');
+    this.sound.play('exit');
   }
 
   /**
