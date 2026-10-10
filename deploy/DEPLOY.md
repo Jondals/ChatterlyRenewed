@@ -1,7 +1,7 @@
 # Putting Chatterly-Renewed on a free server (Oracle Cloud)
 
-1. **The machine.** In Oracle Cloud create an *Always Free* instance: shape `VM.Standard.A1.Flex` (ARM, up to 4 cores and 24 GB), image Ubuntu 24.04, and download the SSH key.
-2. **Open the ports.** In the VCN of the instance (Networking > Security List) add *ingress* rules for TCP 80 and 443. Ubuntu images of Oracle also block them with iptables:
+1. **The machine.** In Oracle Cloud create an _Always Free_ instance: shape `VM.Standard.A1.Flex` (ARM, up to 4 cores and 24 GB), image Ubuntu 24.04, and download the SSH key.
+2. **Open the ports.** In the VCN of the instance (Networking > Security List) add _ingress_ rules for TCP 80 and 443. Ubuntu images of Oracle also block them with iptables:
    `sudo iptables -I INPUT 6 -p tcp --dport 80 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT && sudo netfilter-persistent save`
 3. **A domain.** The browser only allows microphone, camera and encryption on HTTPS, so you need a name: a free one from [duckdns.org](https://www.duckdns.org) pointing to the public IP of the instance.
 4. **Software.**
@@ -20,7 +20,7 @@
 4. `docker compose up -d --build app`. The first build takes a few minutes on the ARM machine. HTTPS: if the machine already has a Caddy, add the block of `deploy/Caddyfile.host` (the API on 3000 AND the web on 3001, or sign-in fails with "JSON.parse: unexpected character") and `sudo systemctl reload caddy`; if not, `docker compose --profile caddy up -d --build` runs one inside Docker.
 5. Update: `git pull && docker compose up -d --build app`, or let GitHub do it after every push (`.github/workflows/deploy.yml`; the branch must be the one named in the file: `master` or `main`). Logs: `docker compose logs -f app`.
 6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
-7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478**, **TCP 3478** and **UDP 49152-49252**. Without that last step Oracle drops the packets before they reach the machine. To check it: Settings > Voice & video > "Hide my IP address" on, then make a call; if the call connects, the relay works.
+7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478**, **TCP 3478** and **UDP 49152-49252**. Without that last step Oracle drops the packets before they reach the machine. To make every call private set `RELAY_ONLY=1` (`bash deploy/turn-setup.sh --private`): calls then use only the relay, and are refused when it is down. To check it, make a call and follow "Check that a call really uses the relay" below.
 
 ### Secrets of GitHub for the automatic update
 
@@ -36,23 +36,50 @@ Install and start coturn on the machine:
 
 1. `sudo apt install -y coturn` and set `TURNSERVER_ENABLED=1` in `/etc/default/coturn`.
 2. Copy `deploy/turnserver.conf` to `/etc/turnserver.conf`, and change `static-auth-secret`, `realm` and `external-ip` (the public IP and the private one of the instance, `ip a` shows it).
-3. Open **UDP and TCP 3478** and **UDP 49152-49252**, in the VCN (Security List) *and* in iptables: `sudo iptables -I INPUT 6 -p udp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p udp --dport 49152:49252 -j ACCEPT && sudo netfilter-persistent save`.
+3. Open **UDP and TCP 3478** and **UDP 49152-49252**, in the VCN (Security List) _and_ in iptables: `sudo iptables -I INPUT 6 -p udp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p udp --dport 49152:49252 -j ACCEPT && sudo netfilter-persistent save`.
 4. `sudo systemctl enable --now coturn`.
 5. Tell the backend, in `chatterly.service`: `Environment=STUN_URLS=stun:chatterly.example.com:3478`, `Environment=TURN_URLS=turn:chatterly.example.com:3478?transport=udp,turn:chatterly.example.com:3478?transport=tcp` and `Environment=TURN_SECRET=<the same secret>`. Then `sudo systemctl daemon-reload && sudo systemctl restart chatterly`. The backend gives every user short-lived TURN credentials (one hour) made from that secret; nobody receives the secret.
 
 ## When something fails
 
-| Symptom | Cause and cure |
-| --- | --- |
-| The page loads but nothing works, the console says *CORS* | `CORS_ORIGINS` has to be exactly the address in the browser, with `https://` and without a final slash (`https://chatterly.example.com`). Several addresses go separated by commas. The WebSocket checks the same list. After changing it: `sudo systemctl restart chatterly`. |
-| The WebSocket closes at once (code 1008, "origin not allowed") | The same: the origin is not in `CORS_ORIGINS`. |
-| Login says the session expired all the time, or every user seems to have the same IP | `TRUST_PROXY=1` is missing: the backend sees Caddy as the only client and the rate limits hit everybody. |
-| The microphone or the camera never asks | The page is not on HTTPS (or you opened it by IP). Use the domain. |
-| Calls connect only between people on the same network | STUN works but there is no TURN, or its ports are closed. Check with `https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/`: add `turn:chatterly.example.com:3478` with a username and a password taken from `/api/rtc/config` (open it signed in) and look for a `relay` candidate. |
-| *Frames rejected* or "Securing…" for ever | The two browsers could not agree on the keys: reload both. If it repeats, look at the console of both browsers and at `journalctl -u chatterly -e`. |
-| `502` from Caddy | The backend or the web server is down: `sudo systemctl status chatterly` and `journalctl -u chatterly -e`. |
-| After an update nothing changes | The browser keeps the old files: hard reload (Ctrl+Shift+R). |
+| Symptom                                                                              | Cause and cure                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The page loads but nothing works, the console says _CORS_                            | `CORS_ORIGINS` has to be exactly the address in the browser, with `https://` and without a final slash (`https://chatterly.example.com`). Several addresses go separated by commas. The WebSocket checks the same list. After changing it: `sudo systemctl restart chatterly`.                           |
+| The WebSocket closes at once (code 1008, "origin not allowed")                       | The same: the origin is not in `CORS_ORIGINS`.                                                                                                                                                                                                                                                           |
+| Login says the session expired all the time, or every user seems to have the same IP | `TRUST_PROXY=1` is missing: the backend sees Caddy as the only client and the rate limits hit everybody.                                                                                                                                                                                                 |
+| The microphone or the camera never asks                                              | The page is not on HTTPS (or you opened it by IP). Use the domain.                                                                                                                                                                                                                                       |
+| Calls connect only between people on the same network                                | STUN works but there is no TURN, or its ports are closed. Check with `https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/`: add `turn:chatterly.example.com:3478` with a username and a password taken from `/api/rtc/config` (open it signed in) and look for a `relay` candidate. |
+| _Frames rejected_ or "Securing…" for ever                                            | The two browsers could not agree on the keys: reload both. If it repeats, look at the console of both browsers and at `journalctl -u chatterly -e`.                                                                                                                                                      |
+| `502` from Caddy                                                                     | The backend or the web server is down: `sudo systemctl status chatterly` and `journalctl -u chatterly -e`.                                                                                                                                                                                               |
+| After an update nothing changes                                                      | The browser keeps the old files: hard reload (Ctrl+Shift+R).                                                                                                                                                                                                                                             |
 
 ## Other servers inside the same machine
 
 Everything above runs in one Always Free instance (the ARM one has 4 cores and 24 GB, enough for the app, Caddy and coturn). Keep it healthy: `sudo apt install -y unattended-upgrades`, copy the folder `DATA_DIR` now and then (`rsync` to your computer) and keep an eye on the disk with `df -h`.
+
+## Check that a call really uses the relay
+
+With `RELAY_ONLY=1` the app refuses to call when the relay is unavailable, and closes a connection that is found to use a direct path. To see it with your own eyes in a test browser (two accounts, two browsers):
+
+1. Open `chrome://webrtc-internals` (Chrome/Edge) in the browser that makes the call, before the call.
+2. Make the call. In the `RTCPeerConnection` of the call open "ICE candidate pair": the selected pair must have a **local candidate of type `relay`** and no `host` or `srflx` one. The candidate grid must list only `relay` candidates.
+3. In Firefox use `about:webrtc`: the selected pair must show the candidate type `relay`.
+4. Stop the relay (`docker compose stop turn`) and try to call: you must see "Private call unavailable" and the call must not start. Start it again afterwards.
+5. Do not copy addresses from these pages into chats or tickets.
+
+## Security checklist for the Oracle Cloud machine (cannot be checked from the repository)
+
+Nothing here can be verified from the code; check each point in the Oracle Cloud Console or on the machine.
+
+- [ ] **Security List / NSG** (Networking > VCN): ingress only for TCP 22 (restricted to your own address, not 0.0.0.0/0), TCP 80, TCP 443, UDP 443 (HTTP/3), UDP 3478, TCP 3478 and UDP 49152-49252. Nothing for 3000, 3001, 4200.
+- [ ] **Host firewall** (`sudo iptables -S INPUT`): the same ports; nothing else open.
+- [ ] **Listening ports** (`sudo ss -tulpn`): 3000 and 3001 only on `127.0.0.1`; no other service reachable from outside (databases, Docker API on 2375, admin panels).
+- [ ] **SSH**: key only (`PasswordAuthentication no`, `PermitRootLogin no`), the deploy key of GitHub limited to this machine.
+- [ ] **Secrets**: `.env` has permissions 600 and is not in the repository; `JWT_SECRET`, `SERVER_SECRET`, `TURN_SECRET` are long random values. A TURN secret that was ever shown outside the server must be replaced: `bash deploy/turn-setup.sh --rotate-secret`. If a real secret was ever committed, rotate it and remove it from the Git history (that needs a decision of the owner: it rewrites history).
+- [ ] **TURN**: `deploy/turnserver.generated.conf` has permissions 600; from outside, an allocation without a valid credential is refused (`turnutils_uclient` with a wrong password fails); the relay answers only on the ports above.
+- [ ] **TLS**: `curl -I https://your.domain` shows HSTS; the certificate renews (Caddy logs); HTTP redirects to HTTPS; WebSocket works over `wss://`.
+- [ ] **Reverse proxy**: the app sees one proxy (`TRUST_PROXY=1`) and Caddy replaces any `X-Forwarded-For` sent by a client.
+- [ ] **Updates**: `unattended-upgrades` on; Docker images updated on purpose (the tags are pinned in `docker-compose.yml`; change them deliberately and test).
+- [ ] **Backups**: `BACKUP_PASSPHRASE=... docker compose exec app node scripts/backup.mjs backup /data/backups`, copy off the machine, and test a restore into another path. The backup of `secrets.json` and of the uploads folder must be encrypted too.
+- [ ] **Monitoring**: disk space (`df -h`), the logs rotate (`docker inspect` shows the log options), an alert if the site or the relay stops answering.
+- [ ] **Logs**: the app logs no addresses or queries; coturn logs allocations (addresses) to its container log, which rotates at 5 x 10 MB; decide how long you keep them.

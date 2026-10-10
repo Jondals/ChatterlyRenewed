@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { AppContext } from '../context';
+import { relayProblem } from '../config';
 import {
   areFriends,
   canAccessChannel,
@@ -533,28 +534,47 @@ export function registerMessageRoutes(app: FastifyInstance, ctx: AppContext): vo
 
   // ---- WebRTC ICE configuration -------------------------------------------------------------
 
-  app.get('/api/rtc/config', auth, async function (req) {
+  /**
+   * GET /api/rtc/config: the ICE servers of a call and the relay policy.
+   * Fail closed: when relay-only calls are requested but no TURN relay is configured the answer is 503, never a
+   * STUN-only list, because a STUN server would let the browsers connect directly and show their addresses. In
+   * relay-only mode no STUN server is listed at all (the relay is the only thing a browser may contact).
+   */
+  app.get('/api/rtc/config', auth, async function (req, reply) {
+    if (relayProblem(config)) {
+      req.log.error('relay-only calls are requested but no TURN relay is configured');
+      return reply.code(503).send({ error: 'relay_unavailable' });
+    }
     const iceServers: {
       urls: string | string[];
       username?: string;
       credential?: string;
-    }[] = config.stunUrls.length ? [{ urls: config.stunUrls }] : [];
+    }[] = config.relayOnly || !config.stunUrls.length ? [] : [{ urls: config.stunUrls }];
+    let expiresAt = 0;
     if (config.turn) {
       // The relay also answers STUN: the same addresses without the transport.
-      iceServers.push({
-        urls: [
-          ...new Set(
-            config.turn.urls.map(function asStun(url) {
-              return url.replace(/^turns?:/, 'stun:').replace(/\?.*$/, '');
-            }),
-          ),
-        ],
-      });
+      if (!config.relayOnly) {
+        iceServers.push({
+          urls: [
+            ...new Set(
+              config.turn.urls.map(function asStun(url) {
+                return url.replace(/^turns?:/, 'stun:').replace(/\?.*$/, '');
+              }),
+            ),
+          ],
+        });
+      }
       // coturn "use-auth-secret" scheme: short-lived credentials, never a shared static password.
-      const username = `${Math.floor(Date.now() / 1000) + config.turn.ttlSec}:${me(req)}`;
+      expiresAt = Math.floor(Date.now() / 1000) + config.turn.ttlSec;
+      const username = `${expiresAt}:${me(req)}`;
       const credential = createHmac('sha1', config.turn.secret).update(username).digest('base64');
       iceServers.push({ urls: config.turn.urls, username, credential });
     }
-    return { iceServers, relayOnly: config.relayOnly };
+    return {
+      iceServers,
+      relayOnly: config.relayOnly,
+      ttlSec: config.turn?.ttlSec ?? 0,
+      expiresAt: expiresAt * 1000,
+    };
   });
 }

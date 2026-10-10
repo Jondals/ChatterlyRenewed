@@ -319,8 +319,6 @@ export class SettingsService {
   readonly echoCancellation = persisted('pref.echoCancellation', true);
   readonly autoGain = persisted('pref.autoGain', true);
   readonly spatialAudio = persisted('pref.spatial', true);
-  /** Only use TURN relays so peers never learn your IP address (needs a TURN server). */
-  readonly relayOnly = persisted('pref.relayOnly', false);
   /** Microphone level (0 to 100) below which the voice gate stays closed. */
   readonly inputGate = persisted('pref.inputGate', 8);
 

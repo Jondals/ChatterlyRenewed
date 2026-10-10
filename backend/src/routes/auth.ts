@@ -151,14 +151,32 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
 
   /**
    * Creates the pair of tokens of a session: a short access token and a long refresh token that is stored only as a hash.
+   * The access token names its session (`sid`), so closing the session revokes the token at once. Renewing a session
+   * (`renewing`) keeps its id and only replaces the refresh token, so the access tokens in flight stay valid.
+   *
+   * @param userId Owner of the session.
+   * @param sessionId Id of the session: a fresh one by default, or the one being renewed.
+   * @param renewing True when the session already exists and only its refresh token changes.
    */
-  function issueTokens(userId: string) {
-    const accessToken = app.jwt.sign({ sub: userId }, { expiresIn: config.accessTtlSec });
+  function issueTokens(userId: string, sessionId: string = randomUUID(), renewing = false) {
+    const accessToken = app.jwt.sign(
+      { sub: userId, sid: sessionId },
+      { expiresIn: config.accessTtlSec },
+    );
     const refreshToken = randomBytes(32).toString('base64url');
     const now = Date.now();
-    db.prepare(
-      'INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?,?,?,?,?)',
-    ).run(randomUUID(), userId, sha256(refreshToken), now + config.refreshTtlSec * 1000, now);
+    const expiresAt = now + config.refreshTtlSec * 1000;
+    if (renewing) {
+      db.prepare('UPDATE sessions SET token_hash = ?, expires_at = ? WHERE id = ?').run(
+        sha256(refreshToken),
+        expiresAt,
+        sessionId,
+      );
+    } else {
+      db.prepare(
+        'INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?,?,?,?,?)',
+      ).run(sessionId, userId, sha256(refreshToken), expiresAt, now);
+    }
     // Opportunistic cleanup of dead sessions, and a limit of 20 open ones per person (the oldest close first).
     db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now);
     db.prepare(
@@ -298,7 +316,8 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           .send({ error: 'account_locked', retryAfter: wait });
       }
       const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
-        UserRow | undefined;
+        | UserRow
+        | undefined;
       let ok = false;
       if (row) {
         ok = await verifyAuthSecret(authSecret, row.auth_hash, config.serverSecret);
@@ -349,25 +368,29 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       const session = db
         .prepare('SELECT * FROM sessions WHERE token_hash = ?')
         .get(sha256(refreshToken)) as
-        { id: string; user_id: string; expires_at: number } | undefined;
+        | { id: string; user_id: string; expires_at: number }
+        | undefined;
       if (!session) {
         // Reusing a token that was already rotated means it was copied: every session of that account is closed.
         const spent = db
           .prepare('SELECT user_id FROM spent_tokens WHERE token_hash = ?')
           .get(sha256(refreshToken)) as { user_id: string } | undefined;
-        if (spent) db.prepare('DELETE FROM sessions WHERE user_id = ?').run(spent.user_id);
+        if (spent) {
+          db.prepare('DELETE FROM sessions WHERE user_id = ?').run(spent.user_id);
+          ctx.hub.closeSessions(spent.user_id);
+        }
         return reply.code(401).send({ error: 'invalid_refresh_token' });
       }
       if (session.expires_at < Date.now()) {
+        db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
         return reply.code(401).send({ error: 'invalid_refresh_token' });
       }
-      // Rotation: a refresh token works exactly once.
+      // Rotation: a refresh token works exactly once. The session keeps its id, only the refresh token changes.
       db.prepare(
         'INSERT OR IGNORE INTO spent_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
       ).run(sha256(refreshToken), session.user_id, session.expires_at);
       db.prepare('DELETE FROM spent_tokens WHERE expires_at < ?').run(Date.now());
-      db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
-      return issueTokens(session.user_id);
+      return issueTokens(session.user_id, session.id, true);
     },
   );
 
@@ -382,10 +405,19 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         },
       },
     },
-    /** POST /api/auth/logout: closes the session of a refresh token. */
+    /**
+     * POST /api/auth/logout: closes the session of a refresh token. Its access token stops working at once and
+     * the connections opened with it are closed.
+     */
     async function (req, reply) {
       const { refreshToken } = req.body as { refreshToken: string };
-      db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(refreshToken));
+      const session = db
+        .prepare('SELECT id, user_id FROM sessions WHERE token_hash = ?')
+        .get(sha256(refreshToken)) as { id: string; user_id: string } | undefined;
+      if (session) {
+        db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
+        ctx.hub.closeSession(session.user_id, session.id);
+      }
       return reply.code(204).send();
     },
   );
@@ -459,7 +491,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         if (typeof value === 'string') {
           sets.push(`${column} = ?`);
           // Bio keeps newlines; everything else is single-line.
-          values.push(key === 'bio' ? value.replace(/ /g, '') : clean(value));
+          values.push(key === 'bio' ? value.replace(/\u0000/g, '') : clean(value));
         }
       }
       const previous = getUser(db, id)!;
@@ -557,9 +589,12 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         body.wrappedKeys.ecdsa,
         id,
       );
-      // Every other device must log in again.
+      // Every other device must log in again: their sessions end and so do their connections.
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
-      return issueTokens(id);
+      const sessionId = randomUUID();
+      const tokens = issueTokens(id, sessionId);
+      ctx.hub.closeSessions(id, sessionId);
+      return tokens;
     },
   );
 
@@ -580,9 +615,11 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
     /**
      * POST /api/me/delete: erases the account. It asks for the proof of the password again (a stolen session must not be
      * enough). Everything of the person goes: their messages, reactions, files, pictures, friendships, direct
-     * conversations and the groups they own, and the keys that protect their private data, and the row of the person
-     * itself: nothing stays. The only thing kept is the public key of the person inside the key envelopes they wrapped
-     * for others, so those people can still read their groups.
+     * conversations, the keys that protect their private data, their sessions and the row of the person itself.
+     * Other people keep what is theirs: a group the person owns passes to its longest-standing member (who is asked to
+     * renew the group key, because the old owner held it) and is only erased when nobody else is in it. The only thing
+     * kept of the person is their public key inside the key envelopes they wrapped for others, so those people can
+     * still read their groups until the key is renewed.
      */
     async function (req, reply) {
       const id = userId(req);
@@ -622,6 +659,20 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         id,
       );
       const ownedGuilds = column('SELECT id FROM guilds WHERE owner_id = ?', id);
+      // A group with other members is handed to the member who has been in it the longest; one with nobody else goes.
+      const heirs = new Map<string, string>();
+      for (const guild of ownedGuilds) {
+        const heir = db
+          .prepare(
+            `SELECT user_id FROM guild_members WHERE guild_id = ? AND user_id <> ?
+              ORDER BY joined_at, user_id LIMIT 1`,
+          )
+          .get(guild, id) as { user_id: string } | undefined;
+        if (heir) heirs.set(guild, heir.user_id);
+      }
+      const abandonedGuilds = ownedGuilds.filter(function noHeir(guild) {
+        return !heirs.has(guild);
+      });
       const joinedGuilds = column(
         "SELECT guild_id FROM guild_members WHERE user_id = ? AND role != 'owner'",
         id,
@@ -635,11 +686,11 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           );
         });
       };
-      const ownedMembers = peersOf(ownedGuilds);
+      const inheritedMembers = peersOf([...heirs.keys()]);
       const joinedMembers = peersOf(joinedGuilds);
       const doomedChannels = [
         ...dmChannels,
-        ...ownedGuilds.flatMap(function channels(guild) {
+        ...abandonedGuilds.flatMap(function channels(guild) {
           return column('SELECT id FROM channels WHERE guild_id = ?', guild);
         }),
       ];
@@ -649,17 +700,35 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           return column('SELECT id FROM files WHERE channel_id = ?', channel);
         }),
       ];
-      const images = [
-        ...column('SELECT id FROM images WHERE owner_id = ?', id),
-        ...column(
-          'SELECT icon_image FROM guilds WHERE owner_id = ? AND icon_image IS NOT NULL',
-          id,
-        ),
-      ];
+      // The icon of a group that goes to somebody else stays with the group: it changes hands instead of being erased.
+      const keptIcons = [...heirs.keys()].flatMap(function iconOf(guild) {
+        return column(
+          'SELECT icon_image FROM guilds WHERE id = ? AND icon_image IS NOT NULL',
+          guild,
+        );
+      });
+      const images = column('SELECT id FROM images WHERE owner_id = ?', id).filter(
+        function erased(image) {
+          return !keptIcons.includes(image);
+        },
+      );
       db.transaction(function erase() {
         for (const channel of dmChannels)
           db.prepare('DELETE FROM channels WHERE id = ?').run(channel);
-        db.prepare('DELETE FROM guilds WHERE owner_id = ?').run(id);
+        for (const [guild, heir] of heirs) {
+          db.prepare('UPDATE guilds SET owner_id = ?, needs_rotation = 1 WHERE id = ?').run(
+            heir,
+            guild,
+          );
+          db.prepare(
+            "UPDATE guild_members SET role = 'owner' WHERE guild_id = ? AND user_id = ?",
+          ).run(guild, heir);
+          db.prepare(
+            'UPDATE images SET owner_id = ? WHERE id = (SELECT icon_image FROM guilds WHERE id = ?)',
+          ).run(heir, guild);
+        }
+        for (const guild of abandonedGuilds)
+          db.prepare('DELETE FROM guilds WHERE id = ?').run(guild);
         // The people of the groups keep the envelopes that this person wrapped for them: the public key goes into the
         // envelope (it is public) because the row of the person goes now, and the owner is asked to renew the key.
         db.prepare(
@@ -682,8 +751,8 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       ctx.hub.sendToMany([...friends, ...dmPeers], { t: 'friends.update' });
       for (const guild of joinedGuilds)
         ctx.hub.sendToMany(joinedMembers, { t: 'guild.update', guildId: guild });
-      for (const guild of ownedGuilds)
-        ctx.hub.sendToMany(ownedMembers, { t: 'guild.removed', guildId: guild });
+      for (const guild of heirs.keys())
+        ctx.hub.sendToMany(inheritedMembers, { t: 'guild.update', guildId: guild });
       return reply.code(204).send();
     },
   );

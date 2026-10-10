@@ -18,9 +18,19 @@ import {
   type Sealed,
 } from '../crypto/pairwise';
 import type { CallParticipant } from '../models';
+import {
+  RelayUnavailableError,
+  buildPeerConfiguration,
+  earliestExpiry,
+  isRelayCandidate,
+  isFreshSignal,
+  needsIceRefresh,
+  selectedPathKind,
+  type RtcConfigResponse,
+} from '../rtc-policy';
 import { AuthService } from './auth.service';
 import { DirectoryService } from './directory.service';
-import { ApiService } from './api.service';
+import { ApiError, ApiService } from './api.service';
 import { SettingsService } from './settings.service';
 import { SocketService, type ServerEvent } from './socket.service';
 import { SoundService, type SfxId } from './sound.service';
@@ -83,6 +93,8 @@ const EMPTY_STATS: CallStats = {
 interface SignalBody {
   sid: string;
   n: number;
+  /** When the sender made the message (milliseconds since 1970): a message that opens a session must be recent. */
+  ts?: number;
   description?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
   /** Id of the MediaStream that carries the sender's screen share, so the receiver can label it. */
@@ -143,6 +155,8 @@ interface Link {
   ephReady: Promise<void>;
   remoteEph: string | null;
   protectedReceivers: WeakSet<RTCRtpReceiver>;
+  /** This connection may only use the relay: a candidate that is not relayed is never sent to the other person. */
+  relayRequired: boolean;
 }
 
 interface AudioChain {
@@ -249,9 +263,16 @@ export class CallService {
     }.bind(this),
   );
 
-  private iceServers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
-  /** The server asks that every call goes through its relay (the addresses of the people stay hidden). */
-  private serverRelayOnly = false;
+  /**
+   * How peer connections are configured for the current call. Null until `loadIce` succeeds: there is deliberately
+   * no default (a built-in public STUN server would reveal the addresses of everybody in the call).
+   */
+  private peerConfiguration: RTCConfiguration | null = null;
+  /** Every connection of this call must use the relay (the server requires it, or the person asked for it). */
+  private relayRequired = false;
+  /** When the relay credentials stop working, in milliseconds since 1970 (null without a relay). */
+  private iceExpiresAt: number | null = null;
+  private refreshingIce = false;
   private readonly links = new Map<string, Link>();
   private micStream: MediaStream | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
@@ -278,8 +299,9 @@ export class CallService {
         })
       )
         return 'failing';
+      // 'active' needs proof, not only keys: at least one frame from every person authenticated under their key.
       return peers.every(function (p) {
-        return p.encrypted;
+        return p.encrypted && p.mediaStats.decrypted > 0;
       })
         ? 'active'
         : 'pending';
@@ -379,6 +401,10 @@ export class CallService {
       await Promise.all([this.loadIce(), this.startMic()]);
     } catch (error) {
       this.teardown();
+      if (error instanceof RelayUnavailableError) {
+        this.toast.error('Private call unavailable', error.message);
+        return;
+      }
       const denied =
         error instanceof DOMException &&
         (error.name === 'NotAllowedError' || error.name === 'SecurityError');
@@ -1034,16 +1060,68 @@ export class CallService {
 
   // ---- microphone pipeline -------------------------------------------------------------------
 
+  /**
+   * Asks the server how to connect and builds the configuration of the peer connections of this call.
+   * Fail closed: if the configuration cannot be loaded, or a relay is required and there is none with valid
+   * credentials, this throws and the call does not start. It never falls back to a public STUN server or to a direct
+   * connection, because that would silently show the address of every person in the call.
+   */
   private async loadIce(): Promise<void> {
+    const response = await this.fetchRtcConfig();
+    const built = buildPeerConfiguration(response);
+    this.peerConfiguration = built.configuration;
+    this.relayRequired = built.relayRequired;
+    this.iceExpiresAt = earliestExpiry(built.configuration.iceServers ?? []);
+  }
+
+  /** Downloads `/api/rtc/config`; any failure becomes a `RelayUnavailableError` with a message for the person. */
+  private async fetchRtcConfig(): Promise<RtcConfigResponse> {
     try {
-      const res = await this.api.get<{ iceServers: RTCIceServer[]; relayOnly?: boolean }>(
-        '/api/rtc/config',
+      return await this.api.get<RtcConfigResponse>('/api/rtc/config');
+    } catch (error) {
+      const refused = error instanceof ApiError && error.code === 'relay_unavailable';
+      throw new RelayUnavailableError(
+        refused
+          ? 'The server asks for private calls but its relay is not working, so the call was not started.'
+          : 'The call configuration could not be loaded from the server, so the call was not started.',
       );
-      this.iceServers = res.iceServers;
-      this.serverRelayOnly = res.relayOnly === true;
-    } catch {
-      /* keep the STUN fallback */
     }
+  }
+
+  /**
+   * Gets fresh relay credentials and gives them to every open connection. The relay stops accepting credentials when
+   * they expire (one hour), which would end a long call; the policy of the connections does not change.
+   */
+  private async refreshIce(): Promise<void> {
+    if (this.refreshingIce || !this.peerConfiguration) return;
+    this.refreshingIce = true;
+    try {
+      const built = buildPeerConfiguration(await this.fetchRtcConfig());
+      if (built.relayRequired !== this.relayRequired) {
+        throw new RelayUnavailableError('The relay policy changed during the call.');
+      }
+      this.peerConfiguration = built.configuration;
+      this.iceExpiresAt = earliestExpiry(built.configuration.iceServers ?? []);
+      for (const link of this.links.values()) link.pc.setConfiguration(built.configuration);
+    } catch (error) {
+      console.warn('could not renew the relay credentials', error);
+    } finally {
+      this.refreshingIce = false;
+    }
+  }
+
+  /**
+   * Checks, from the statistics of a connection, that it really goes through the relay when one is required. A direct
+   * path in a private call means the address was exposed: the connection is closed instead of being kept.
+   */
+  private enforceRelay(link: Link, report: RTCStatsReport): void {
+    if (!link.relayRequired || selectedPathKind(report) !== 'direct') return;
+    console.warn('closing a connection that did not use the relay');
+    this.closeLink(link.userId);
+    this.toast.error(
+      'Call stopped',
+      'A connection did not go through the relay, so it was closed to protect your address.',
+    );
   }
 
   /** Builds the audio graph (level meter, voice gate, outgoing track) and starts the meters and the statistics. */
@@ -1252,11 +1330,9 @@ export class CallService {
     const existing = this.links.get(userId);
     if (existing) return existing;
     const me = this.auth.user()!.id;
-    const pc = new RTCPeerConnection({
-      iceServers: this.iceServers,
-      iceTransportPolicy: this.serverRelayOnly || this.settings.relayOnly() ? 'relay' : 'all',
-      bundlePolicy: 'max-bundle',
-    });
+    // No configuration means `loadIce` did not succeed: a connection is never opened with default (open) settings.
+    if (!this.peerConfiguration) throw new RelayUnavailableError('The call is not configured.');
+    const pc = new RTCPeerConnection(this.peerConfiguration);
     const link: Link = {
       userId,
       pc,
@@ -1280,6 +1356,7 @@ export class CallService {
       ephReady: Promise.resolve(),
       remoteEph: null,
       protectedReceivers: new WeakSet(),
+      relayRequired: this.relayRequired,
     };
     link.ephReady = crypto.subtle
       .generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits'])
@@ -1312,11 +1389,15 @@ export class CallService {
       }
     }.bind(this);
     pc.onicecandidate = function (this: CallService, { candidate }: RTCPeerConnectionIceEvent) {
-      if (candidate) this.sendSignal(link, { candidate: candidate.toJSON() });
+      if (!candidate) return;
+      // Defence in depth: with a relay-only policy the browser gathers nothing else, but if it ever did, an address
+      // that is not relayed must not leave this device.
+      if (link.relayRequired && !isRelayCandidate(candidate.candidate)) return;
+      this.sendSignal(link, { candidate: candidate.toJSON() });
     }.bind(this);
     pc.onconnectionstatechange = function (this: CallService) {
       this.updatePeer(userId, { connection: pc.connectionState });
-      if (pc.connectionState === 'failed') pc.restartIce();
+      if (pc.connectionState === 'failed') void this.recoverConnection(link);
       if (pc.connectionState === 'connected') {
         this.tuneAudioSender(link);
         this.tellMusicTo(link);
@@ -1351,6 +1432,16 @@ export class CallService {
     const screen = this.localScreen();
     if (screen) this.addVideo(link, screen, 'screen');
     return link;
+  }
+
+  /**
+   * Tries again after a connection failed: relay credentials are renewed first (an expired credential is a common
+   * reason for a relay connection to fail), then ICE restarts under the SAME policy as before (the policy lives in
+   * the configuration of the connection and is never relaxed to recover).
+   */
+  private async recoverConnection(link: Link): Promise<void> {
+    await this.refreshIce();
+    if (this.links.get(link.userId) === link) link.pc.restartIce();
   }
 
   /** Sends a camera or screen stream to a person, protected with frame encryption. */
@@ -1449,9 +1540,15 @@ export class CallService {
       async function (this: CallService) {
         try {
           await link.ephReady;
+          // Nothing is encrypted to an identity key that changed since it was first seen (see rejectUntrusted).
+          if (!(await this.directory.isIdentityTrusted(link.userId))) {
+            this.rejectUntrusted(link.userId);
+            return;
+          }
           const full: SignalBody = {
             sid: link.sid,
             n: counter,
+            ts: Date.now(),
             screen: link.screenStreamId,
             eph: link.ephPub,
             ...body,
@@ -1480,6 +1577,11 @@ export class CallService {
     const gate = this.links.get(from);
     const run = async function (this: CallService) {
       const aad = signalContext(roomId, from, this.auth.userId);
+      // A changed identity key is not trusted for calls: the server could have swapped it to listen in.
+      if (!(await this.directory.isIdentityTrusted(from))) {
+        this.rejectUntrusted(from);
+        return;
+      }
       const sender = await this.directory.require(from);
       if (!(await verifySealed(sender.publicKeys.ecdsa, aad, payload, payload.signature))) {
         console.warn('dropping signal with an invalid signature from', from);
@@ -1489,9 +1591,12 @@ export class CallService {
       let link = this.links.get(from);
       if (link && link.remoteSid && body.sid !== link.remoteSid) {
         if (body.n !== 1) return; // stale traffic from a previous session
+        // A message that replaces a live session must be recent: a recording of an old first message is not enough.
+        if (!isFreshSignal(body.ts)) return;
         this.closeLink(from);
         link = undefined;
       }
+      if (!link && !isFreshSignal(body.ts)) return;
       link ??= this.ensureLink(from);
       link.remoteSid ??= body.sid;
       if (body.n <= link.lastReceived) return; // replayed or duplicated frame
@@ -1506,6 +1611,24 @@ export class CallService {
       void chain.then(function () {
         return undefined;
       });
+  }
+
+  /** People whose changed key was already reported in this call (one warning each). */
+  private readonly untrustedWarned = new Set<string>();
+
+  /**
+   * Refuses to set up a call with a person whose identity key is not the one that was pinned. The connection with
+   * them is closed and the person is told once. They can review the new key in the chat with that contact; until
+   * they accept it, no call is set up with that key.
+   */
+  private rejectUntrusted(userId: string): void {
+    this.closeLink(userId);
+    if (this.untrustedWarned.has(userId)) return;
+    this.untrustedWarned.add(userId);
+    this.toast.error(
+      'Call blocked',
+      'The security key of a participant changed. Review it in your chat with them before calling.',
+    );
   }
 
   /** "Perfect negotiation": both sides can renegotiate at any time without deadlocking. */
@@ -1726,6 +1849,7 @@ export class CallService {
   // ---- telemetry (real numbers from getStats) -----------------------------------------------
 
   private async collectStats(): Promise<void> {
+    if (needsIceRefresh(this.iceExpiresAt, Date.now())) void this.refreshIce();
     if (!this.links.size) {
       this.stats.set({ ...EMPTY_STATS });
       return;
@@ -1746,6 +1870,7 @@ export class CallService {
         return null;
       });
       if (!report) continue;
+      this.enforceRelay(link, report);
       const now = performance.now();
       let bytesIn = 0;
       let bytesOut = 0;
@@ -1857,5 +1982,10 @@ export class CallService {
     this.status.set('idle');
     this.worker?.terminate();
     this.worker = null;
+    // The next call asks the server again: nothing about how to connect is remembered between calls.
+    this.peerConfiguration = null;
+    this.relayRequired = false;
+    this.iceExpiresAt = null;
+    this.untrustedWarned.clear();
   }
 }

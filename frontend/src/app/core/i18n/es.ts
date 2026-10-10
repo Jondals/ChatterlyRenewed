@@ -660,7 +660,6 @@ export const ES: Record<string, string> = {
   'Automatic gain': 'Ganancia automática',
   'Auto gain': 'Ganancia automática',
   '3D spatial audio': 'Audio espacial 3D',
-  'Hide my IP address': 'Ocultar mi dirección IP',
   'Microphone unavailable': 'Micrófono no disponible',
   'Allow access in your browser to test it.': 'Permite el acceso en tu navegador para probarlo.',
   'Filters keyboard and background noise (browser processing).':
@@ -669,8 +668,6 @@ export const ES: Record<string, string> = {
     'Evita que tus altavoces se cuelen en el micrófono.',
   'Evens out your volume.': 'Nivela tu volumen.',
   'Places each voice around you (HRTF).': 'Coloca cada voz a tu alrededor (HRTF).',
-  'Only connect through a TURN relay so participants never learn your address. Needs a TURN server.':
-    'Conecta solo mediante un relé TURN para que nadie conozca tu dirección. Requiere un servidor TURN.',
   'Stop test': 'Detener prueba',
   'Test microphone': 'Probar micrófono',
 
@@ -868,6 +865,21 @@ export const ES: Record<string, string> = {
   'Call in progress': 'Llamada en curso',
   'Disconnect': 'Desconectar',
   'Browser not supported for secure calls': 'Navegador no compatible con llamadas seguras',
+  'Private call unavailable': 'Llamada privada no disponible',
+  'A private call needs the relay server, and it is not available. Your address would be exposed, so the call was not started.':
+    'Una llamada privada necesita el servidor de retransmisión y no está disponible. Tu dirección quedaría expuesta, así que la llamada no se inició.',
+  'The server asks for private calls but its relay is not working, so the call was not started.':
+    'El servidor exige llamadas privadas pero su retransmisión no funciona, así que la llamada no se inició.',
+  'The call configuration could not be loaded from the server, so the call was not started.':
+    'No se pudo cargar la configuración de la llamada desde el servidor, así que la llamada no se inició.',
+  'The server sent an unusable call configuration.':
+    'El servidor envió una configuración de llamada inutilizable.',
+  'Call stopped': 'Llamada detenida',
+  'A connection did not go through the relay, so it was closed to protect your address.':
+    'Una conexión no pasó por la retransmisión, así que se cerró para proteger tu dirección.',
+  'Call blocked': 'Llamada bloqueada',
+  'The security key of a participant changed. Review it in your chat with them before calling.':
+    'La clave de seguridad de un participante cambió. Revísala en tu chat con esa persona antes de llamar.',
 
   // Sidebar
   'Create text channel': 'Crear canal de texto',

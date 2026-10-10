@@ -12,7 +12,9 @@ import fs from 'node:fs';
 import { loadConfig, type AppConfig } from './config';
 import { openDatabase } from './db';
 import { Hub } from './ws/hub';
+import { runMaintenance, MAINTENANCE_INTERVAL_MS } from './maintenance';
 import { LoginThrottle } from './security/throttle';
+import { isSessionLive } from './security/sessions';
 import type { AppContext } from './context';
 import { registerAuthRoutes } from './routes/auth';
 import { registerSocialRoutes } from './routes/social';
@@ -32,8 +34,8 @@ declare module 'fastify' {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { sub: string };
-    user: { sub: string };
+    payload: { sub: string; sid: string };
+    user: { sub: string; sid: string };
   }
 }
 
@@ -45,6 +47,19 @@ function logRequest(request: { method?: string; url?: string }): { method?: stri
 /** What the log says about an answer: only its status. */
 function logResponse(response: { statusCode?: number }): { status?: number } {
   return { status: response.statusCode };
+}
+
+/**
+ * How many reverse proxies stand in front of the app (the TRUST_PROXY variable: 1 for a single Caddy). Fastify then
+ * believes exactly that many entries of X-Forwarded-For, counted from the end, so a client cannot choose the address
+ * the rate limits see. 0 or anything that is not a positive whole number means no proxy is trusted.
+ */
+function trustedProxyHops(): false | ((address: string, hop: number) => boolean) {
+  const hops = Number(process.env['TRUST_PROXY'] ?? 0);
+  if (!Number.isInteger(hops) || hops <= 0) return false;
+  return function trustHop(_address: string, hop: number): boolean {
+    return hop < hops;
+  };
 }
 
 /**
@@ -61,7 +76,9 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
         }
       : false,
     bodyLimit: 256 * 1024,
-    trustProxy: process.env['TRUST_PROXY'] === '1',
+    // The number of reverse proxies in front of the app (1 = Caddy). Only that many entries of X-Forwarded-For are
+    // believed, so a client cannot choose its own address (which would defeat the per-address rate limits).
+    trustProxy: trustedProxyHops(),
     ...(config.tls
       ? {
           https: {
@@ -107,12 +124,15 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
 
   const db = openDatabase(config.dbPath);
+  /**
+   * Authenticates a request: the signature of the access token must be valid AND the session it names must still
+   * be open. A token whose session was closed (sign out, password change, erased account) is refused at once.
+   */
   app.decorate('authenticate', async function (req: FastifyRequest, reply: FastifyReply) {
     try {
       await req.jwtVerify();
-      const who = (req.user as { sub: string }).sub;
-      if (!db.prepare('SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL').get(who))
-        throw new Error('gone');
+      const { sub, sid } = req.user as { sub: string; sid?: string };
+      if (!sid || !isSessionLive(db, sid, sub)) throw new Error('gone');
     } catch {
       reply.code(401).send({ error: 'unauthorized' });
     }
@@ -161,7 +181,20 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
   registerPreviewRoutes(app, ctx);
   registerSocket(app, ctx);
 
+  // Cleanup of what nothing can reach any more (expired sessions, abandoned uploads). Not kept alive by the timer.
+  const maintenance = function () {
+    try {
+      runMaintenance(ctx);
+    } catch (error) {
+      app.log.error(error);
+    }
+  };
+  maintenance();
+  const maintenanceTimer = setInterval(maintenance, MAINTENANCE_INTERVAL_MS);
+  maintenanceTimer.unref();
+
   app.addHook('onClose', async function () {
+    clearInterval(maintenanceTimer);
     hub.shutdown();
     db.close();
   });

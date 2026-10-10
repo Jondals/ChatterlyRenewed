@@ -6,7 +6,7 @@
 
 **End-to-end encrypted chat, guilds and peer-to-peer WebRTC calls — with a UI that feels alive.**
 
-![version](https://img.shields.io/badge/version-2.15.1-2ef2b0?style=flat-square)
+![version](https://img.shields.io/badge/version-2.16.0-2ef2b0?style=flat-square)
 ![encryption](https://img.shields.io/badge/E2EE-AES--256--GCM%20%C2%B7%20ECDH%20P--256%20%C2%B7%20ECDSA-8b5cf6?style=flat-square)
 ![calls](https://img.shields.io/badge/calls-WebRTC%20mesh%20%C2%B7%20DTLS--SRTP-38e8ff?style=flat-square)
 ![tests](https://img.shields.io/badge/test-1%20completo-2ef2b0?style=flat-square)
@@ -74,16 +74,17 @@ GIF search needs a free GIPHY key in `backend/.env` (`GIPHY_API_KEY=...`, see `.
 
 All backend settings are environment variables (see [`backend/.env.example`](backend/.env.example)):
 
-| Variable                            | Default                                       | Purpose                                                                |
-| ----------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
-| `PORT` / `HOST`                     | `3000` / `0.0.0.0`                            | Listen address                                                         |
-| `CORS_ORIGINS`                      | `http://localhost:4200,http://127.0.0.1:4200` | Allowed web origins (also checked on WebSocket upgrade)                |
-| `JWT_SECRET`, `SERVER_SECRET`       | auto-generated in `data/secrets.json`         | **Set both in production**                                             |
-| `DATA_DIR`, `DB_PATH`, `UPLOAD_DIR` | `./data`                                      | SQLite database and encrypted blobs                                    |
-| `STUN_URLS`                         | Google STUN                                   | ICE servers for calls                                                  |
-| `TURN_URLS`, `TURN_SECRET`          | –                                             | coturn (`use-auth-secret`) — issues short-lived credentials per user   |
-| `TLS_KEY`, `TLS_CERT`               | –                                             | Serve HTTPS directly (otherwise terminate TLS in a reverse proxy)      |
-| `TRUST_PROXY`                       | –                                             | `1` when behind a reverse proxy (correct client IPs for rate limiting) |
+| Variable                            | Default                                       | Purpose                                                                                  |
+| ----------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `PORT` / `HOST`                     | `3000` / `0.0.0.0`                            | Listen address                                                                           |
+| `CORS_ORIGINS`                      | `http://localhost:4200,http://127.0.0.1:4200` | Allowed web origins (also checked on WebSocket upgrade)                                  |
+| `JWT_SECRET`, `SERVER_SECRET`       | auto-generated in `data/secrets.json`         | **Set both in production**                                                               |
+| `DATA_DIR`, `DB_PATH`, `UPLOAD_DIR` | `./data`                                      | SQLite database and encrypted blobs                                                      |
+| `STUN_URLS`                         | Google STUN (none with a relay)               | ICE servers for calls                                                                    |
+| `RELAY_ONLY`                        | –                                             | `1` = every call must use the TURN relay; calls are **refused** if it is down            |
+| `TURN_URLS`, `TURN_SECRET`          | –                                             | coturn (`use-auth-secret`) — issues short-lived credentials per user                     |
+| `TLS_KEY`, `TLS_CERT`               | –                                             | Serve HTTPS directly (otherwise terminate TLS in a reverse proxy)                        |
+| `TRUST_PROXY`                       | –                                             | Number of reverse proxies in front (`1` for Caddy): correct client IPs for rate limiting |
 
 The frontend finds the API at `<page-host>:3000`. To point elsewhere without rebuilding, define
 `window.CHATTERLY_API = 'https://api.example.com'` in a `<script>` before the app boots.
@@ -108,7 +109,7 @@ password ──PBKDF2-SHA256 (600k, per-user salt)──► master ──HKDF─
 - On the device, unlocked keys are re-imported as **non-extractable** `CryptoKey`s in IndexedDB: scripts can
   use them but cannot read the key bytes. On unlock the client verifies the private key really matches the
   advertised public key, and refuses servers that request a weaker KDF than 200k rounds.
-- Sessions are 15-minute JWTs plus single-use rotating refresh tokens (stored hashed). Per-IP rate limits,
+- Sessions are 15-minute JWTs that name their session (closing the session stops the token at once) plus single-use rotating refresh tokens (stored hashed). Per-IP rate limits,
   per-account lockout after repeated failures, constant-time responses for unknown users and a fake-salt
   endpoint prevent account enumeration.
 
@@ -136,7 +137,8 @@ password ──PBKDF2-SHA256 (600k, per-user salt)──► master ──HKDF─
 - Signaling (SDP offers/answers, ICE candidates) travels through the server but is **encrypted with the pairwise
   key and signed** with each peer's identity key, with per-session ids and counters against replay. The server
   cannot read it or swap DTLS fingerprints to mount a man-in-the-middle attack.
-- Optional **relay-only mode** hides your IP from peers (requires a TURN server).
+- With `RELAY_ONLY=1` every connection is created with `iceTransportPolicy: "relay"` and only your TURN relay as ICE server, so the other people in the call never learn your address. It **fails closed**: if the relay is missing, down or its credentials are expired, the call is not started (it never falls back to direct or public STUN), and a connection that is found to use a non-relayed path is closed. The relay (and its host) still sees addresses and traffic volume, but not the content.
+- A contact whose identity key changed is not called until you review the change; signals that open a session must be recent.
 
 ### Verifying your contacts
 
@@ -144,6 +146,10 @@ The first identity fingerprint seen for a contact is pinned (trust-on-first-use)
 warning. For high-stakes conversations compare the **safety number** (🛡 in the chat header) over a trusted channel.
 
 ### What the server still sees (honest threat model)
+
+Profile pictures, banners and group icons are stored **in clear** (the server re-checks them and strips their metadata) and are readable by any signed-in user who knows the id. They are not end-to-end encrypted. Photos meant to be private belong in chat attachments, which are encrypted in the browser.
+
+The application cannot protect you from a server that serves you malicious JavaScript: the end-to-end guarantees assume the code you load is the code in this repository.
 
 Usernames, profile fields, friend graph, guild/channel names and membership, message timestamps, sizes (bucketed)
 and sender/recipient ids, file sizes, who is online and who is in which call. It sees **no** message text,

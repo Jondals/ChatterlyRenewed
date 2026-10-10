@@ -12,88 +12,101 @@ const MAX_HTML = 400 * 1024;
 const MAX_IMAGE = 300 * 1024;
 const TIMEOUT_MS = 6000;
 const MAX_REDIRECTS = 3;
+/** The longest `<meta>` tag read. Bounding it keeps the scan linear even on hostile pages. */
+const MAX_TAG = 2000;
 
-/** True when an IPv4 address is private, local, shared, documentation, benchmarking or reserved. */
-function privateV4(a: number, b: number, c: number): boolean {
-  return (
-    a === 10 ||
-    a === 127 ||
-    a === 0 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 192 && b === 0 && c <= 2) ||
-    (a === 198 && (b === 18 || b === 19)) ||
-    (a === 198 && b === 51 && c === 100) ||
-    (a === 203 && b === 0 && c === 113) ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    a >= 224
-  );
+/** Ranges the server must never connect to: private, loopback, link-local, shared, documentation, multicast, reserved. */
+const BLOCKED = new net.BlockList();
+for (const [address, prefix] of [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.0.2.0', 24],
+  ['192.88.99.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15],
+  ['198.51.100.0', 24],
+  ['203.0.113.0', 24],
+  ['224.0.0.0', 4],
+  ['240.0.0.0', 4],
+] as const) {
+  BLOCKED.addSubnet(address, prefix, 'ipv4');
+}
+for (const [address, prefix] of [
+  ['::', 96],
+  ['64:ff9b::', 96],
+  ['64:ff9b:1::', 48],
+  ['100::', 64],
+  ['2001::', 23],
+  ['2001:db8::', 32],
+  ['2002::', 16],
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['fec0::', 10],
+  ['ff00::', 8],
+] as const) {
+  BLOCKED.addSubnet(address, prefix, 'ipv6');
 }
 
-/** True when an address is private, local or reserved (the server must never connect to those). */
+/**
+ * True when an address is private, local or reserved (the server must never connect to those). IPv4 addresses
+ * written inside IPv6 (`::ffff:127.0.0.1`, `::ffff:7f00:1`) are judged by their IPv4 rules.
+ *
+ * @param ip An IPv4 or IPv6 literal, with or without the brackets of a URL.
+ */
 export function isPrivateAddress(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const [a, b, c] = ip.split('.').map(Number) as [number, number, number];
-    return privateV4(a, b, c);
-  }
-  const v6 = ip.toLowerCase().replace(/^\[|\]$/g, '');
-  if (v6 === '::1' || v6 === '::') return true;
-  // IPv4 inside IPv6, written with dots (::ffff:127.0.0.1) or in hexadecimal (::ffff:7f00:1, ::127.0.0.1).
-  const dotted = /^(?:::ffff:|::)(\d+\.\d+\.\d+\.\d+)$/.exec(v6);
-  if (dotted) return isPrivateAddress(dotted[1]!);
-  const hex = /^(?:::ffff:|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(v6);
-  if (hex) {
-    const high = parseInt(hex[1]!, 16);
-    const low = parseInt(hex[2]!, 16);
-    return privateV4(high >> 8, high & 255, low >> 8);
-  }
-  return (
-    v6.startsWith('fc') ||
-    v6.startsWith('fd') ||
-    v6.startsWith('fe8') ||
-    v6.startsWith('fe9') ||
-    v6.startsWith('fea') ||
-    v6.startsWith('feb') ||
-    v6.startsWith('fec') ||
-    v6.startsWith('ff') ||
-    v6.startsWith('64:ff9b:') ||
-    v6.startsWith('2002:') ||
-    v6.startsWith('2001:db8') ||
-    v6.startsWith('2001::')
-  );
+  const bare = ip.replace(/^\[|\]$/g, '');
+  const family = net.isIP(bare);
+  if (family === 0) return true;
+  return BLOCKED.check(bare, family === 4 ? 'ipv4' : 'ipv6');
+}
+
+/**
+ * Checks that a URL may be fetched by the server: https only, no credentials, the standard port, and (when the host is
+ * an IP literal, which skips name resolution) a public address. Throws with a short reason otherwise.
+ *
+ * Names are not resolved here: that is done when connecting (see `safeLookup`), so a name that changes its address
+ * between the check and the connection does not work either.
+ */
+export function assertFetchable(url: URL): void {
+  if (url.protocol !== 'https:' || url.username || url.password) throw new Error('url_not_allowed');
+  if (url.port && url.port !== '443') throw new Error('port_not_allowed');
+  const host = url.hostname.replace(/^\[|\]$/g, '');
+  if (net.isIP(host) && isPrivateAddress(host)) throw new Error('address_not_allowed');
 }
 
 /**
  * Name resolution that runs right when connecting: a private real address is refused.
  * That way a name that changes its address between the check and the connection does not work either.
  */
-function safeLookup(host: string, opciones: unknown, callback: (...args: unknown[]) => void): void {
-  const todas =
-    typeof opciones === 'object' &&
-    opciones !== null &&
-    (opciones as { all?: boolean }).all === true;
-  dnsLookup(host, { all: true }, function (error, direcciones) {
+function safeLookup(host: string, options: unknown, callback: (...args: unknown[]) => void): void {
+  const wantsAll =
+    typeof options === 'object' && options !== null && (options as { all?: boolean }).all === true;
+  dnsLookup(host, { all: true }, function onResolved(error, addresses) {
     if (error) return callback(error);
-    const buenas = direcciones.filter(function (d) {
-      return !isPrivateAddress(d.address);
+    const allowed = addresses.filter(function isPublic(entry) {
+      return !isPrivateAddress(entry.address);
     });
-    if (!buenas.length) return callback(new Error('direccion_no_permitida'));
-    if (todas) return callback(null, buenas);
-    return callback(null, buenas[0]!.address, buenas[0]!.family);
+    if (!allowed.length) return callback(new Error('address_not_allowed'));
+    if (wantsAll) return callback(null, allowed);
+    return callback(null, allowed[0]!.address, allowed[0]!.family);
   });
 }
 
 interface Reply {
   status: number;
-  tipo: string;
-  cuerpo: Buffer;
-  ubicacion: string;
+  type: string;
+  body: Buffer;
+  location: string;
 }
 
 /** Downloads an https URL with limits on size and time and a safe name resolution. It does not follow redirects. */
 function download(url: URL, maxBytes: number): Promise<Reply> {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function executor(resolve, reject) {
     const req = https.request(
       url,
       {
@@ -106,59 +119,56 @@ function download(url: URL, maxBytes: number): Promise<Reply> {
           'accept-language': 'en,es;q=0.8',
         },
       },
-      function (res) {
+      function onResponse(res) {
         const chunks: Buffer[] = [];
         let total = 0;
-        res.on('data', function (trozo: Buffer) {
-          total += trozo.length;
+        res.on('data', function onData(chunk: Buffer) {
+          total += chunk.length;
           if (total > maxBytes) {
             // When the limit is reached the download stops: for HTML the beginning is enough, an image is discarded.
             res.destroy();
             resolve({
               status: res.statusCode ?? 0,
-              tipo: String(res.headers['content-type'] ?? ''),
-              cuerpo: Buffer.concat(chunks),
-              ubicacion: '',
+              type: String(res.headers['content-type'] ?? ''),
+              body: Buffer.concat(chunks),
+              location: '',
             });
             return;
           }
-          chunks.push(trozo);
+          chunks.push(chunk);
         });
-        res.on('end', function () {
+        res.on('end', function onEnd() {
           resolve({
             status: res.statusCode ?? 0,
-            tipo: String(res.headers['content-type'] ?? ''),
-            cuerpo: Buffer.concat(chunks),
-            ubicacion: String(res.headers['location'] ?? ''),
+            type: String(res.headers['content-type'] ?? ''),
+            body: Buffer.concat(chunks),
+            location: String(res.headers['location'] ?? ''),
           });
         });
         res.on('error', reject);
       },
     );
-    req.on('timeout', function () {
-      req.destroy(new Error('tiempo_agotado'));
+    req.on('timeout', function onTimeout() {
+      req.destroy(new Error('timed_out'));
     });
     req.on('error', reject);
     req.end();
   });
 }
 
-/** Sigue to 3 redirecciones, comprobando cada target (solo https). */
-async function fetchFollowing(inicial: URL, maxBytes: number): Promise<Reply> {
-  let url = inicial;
+/** Follows up to 3 redirects, checking every target (https only, public addresses). */
+async function fetchFollowing(first: URL, maxBytes: number): Promise<Reply> {
+  let url = first;
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    if (url.protocol !== 'https:' || url.username || url.password)
-      throw new Error('url_no_permitida');
-    if (net.isIP(url.hostname) && isPrivateAddress(url.hostname))
-      throw new Error('direccion_no_permitida');
-    const r = await download(url, maxBytes);
-    if (r.status >= 300 && r.status < 400 && r.ubicacion) {
-      url = new URL(r.ubicacion, url);
+    assertFetchable(url);
+    const reply = await download(url, maxBytes);
+    if (reply.status >= 300 && reply.status < 400 && reply.location) {
+      url = new URL(reply.location, url);
       continue;
     }
-    return r;
+    return reply;
   }
-  throw new Error('demasiadas_redirecciones');
+  throw new Error('too_many_redirects');
 }
 
 /** Turns the HTML entities of a title or a description into plain text. */
@@ -169,19 +179,27 @@ function decodeEntities(text: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, function (_m, n: string) {
-      return String.fromCodePoint(Math.min(Number(n), 0x10ffff));
+    .replace(/&#(\d+);/g, function fromCode(_match, digits: string) {
+      return String.fromCodePoint(Math.min(Number(digits), 0x10ffff));
     })
     .trim();
 }
 
-/** Finds the content of a <meta> tag by its name or property. */
-function meta(html: string, clave: string): string {
-  const patron = new RegExp(`<meta[^>]+(?:property|name)=["']${clave}["'][^>]*>`, 'i');
-  const etiqueta = patron.exec(html)?.[0];
-  if (!etiqueta) return '';
-  const contenido = /content=["']([^"']*)["']/i.exec(etiqueta)?.[1];
-  return contenido ? decodeEntities(contenido) : '';
+/**
+ * Reads the `<meta>` tags of a page in one pass: name (or property) to content, first one wins. The pattern cannot
+ * cross a `<`, so every attempt ends at the next tag: the cost grows with the size of the page, never with its square
+ * (a page made of thousands of unclosed `<meta` could otherwise block the whole server).
+ */
+export function metaTags(html: string): Map<string, string> {
+  const found = new Map<string, string>();
+  const tags = html.matchAll(new RegExp(`<meta\\s[^<>]{1,${MAX_TAG}}>`, 'gi'));
+  for (const match of tags) {
+    const key = /(?:property|name)=["']([^"']{1,100})["']/i.exec(match[0])?.[1];
+    const content = /content=["']([^"']*)["']/i.exec(match[0])?.[1];
+    if (key && content && !found.has(key.toLowerCase()))
+      found.set(key.toLowerCase(), decodeEntities(content));
+  }
+  return found;
 }
 
 /** oEmbed address of the sites that give no good metadata in their HTML (YouTube and Spotify ask for consent). */
@@ -202,11 +220,11 @@ async function imageAsDataUrl(url: URL): Promise<string> {
     const img = await fetchFollowing(url, MAX_IMAGE);
     if (
       img.status < 400 &&
-      /^image\/(png|jpeg|webp|gif)/i.test(img.tipo) &&
-      img.cuerpo.length > 0 &&
-      img.cuerpo.length < MAX_IMAGE
+      /^image\/(png|jpeg|webp|gif)/i.test(img.type) &&
+      img.body.length > 0 &&
+      img.body.length < MAX_IMAGE
     ) {
-      return `data:${img.tipo.split(';')[0]};base64,${img.cuerpo.toString('base64')}`;
+      return `data:${img.type.split(';')[0]};base64,${img.body.toString('base64')}`;
     }
   } catch {
     /* without an image the card is still shown */
@@ -249,19 +267,19 @@ export function registerPreviewRoutes(app: FastifyInstance, _ctx: AppContext): v
       try {
         const oembed = oembedUrl(target);
         if (oembed) {
-          const r = await fetchFollowing(oembed, 64 * 1024).catch(function () {
+          const r = await fetchFollowing(oembed, 64 * 1024).catch(function failed() {
             return null;
           });
           if (r && r.status < 400) {
             try {
-              const data = JSON.parse(r.cuerpo.toString('utf8')) as {
+              const data = JSON.parse(r.body.toString('utf8')) as {
                 title?: string;
                 author_name?: string;
                 provider_name?: string;
                 thumbnail_url?: string;
               };
               if (data.title) {
-                const miniatura = data.thumbnail_url
+                const thumbnail = data.thumbnail_url
                   ? await imageAsDataUrl(new URL(data.thumbnail_url))
                   : '';
                 return {
@@ -269,7 +287,7 @@ export function registerPreviewRoutes(app: FastifyInstance, _ctx: AppContext): v
                   title: data.title.slice(0, 160),
                   description: (data.author_name ?? '').slice(0, 280),
                   site: (data.provider_name ?? target.hostname).slice(0, 60),
-                  image: miniatura,
+                  image: thumbnail,
                 };
               }
             } catch {
@@ -277,42 +295,36 @@ export function registerPreviewRoutes(app: FastifyInstance, _ctx: AppContext): v
             }
           }
         }
-        const pagina = await fetchFollowing(target, MAX_HTML);
-        if (pagina.status >= 400 || !/text\/html|application\/xhtml/i.test(pagina.tipo))
+        const page = await fetchFollowing(target, MAX_HTML);
+        if (page.status >= 400 || !/text\/html|application\/xhtml/i.test(page.type))
           return reply.code(422).send({ error: 'no_preview' });
-        const html = pagina.cuerpo.toString('utf8');
-        const titulo =
-          meta(html, 'og:title') ||
-          meta(html, 'twitter:title') ||
-          decodeEntities(/<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1] ?? '');
-        const descripcion =
-          meta(html, 'og:description') ||
-          meta(html, 'twitter:description') ||
-          meta(html, 'description');
-        const sitio = meta(html, 'og:site_name') || target.hostname.replace(/^www\./, '');
-        if (!titulo && !descripcion) return reply.code(422).send({ error: 'no_preview' });
+        const html = page.body.toString('utf8');
+        const tags = metaTags(html);
+        const title =
+          tags.get('og:title') ||
+          tags.get('twitter:title') ||
+          decodeEntities(/<title[^<>]{0,200}>([^<]{0,2000})<\/title>/i.exec(html)?.[1] ?? '');
+        const description =
+          tags.get('og:description') ||
+          tags.get('twitter:description') ||
+          tags.get('description') ||
+          '';
+        const site = tags.get('og:site_name') || target.hostname.replace(/^www\./, '');
+        if (!title && !description) return reply.code(422).send({ error: 'no_preview' });
         let image = '';
-        const urlImagen = meta(html, 'og:image') || meta(html, 'twitter:image');
-        if (urlImagen) {
+        const imageUrl = tags.get('og:image') || tags.get('twitter:image');
+        if (imageUrl) {
           try {
-            const img = await fetchFollowing(new URL(urlImagen, target), MAX_IMAGE);
-            if (
-              img.status < 400 &&
-              /^image\/(png|jpeg|webp|gif)/i.test(img.tipo) &&
-              img.cuerpo.length > 0 &&
-              img.cuerpo.length < MAX_IMAGE
-            ) {
-              image = `data:${img.tipo.split(';')[0]};base64,${img.cuerpo.toString('base64')}`;
-            }
+            image = await imageAsDataUrl(new URL(imageUrl, target));
           } catch {
             /* without an image the card is still shown */
           }
         }
         return {
           url: target.toString(),
-          title: titulo.slice(0, 160),
-          description: descripcion.slice(0, 280),
-          site: sitio.slice(0, 60),
+          title: title.slice(0, 160),
+          description: description.slice(0, 280),
+          site: site.slice(0, 60),
           image: image,
         };
       } catch {

@@ -2,6 +2,14 @@
 
 Chatterly-Renewed is built so that the server cannot read messages or listen to calls. If you find a way around that, or any other vulnerability, please tell us privately.
 
+## What the app guarantees (and what it does not)
+
+- Messages, reactions and attachments are encrypted in the browser; the server stores only ciphertext. Call media is encrypted frame by frame in the browser, and the signaling that sets calls up is encrypted and signed between the two people.
+- With `RELAY_ONLY=1` calls use only your TURN relay and fail instead of connecting directly. The relay and the machine that hosts it can see network addresses and traffic volume.
+- Profile pictures, banners and group icons are **not** end-to-end encrypted; every signed-in user who knows the id can read them. Private photographs must be sent as attachments.
+- Keys of contacts are pinned the first time they are seen; calls with a changed key are refused until reviewed. Compare the safety number for high-stakes conversations.
+- A server that serves malicious JavaScript can defeat any of this: the guarantees assume the code you load is this repository's.
+
 ## How to report
 
 Use the private vulnerability reporting of the repository (Security tab), or write to the maintainer through the contact in the repository profile. Please include the steps to reproduce it, the version (Settings > About) and what an attacker gains.

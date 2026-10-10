@@ -40,14 +40,21 @@ export interface AppConfig {
   rateLimit: { max: number; authMax: number; windowMs: number };
   loginLockout: { maxFailures: number; windowMs: number; lockMs: number };
   stunUrls: string[];
-  /** Every call goes through the relay (no peer learns the address of another and no third party sees it). */
+  /**
+   * Every call must go through the relay (no peer learns the address of another and no third party sees it).
+   * This is the REQUESTED policy: it stays true even when the relay is not configured, so the calls fail closed
+   * (see `relayProblem`) instead of silently falling back to direct or STUN-assisted connections.
+   */
   relayOnly: boolean;
   turn: { urls: string[]; secret: string; ttlSec: number } | null;
   tls: { key: string; cert: string } | null;
   logger: boolean;
 }
 
-export const APP_VERSION = '2.15.1';
+export const APP_VERSION = '2.16.0';
+
+/** The shortest secret the server accepts from the environment (generated ones are 64 characters). */
+const MIN_SECRET_LENGTH = 32;
 
 /** A list from an environment variable, separated by commas. */
 function list(value: string | undefined, fallback: string[]): string[] {
@@ -72,6 +79,17 @@ function loadSecrets(dataDir: string): {
     jwtSecret: process.env['JWT_SECRET'],
     serverSecret: process.env['SERVER_SECRET'],
   };
+  for (const name of ['jwtSecret', 'serverSecret'] as const) {
+    const value = fromEnv[name];
+    if (value && value.length < MIN_SECRET_LENGTH) {
+      throw new Error(
+        `${name === 'jwtSecret' ? 'JWT_SECRET' : 'SERVER_SECRET'} must have at least ${MIN_SECRET_LENGTH} characters (try: openssl rand -base64 48)`,
+      );
+    }
+  }
+  if (fromEnv.jwtSecret && fromEnv.jwtSecret === fromEnv.serverSecret) {
+    throw new Error('JWT_SECRET and SERVER_SECRET must be different values');
+  }
   if (fromEnv.jwtSecret && fromEnv.serverSecret) {
     return { jwtSecret: fromEnv.jwtSecret, serverSecret: fromEnv.serverSecret };
   }
@@ -96,6 +114,23 @@ function loadSecrets(dataDir: string): {
   return generated;
 }
 
+/** True for a TURN url that a browser can use (`turn:` or `turns:`); STUN-only entries cannot relay anything. */
+function isTurnUrl(url: string): boolean {
+  return /^turns?:\S+$/i.test(url);
+}
+
+/**
+ * Why the calls cannot start under the requested policy, or null when everything needed is in place. When the
+ * operator asked for relay-only calls but no usable TURN relay is configured, the server must refuse to hand out
+ * ICE servers: handing out a STUN server (or nothing) would let the browsers connect directly and expose addresses.
+ */
+export function relayProblem(config: Pick<AppConfig, 'relayOnly' | 'turn'>): string | null {
+  if (config.relayOnly && !config.turn) {
+    return 'RELAY_ONLY=1 needs TURN_URLS (turn:/turns: addresses) and TURN_SECRET; calls are refused until they are set';
+  }
+  return null;
+}
+
 /** Reads the settings of the server from the environment; the secrets are created the first time and kept. */
 export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   const dataDir = path.resolve(process.env['DATA_DIR'] ?? path.join(process.cwd(), 'data'));
@@ -104,8 +139,9 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       ? { jwtSecret: overrides.jwtSecret, serverSecret: overrides.serverSecret }
       : loadSecrets(dataDir);
 
-  const turnUrls = list(process.env['TURN_URLS'], []);
+  const turnUrls = list(process.env['TURN_URLS'], []).filter(isTurnUrl);
   const turnSecret = process.env['TURN_SECRET'];
+  const relayRequested = process.env['RELAY_ONLY'] === '1';
 
   const tlsKey = process.env['TLS_KEY'];
   const tlsCert = process.env['TLS_CERT'];
@@ -137,14 +173,15 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       windowMs: 15 * 60_000,
       lockMs: 15 * 60_000,
     },
-    // With an own relay (coturn also answers STUN) Google is not asked at all: it would learn the address of every caller.
+    // With an own relay (coturn also answers STUN), or when relay-only calls are requested, Google is not asked at
+    // all: it would learn the address of every caller.
     stunUrls: list(
       process.env['STUN_URLS'],
-      turnUrls.length && turnSecret
+      (turnUrls.length && turnSecret) || relayRequested
         ? []
         : ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'],
     ),
-    relayOnly: process.env['RELAY_ONLY'] === '1' && turnUrls.length > 0 && !!turnSecret,
+    relayOnly: relayRequested,
     turn:
       turnUrls.length && turnSecret ? { urls: turnUrls, secret: turnSecret, ttlSec: 3600 } : null,
     tls: tlsKey && tlsCert ? { key: tlsKey, cert: tlsCert } : null,

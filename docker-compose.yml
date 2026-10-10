@@ -17,6 +17,11 @@ services:
       TURN_URLS: ${TURN_URLS:-}
       TURN_SECRET: ${TURN_SECRET:-}
       RELAY_ONLY: ${RELAY_ONLY:-}
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
     volumes:
       - chatterly-data:/data
     # Hardening: the container only writes in its data volume and in memory, has no extra privileges and has no
@@ -40,7 +45,7 @@ services:
 
   caddy:
     profiles: ['caddy']
-    image: caddy:2
+    image: caddy:2.11.7
     restart: unless-stopped
     depends_on:
       - app
@@ -55,31 +60,25 @@ services:
       - caddy-data:/data
       - caddy-config:/config
 
+  # The TURN relay. Its settings (including the shared secret) live in deploy/turnserver.generated.conf, written by
+  # deploy/turn-setup.sh from deploy/turnserver.conf: the secret is not in this file, not in the command line and not in
+  # the output of "docker inspect". There are no built-in addresses: nothing starts without that file.
   turn:
-    image: coturn/coturn:latest
+    image: coturn/coturn:4.18.0
     restart: unless-stopped
     network_mode: host
-    command:
-      - -n
-      - --log-file=stdout
-      - --listening-port=3478
-      - --listening-ip=${TURN_PRIVATE_IP:-10.0.0.194}
-      - --realm=${DOMAIN:-localhost}
-      - --use-auth-secret
-      - --static-auth-secret=${TURN_SECRET:-}
-      - --external-ip=${TURN_PUBLIC_IP:-51.170.53.50}/${TURN_PRIVATE_IP:-10.0.0.194}
-      - --min-port=49152
-      - --max-port=49252
-      - --fingerprint
-      - --no-cli
-      - --no-tls
-      - --no-dtls
-      - --no-multicast-peers
-      - --allowed-peer-ip=${TURN_PRIVATE_IP:-10.0.0.194}
-      - --denied-peer-ip=10.0.0.0-10.255.255.255
-      - --denied-peer-ip=172.16.0.0-172.31.255.255
-      - --denied-peer-ip=192.168.0.0-192.168.255.255
-      - --denied-peer-ip=127.0.0.0-127.255.255.255
+    command: ['-c', '/etc/coturn/turnserver.conf', '-n']
+    volumes:
+      - ./deploy/turnserver.generated.conf:/etc/coturn/turnserver.conf:ro
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
 volumes:
   chatterly-data:

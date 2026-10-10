@@ -8,29 +8,12 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context';
 import { callerId } from '../validation';
+import { sanitizeImage } from '../security/image-sanitize';
 
 export const IMAGE_KINDS = ['avatar', 'banner', 'group'] as const;
 export type ImageKind = (typeof IMAGE_KINDS)[number];
 
 const MAX_IMAGES_PER_USER = 30;
-
-/** Identify an image by its magic bytes — never trust the client's declared type. SVG is refused on purpose. */
-export function sniffImage(buf: Buffer): string | null {
-  if (
-    buf.length > 12 &&
-    buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-  )
-    return 'image/png';
-  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
-  if (buf.length > 6 && buf.subarray(0, 4).toString('latin1') === 'GIF8') return 'image/gif';
-  if (
-    buf.length > 12 &&
-    buf.subarray(0, 4).toString('latin1') === 'RIFF' &&
-    buf.subarray(8, 12).toString('latin1') === 'WEBP'
-  )
-    return 'image/webp';
-  return null;
-}
 
 export function imageFile(ctx: AppContext, id: string): string {
   return path.join(ctx.config.uploadDir, 'images', id);
@@ -57,8 +40,10 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
   const me = callerId;
   const auth = { onRequest: [app.authenticate] };
 
-  // Profile pictures, banners and group icons are public to signed-in users (the client re-encodes
-  // them to a small WebP first); they are not part of the end-to-end encrypted payload.
+  // Profile pictures, banners and group icons are readable by every signed-in user who knows the id (ids are random
+  // and only appear in profiles, but they are NOT a secret and the pictures are NOT end-to-end encrypted: the server
+  // stores them in clear). The client re-encodes them to a small WebP first and the server strips any metadata that
+  // is still there. Private photographs belong in chat attachments, which are encrypted in the browser.
   app.post(
     '/api/images',
     {
@@ -80,8 +65,10 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
       if (!Buffer.isBuffer(body) || body.length < 16 || body.length > config.maxImageBytes) {
         return reply.code(400).send({ error: 'invalid_image' });
       }
-      const mime = sniffImage(body);
-      if (!mime) return reply.code(415).send({ error: 'unsupported_image_type' });
+      // The type comes from the bytes. The picture is rebuilt without metadata (EXIF, GPS, text chunks) and
+      // refused when it is malformed or its dimensions are absurd: the browser is not trusted to have done it.
+      const clean = sanitizeImage(body);
+      if (!clean) return reply.code(415).send({ error: 'unsupported_image_type' });
       const count = (
         db.prepare('SELECT COUNT(*) AS n FROM images WHERE owner_id = ?').get(owner) as {
           n: number;
@@ -90,10 +77,16 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
       if (count >= MAX_IMAGES_PER_USER) return reply.code(429).send({ error: 'too_many_images' });
       const id = randomUUID();
       fs.mkdirSync(path.dirname(imageFile(ctx, id)), { recursive: true });
-      await fs.promises.writeFile(imageFile(ctx, id), body, { mode: 0o600 });
-      db.prepare(
-        'INSERT INTO images (id, owner_id, kind, mime, size, created_at) VALUES (?,?,?,?,?,?)',
-      ).run(id, owner, kind, mime, body.length, Date.now());
+      await fs.promises.writeFile(imageFile(ctx, id), clean.data, { mode: 0o600 });
+      try {
+        db.prepare(
+          'INSERT INTO images (id, owner_id, kind, mime, size, created_at) VALUES (?,?,?,?,?,?)',
+        ).run(id, owner, kind, clean.mime, clean.data.length, Date.now());
+      } catch (error) {
+        // No row, no file: an upload that cannot be recorded must not leave bytes on the disk.
+        await fs.promises.rm(imageFile(ctx, id), { force: true });
+        throw error;
+      }
       return reply.code(201).send({ id });
     },
   );

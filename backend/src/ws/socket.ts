@@ -7,6 +7,7 @@ import type { WebSocket } from 'ws';
 import { randomUUID } from 'node:crypto';
 import type { AppContext } from '../context';
 import { areFriends, canAccessChannel, channelAudience, getChannel } from '../models';
+import { isSessionLive } from '../security/sessions';
 import type { Client, Presence } from './hub';
 
 const PRESENCE_VALUES: Presence[] = ['online', 'idle', 'dnd', 'invisible'];
@@ -68,8 +69,13 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
       return (budget = 1500);
     }, 10_000);
     let alive = true;
+    let sessionId = '';
     const heartbeat = setInterval(function () {
       if (!alive) return socket.terminate();
+      // A connection must not outlive its session (sign out from another device, password change, erased account).
+      if (client && !isSessionLive(db, sessionId, client.userId)) {
+        return socket.close(4401, 'session ended');
+      }
       alive = false;
       socket.ping();
     }, 30_000);
@@ -103,16 +109,19 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
           return socket.close(4401, 'unauthenticated');
         let userId: string;
         try {
-          userId = (app.jwt.verify(msg['token']) as { sub: string }).sub;
+          const claims = app.jwt.verify(msg['token']) as { sub: string; sid?: string };
+          userId = claims.sub;
+          sessionId = claims.sid ?? '';
         } catch {
           return socket.close(4401, 'invalid token');
         }
-        if (!db.prepare('SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL').get(userId))
-          return socket.close(4401, 'unknown user');
+        if (!sessionId || !isSessionLive(db, sessionId, userId))
+          return socket.close(4401, 'session ended');
         clearTimeout(authTimer);
         client = {
           id: randomUUID(),
           userId,
+          sessionId,
           send,
           close: function (code, reason) {
             return socket.close(code, reason);

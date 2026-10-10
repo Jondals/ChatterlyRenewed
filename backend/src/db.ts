@@ -241,16 +241,34 @@ function migrate(db: Database.Database): void {
   }
 }
 
+/** Version of the schema, kept in `PRAGMA user_version`: it only grows, and a database from the future is refused. */
+export const SCHEMA_VERSION = 2;
+
 /**
  * Opens the database (creating the folder and the tables) with foreign keys on and the journal that allows reading while writing.
+ * `secure_delete` makes SQLite overwrite deleted content with zeros, so erased messages, accounts and sessions do not
+ * stay readable in the free pages of the file (nor in the write-ahead log once it is checkpointed).
+ *
+ * Opening is repeatable: the tables are created only when missing, the columns of older versions are added, and a
+ * second open of the same file changes nothing. A database written by a newer version of the app is not touched.
  */
 export function openDatabase(dbPath: string): Db {
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
+  const current = Number(db.pragma('user_version', { simple: true }));
+  if (current > SCHEMA_VERSION) {
+    db.close();
+    throw new Error(
+      `The database has schema version ${current}, newer than this app (${SCHEMA_VERSION}); update the app instead of opening it`,
+    );
+  }
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  db.pragma('secure_delete = ON');
+  db.pragma('busy_timeout = 5000');
   db.exec(SCHEMA);
   migrate(db);
   untieWrappers(db);
+  db.pragma(`user_version = ${SCHEMA_VERSION}`);
   return db;
 }

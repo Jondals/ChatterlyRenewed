@@ -11,6 +11,13 @@ chatterly.example.com {
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		-Server
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(), payment=()"
+	}
+
+	# Nothing bigger than the largest upload (12 MB of encrypted file) is passed on to the app.
+	request_body {
+		max_size 14MB
 	}
 
 	@backend path /api/* /ws

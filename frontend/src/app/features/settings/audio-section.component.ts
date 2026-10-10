@@ -140,14 +140,6 @@ import { decibels } from '../../shared/util/audio-level';
           (checkedChange)="s.spatialAudio.set($event)"
           [label]="'3D spatial audio' | t"
       /></app-setting-row>
-      <app-setting-row
-        title="Hide my IP address"
-        hint="Only connect through a TURN relay so participants never learn your address. Needs a TURN server."
-        ><app-toggle
-          [checked]="s.relayOnly()"
-          (checkedChange)="s.relayOnly.set($event)"
-          [label]="'Hide my IP address' | t"
-      /></app-setting-row>
     </section>
   `,
 })

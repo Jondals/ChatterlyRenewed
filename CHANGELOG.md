@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.16.0
+
+Security audit release. Nothing changes in how the app is used, except that the "Hide my IP address" switch is gone: whether calls must use the relay is now decided only by the server (`RELAY_ONLY=1`).
+
+- **Calls fail closed.** `RELAY_ONLY=1` used to switch itself off silently when the relay (TURN) was not configured, and the browser fell back to Google STUN or a direct connection whenever `/api/rtc/config` failed: the call worked and the addresses leaked. Now the server answers 503 and the browser refuses to start the call with a clear message; the relay policy lives in the configuration of every connection and is kept through reconnections; the credentials of the relay are renewed before they expire (a call of more than an hour used to lose its relay); a connection that is found to use a direct path in a private call is closed; a non-relayed candidate is never sent. No public STUN server is listed in relay-only mode.
+- **Calls and a server that cannot be trusted.** A contact whose identity key changed is no longer called with the new key until the person reviews it (before, only a warning was shown); the first signal of a session must be recent, so a recording of an old one cannot tear down a live call; the "End-to-end encrypted" label now needs a frame that really authenticated, not only the keys.
+- **Sessions.** Access tokens name their session: signing out, changing the password, erasing the account or reusing a refresh token stops the token at once (before it worked for up to 15 minutes) and closes the open sockets of that session. Sockets also check their session every 30 seconds.
+- **Link previews (SSRF).** A link to an IPv6 address (`https://[::1]/`, `https://[::ffff:127.0.0.1]/`) skipped the check and the server connected to its own network. Fixed with a complete range list, only port 443, and a check on every redirect. The reading of the page could also be made to stall the whole server with a page of unclosed `<meta` tags; it is now linear.
+- **Uploaded pictures** are validated and rebuilt without metadata (EXIF/GPS, text chunks, comments) on the server, with limits on the size in pixels; abandoned uploads are cleaned up. Profile pictures are still readable by every signed-in user and are NOT end-to-end encrypted (as before): send private photos as chat attachments, which are encrypted in the browser.
+- **Deleting an account** no longer destroys the groups it owned when other people are in them: the group passes to its longest-standing member, its key is marked for renewal, its icon stays. A group with nobody else is erased. The whole deletion is one transaction.
+- **Database:** deleted content is overwritten (`secure_delete`), the schema version is recorded and a database from a newer version is refused, expired sessions and used refresh tokens are cleaned every hour. `scripts/backup.mjs` makes consistent, optionally encrypted backups.
+- **Web server:** a malformed address (`/%E0%A4%A`) crashed the whole process; fixed, and only GET/HEAD are served. The CSP no longer allows connections to any host (a deployment with the API on another origin must add it to `connect-src` in `index.html`). Secrets shorter than 32 characters (or identical) are refused at start. `TRUST_PROXY=1` now trusts exactly one proxy.
+- **Deployment:** the TURN relay reads its settings (and secret) from a generated file instead of the command line, with no built-in addresses, limits per credential, no TCP relaying and more denied ranges (cloud metadata, link-local, carrier NAT); images are pinned (`coturn 4.18.0`, `caddy 2.11.7`, `node 22.22`); Docker logs rotate; the systemd unit is sandboxed; `.gitignore` covers data, keys and generated files. `bash deploy/turn-setup.sh --rotate-secret` makes a new relay secret.
+- **Dependencies:** Angular 21.2.25 (several XSS and denial-of-service advisories), the unused `@angular-devkit/build-angular` removed (87 advisories, all build-time, down to 3 in a build-time dependency of Autoprefixer).
+- A pre-existing console error after deleting an account (the sidebar read the user after sign-out) is fixed.
+- Tests: `test/security.mts` runs inside `pnpm test` (no browser).
+
 ## 2.15.1
 
 - Deleting the account now erases the row of the person too: nothing of them stays in the database (before a stub without name, password or keys stayed). To make that possible the key envelopes that a person wrapped for others no longer depend on that person's row: the public key of the wrapper (public data) is written into the envelope when the account is erased, and the app uses it. Older databases are updated by themselves when the server starts. The groups where the person was a member are marked so their owner renews the group key.
@@ -459,7 +476,6 @@
 - Every source file now starts with a comment saying what it does.
 
 - Earlier in this release line: auth screens back to the original look with an animated particle network; colour picker fixed (it opened off-screen inside the chat; panels now use the browser top layer); gradients for the name colour and a custom gradient builder in the chat; density option removed; 9 more click sounds; 8 more animated backgrounds; cursor presets reworked and uploaded cursors are named entries; global tooltips that never get clipped; call grid sizes tiles to the available height and any participant can be pinned; About redesigned; GIFs through GIPHY (+ optional Tenor) merged; refresh-token reuse detection, `Cache-Control: no-store` and `Permissions-Policy` on the API; `pnpm app` serves the production build.
-
 
 ## 1.1.0
 

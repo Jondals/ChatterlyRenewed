@@ -4,7 +4,7 @@
 # Inside the container: the API listens on 3000 and the web app on 4200 (a reverse proxy, Caddy, sits in front).
 
 # ---- Stage 1: build ----
-FROM node:22-bookworm-slim AS build
+FROM node:22.22-bookworm-slim AS build
 # better-sqlite3 is native code: it is downloaded ready-made, and compiled with these tools when there is none for the CPU.
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/* \
@@ -25,7 +25,7 @@ RUN pnpm --dir backend build && pnpm --dir frontend build
 RUN pnpm --dir backend install --frozen-lockfile --prod
 
 # ---- Stage 2: runtime ----
-FROM node:22-bookworm-slim
+FROM node:22.22-bookworm-slim
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
@@ -37,7 +37,7 @@ COPY --from=build /app/backend/package.json backend/package.json
 COPY --from=build /app/backend/node_modules backend/node_modules
 COPY --from=build /app/backend/dist backend/dist
 COPY --from=build /app/frontend/dist/frontend frontend/dist/frontend
-COPY scripts/produccion.mjs scripts/produccion.mjs
+COPY scripts/produccion.mjs scripts/static-server.mjs scripts/backup.mjs scripts/
 # The database, the uploads and the secrets of the server live here: keep this folder in a volume.
 RUN mkdir /data && chown node:node /data
 VOLUME /data

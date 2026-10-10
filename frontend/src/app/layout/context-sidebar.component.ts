@@ -424,7 +424,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
             [user]="auth.user()"
             [size]="40"
             [aura]="true"
-            [status]="social.statusOf(auth.user()!.id)"
+            [status]="social.statusOf(auth.user()?.id ?? '')"
           />
           <span class="min-w-0 leading-snug">
             <span

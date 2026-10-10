@@ -301,6 +301,9 @@ export function registerGifRoutes(app: FastifyInstance, ctx: AppContext): void {
         const type = res.headers.get('content-type') ?? '';
         if (!res.ok || !/^image\/(gif|webp|png|jpeg)/.test(type))
           return reply.code(502).send({ error: 'gif_provider_error' });
+        // Refuse before downloading when the provider already says the file is too big.
+        if (Number(res.headers.get('content-length') ?? 0) > MAX_GIF_BYTES)
+          return reply.code(413).send({ error: 'gif_too_large' });
         const bytes = Buffer.from(await res.arrayBuffer());
         if (bytes.length > MAX_GIF_BYTES) return reply.code(413).send({ error: 'gif_too_large' });
         return reply

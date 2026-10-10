@@ -3,12 +3,15 @@
  * Entry point of the backend: starts the server and shuts it down cleanly when it receives a signal.
  */
 import { buildApp } from './app';
-import { loadConfig } from './config';
+import { loadConfig, relayProblem } from './config';
 
 /** Starts the server and closes it cleanly when the process is told to stop. */
 async function main() {
   const config = loadConfig();
   const app = await buildApp(config);
+  // Relay-only calls without a relay are refused (fail closed); say so loudly at start, not on the first call.
+  const problem = relayProblem(config);
+  if (problem) app.log.error(problem);
   const shutdown = async function () {
     await app.close();
     process.exit(0);

@@ -7,3 +7,17 @@ backend/data/
 .env
 *.log
 .DS_Store
+# Local data, secrets and generated deployment files must never be committed.
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+secrets.json
+.env.*
+!.env.example
+!.env.docker.example
+*.pem
+*.key
+deploy/turnserver.generated.conf
+backups/

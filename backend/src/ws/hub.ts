@@ -11,6 +11,8 @@ export type PublicPresence = 'online' | 'idle' | 'dnd' | 'offline';
 export interface Client {
   id: string;
   userId: string;
+  /** The session the connection was opened with; closing that session closes the connection. */
+  sessionId: string;
   send(message: unknown): void;
   close(code?: number, reason?: string): void;
 }
@@ -88,6 +90,26 @@ export class Hub {
     this.leaveRoom(userId);
     for (const client of [...(this.clients.get(userId) ?? [])])
       client.close(4401, 'account deleted');
+  }
+
+  /**
+   * Closes the connections of a person that belong to revoked sessions: all of them, or all except the session
+   * that is being kept (the one that has just changed the password).
+   *
+   * @param userId Owner of the sessions.
+   * @param keepSessionId Session whose connections stay open, if any.
+   */
+  closeSessions(userId: string, keepSessionId?: string): void {
+    for (const client of [...(this.clients.get(userId) ?? [])]) {
+      if (client.sessionId !== keepSessionId) client.close(4401, 'session ended');
+    }
+  }
+
+  /** Closes the connections opened with one session (it was signed out). */
+  closeSession(userId: string, sessionId: string): void {
+    for (const client of [...(this.clients.get(userId) ?? [])]) {
+      if (client.sessionId === sessionId) client.close(4401, 'session ended');
+    }
   }
 
   /** Whether a person has any connection open. */

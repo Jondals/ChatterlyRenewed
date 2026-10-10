@@ -5,7 +5,8 @@
  *   pnpm test
  *
  * What it does:
- *   1. Type-checks backend and frontend and checks that every UI string is translated.
+ *   1. Type-checks backend and frontend and checks that every UI string is translated, then runs the security checks
+ *      (test/security.mts: other people's ids, sessions, uploads, SSRF, deletion, the relay-only policy, the frame cipher).
  *   2. Builds the frontend in a temporary folder and starts the real backend with a temporary database.
  *   3. Two real Chromium browsers: sign-up, friendship, chat with colors/emoji/stickers, GIFs (disabled
  *      without a key), an end-to-end encrypted video call (equal security codes and encrypted frames
@@ -267,6 +268,19 @@ async function main() {
   run('pnpm', ['--dir', 'frontend', 'typecheck']);
   run('node', ['scripts/i18n.mjs', '--check'], { cwd: FRONTEND });
   console.log('  ok  backend and frontend types, and every string translated');
+
+  step('security checks (no browser)');
+  const securityCli = path.join(BACKEND, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const security = spawnSync(
+    process.execPath,
+    [securityCli, path.join(ROOT, 'test', 'security.mts')],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+    },
+  );
+  process.stdout.write(security.stdout);
+  if (security.status !== 0) throw new Error('security checks failed:\n' + security.stderr);
 
   step('build and temporary servers');
   const webOut = path.join(TMP, 'web');
