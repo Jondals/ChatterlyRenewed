@@ -43,7 +43,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
       <div class="mt-3 rounded-ui border border-accent/25 bg-accent/5 p-4">
         <div class="label mb-2 text-center text-accent">{{ 'Safety number' | t }}</div>
         <div
-          class="grid grid-cols-4 gap-x-3 gap-y-2 text-center font-mono text-[15px] font-bold tracking-wider"
+          class="grid grid-cols-4 gap-x-3 gap-y-2 text-center font-mono text-[0.9375rem] font-bold tracking-wider"
         >
           @for (g of groups(); track $index) {
             <span class="anim-fade-in" [style.--d]="$index * 40 + 'ms'">{{ g }}</span>
@@ -55,7 +55,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
         <summary class="cursor-pointer font-semibold hover:text-fg">
           {{ 'Show raw identity fingerprints' | t }}
         </summary>
-        <div class="mt-2 space-y-2 font-mono text-[11px]">
+        <div class="mt-2 space-y-2 font-mono text-[0.6875rem]">
           <div>
             <b class="text-fg">{{ 'You' | t }}</b
             ><br />{{ mine() }}

@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 User=ubuntu
-# Secrets (JWT_SECRET, SERVER_SECRET, TURN_*) live in a file only root can read (chmod 600), never in this unit.
+# ! Secrets (JWT_SECRET, SERVER_SECRET, TURN_*) live in a file only root can read (chmod 600), NEVER in this unit.
 EnvironmentFile=-/etc/chatterly.env
 WorkingDirectory=/home/ubuntu/ChatterlyRenewed
 Environment=NODE_ENV=production
@@ -15,7 +15,7 @@ Environment=CORS_ORIGINS=https://chatterly.example.com
 ExecStart=/usr/bin/node scripts/produccion.mjs
 Restart=always
 RestartSec=3
-# Hardening: the app only writes in its data folder and has no extra privileges.
+# * Hardening: the app only writes in its data folder and has no extra privileges.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only

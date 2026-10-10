@@ -3,7 +3,7 @@
  * Periodic cleanup of data that nothing can reach any more: expired sessions, used-up refresh tokens and uploaded
  * pictures that were never attached to a profile or a group.
  *
- * Why it exists: without it the database keeps dead sessions forever and an upload that is abandoned half way (the
+ * ? Why it exists: without it the database keeps dead sessions forever and an upload that is abandoned half way (the
  * person picks a picture and closes the page) stays on the disk with a row that nothing references. Removing
  * what is unreachable keeps the stored data to what people actually use.
  */

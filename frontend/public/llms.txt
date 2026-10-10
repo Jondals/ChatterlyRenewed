@@ -1,0 +1,15 @@
+# Chatterly-Renewed
+
+> Chatterly-Renewed is a chat application with direct messages, groups, voice and video calls and file sharing. Everything is end-to-end encrypted in the browser: the server cannot read messages or listen to calls. It is open source (ISC).
+
+The application itself is private (it needs an account); only the pages below are public.
+
+## Pages
+
+- [Sign in](__SITE_URL__/login): unlock your encrypted vault with your username and password.
+- [Create an account](__SITE_URL__/register): the keys are generated in your browser; the password never reaches the server.
+
+## Project
+
+- [Source code and documentation](https://github.com/Jondals/ChatterlyRenewed#readme): features, how the security works and how to run your own server.
+- [Security policy](https://github.com/Jondals/ChatterlyRenewed/security/policy): how to report a vulnerability.

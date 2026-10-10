@@ -7,7 +7,7 @@ import type { Db } from '../db';
 
 /**
  * Whether a session exists, belongs to the user, has not expired and its account is not erased.
- * Access tokens carry the id of their session (`sid`); a token without a live session is worthless, which
+ * * Access tokens carry the id of their session (`sid`); a token without a live session is worthless, which
  * is what makes logout and "close all sessions" effective immediately instead of after the 15 minute lifetime.
  *
  * @param db Open database.

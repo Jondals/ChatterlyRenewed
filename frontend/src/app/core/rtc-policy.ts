@@ -3,10 +3,10 @@
  * Decides how a call may connect (which ICE servers it may use, and whether only a relay is allowed) and checks
  * that the connection that was really made follows that decision.
  *
- * Why it exists: hiding the addresses of the people in a call only works if the browser is forbidden to connect
+ * ? Why it exists: hiding the addresses of the people in a call only works if the browser is forbidden to connect
  * in any other way. If the relay is missing, broken or its credentials have expired, the dangerous behaviour is to
  * quietly fall back to STUN or to a direct connection: the call works and the addresses leak. These functions make
- * that impossible to do by accident: when a relay is required and cannot be used they throw, and the call is not
+ * ! that impossible to do by accident: when a relay is required and cannot be used they throw, and the call is not
  * started.
  *
  * Pure functions with no Angular, so they run in the single test without a browser.
@@ -65,7 +65,7 @@ function isUsableRelay(server: RTCIceServer, now: number): boolean {
 /**
  * Builds the configuration of an RTCPeerConnection from the answer of the server.
  *
- * When a relay is required (the server says so) the configuration contains
+ * ! When a relay is required (the server says so) the configuration contains
  * ONLY relay servers and `iceTransportPolicy: 'relay'`, so the browser cannot even gather a direct candidate. If there
  * is no relay with valid credentials the function throws `RelayUnavailableError`: it never lowers the policy to
  * `all`, and never adds a STUN server of its own.

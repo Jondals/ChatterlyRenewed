@@ -927,6 +927,47 @@ async function main() {
   await a.waitForTimeout(4500);
   await shot(a, '02-llamada-a');
   await shot(b, '03-llamada-b');
+  // The arrows with the devices, and the menu of a person (volume, next to the cursor, closes with a press elsewhere).
+  check(
+    (await a.locator('app-device-menu').count()) === 2,
+    'the microphone and the camera have an arrow with their devices',
+  );
+  await a.locator('app-device-menu button').first().click();
+  await a.waitForSelector('app-device-menu [role=menu]', { timeout: 5000 });
+  check(
+    await a.locator('app-device-menu [role=menu]').first().isVisible(),
+    'the arrow of the microphone opens the list of devices',
+  );
+  await a.keyboard.press('Escape');
+  await a.waitForTimeout(300);
+  check(
+    (await a.locator('app-device-menu [role=menu]').count()) === 0,
+    'Escape closes the list of devices',
+  );
+  const bobTile = a.locator('.stage-host').getByText('bob', { exact: true }).first();
+  const bobBox = await bobTile.boundingBox();
+  await bobTile.click({ button: 'right' });
+  await a.waitForSelector('app-person-menu input[type=range]');
+  const menuBox = await a.locator('app-person-menu').boundingBox();
+  check(
+    Math.abs(menuBox.x - (bobBox.x + bobBox.width / 2)) < 280 &&
+      Math.abs(menuBox.y - (bobBox.y + bobBox.height / 2)) < 280,
+    'the menu of a person opens next to the cursor',
+  );
+  await a.locator('app-person-menu input[type=range]').fill('150');
+  const volumes = await a.evaluate(function () {
+    return JSON.parse(localStorage.getItem('chatterly.pref.peerVolumes') ?? '{}');
+  });
+  check(
+    Object.values(volumes).includes(150),
+    'the volume of a person can be raised (150 %) and is kept',
+  );
+  await a.mouse.click(4, 4);
+  await a.waitForTimeout(300);
+  check(
+    (await a.locator('app-person-menu').count()) === 0,
+    'a press anywhere else closes the menu of a person',
+  );
   await a.click('button.chip:has-text("End-to-end encrypted")');
   await b.click('button.chip:has-text("End-to-end encrypted")');
   await a.waitForSelector('text=Verify this call');
@@ -1294,9 +1335,13 @@ async function main() {
   await shot(a, '04b-efectos');
   await a.click('h2:has-text("About you")');
   await a.click('label:has-text("Gradient") input');
-  await a.click('button:has-text("Edit") >> nth=0');
+  await a.click('button:has-text("More options") >> nth=0');
   await a.waitForSelector('text=Angle');
   check(true, 'banner with gradient, angle and where it starts and ends');
+  check(
+    (await a.locator('.gbar').count()) === 1 || (await a.locator('.gbar:visible').count()) >= 1,
+    'the gradient editor is one single bar that also holds the markers',
+  );
   await a.click('button:has-text("Save changes")');
   await a.waitForTimeout(1000);
   check(true, 'profile picture and banner uploaded, name font saved');
@@ -1456,6 +1501,9 @@ async function main() {
   await a.mouse.wheel(0, -100);
   await a.waitForTimeout(200);
   const valorMas = Number(await deslizador.inputValue());
+  // The whole interface follows the text size, so the slider may have moved: the pointer goes to where it is now.
+  const cajaNueva = await deslizador.boundingBox();
+  await a.mouse.move(cajaNueva.x + cajaNueva.width / 2, cajaNueva.y + cajaNueva.height / 2);
   await a.mouse.wheel(0, 100);
   await a.waitForTimeout(200);
   const valorMenos = Number(await deslizador.inputValue());
@@ -1595,6 +1643,43 @@ async function main() {
   await a.waitForSelector('.settings-overlay nav a >> nth=6');
   check(true, 'the back button leads to the list again');
   await a.keyboard.press('Escape');
+  // The main screens on a phone: nothing may be wider than the screen (screenshots with CHATTERLY_SHOTS).
+  for (const [name, route] of [
+    ['friends', '/direct'],
+    ['groups', '/groups'],
+    ['voice', '/voice'],
+  ]) {
+    // Moved inside the app (no page load): every load asks the server to renew the session, which is rate limited.
+    await a.evaluate(function (path) {
+      history.pushState({}, '', path);
+      dispatchEvent(new PopStateEvent('popstate'));
+    }, route);
+    await a.waitForTimeout(1200);
+    await shot(a, '13-movil-' + name);
+    check(
+      await a.evaluate(function () {
+        return document.documentElement.scrollWidth <= window.innerWidth + 1;
+      }),
+      `the ${name} screen fits in 390px`,
+    );
+  }
+  await a.evaluate(function () {
+    history.pushState({}, '', '/direct');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await a.waitForTimeout(900);
+  const firstChat = a.locator('a[href*="/direct/"]').first();
+  if (await firstChat.count()) {
+    await firstChat.click();
+    await a.waitForTimeout(900);
+    await shot(a, '13-movil-chat');
+    check(
+      await a.evaluate(function () {
+        return document.documentElement.scrollWidth <= window.innerWidth + 1;
+      }),
+      'a conversation fits in 390px',
+    );
+  }
   await a.setViewportSize({ width: 1440, height: 900 });
 
   step('the server stores nothing in clear');
@@ -1627,7 +1712,7 @@ async function main() {
   });
   await register(c, C);
   await c.waitForTimeout(1200);
-  await c.goto(WEB + '/direct(settings:settings/security)');
+  await c.goto(WEB + '/direct(settings:settings/profile)');
   await c.click('button:has-text("Delete my account")');
   const eraseForm = '[role="dialog"][aria-label="Delete account"]';
   await c.waitForSelector(eraseForm);
@@ -1658,10 +1743,19 @@ async function main() {
     carolBearer.length > 20 && stale.status === 401,
     'delete account: the old session token stops working at once',
   );
-  const cLeft = await c.evaluate(function () {
-    return localStorage.length;
+  // The page that loads after the erasure writes the default value of its own preferences, so what is checked is that nothing
+  // that belongs to the account is left: no session, no pinned or verified keys, no active group, no used emoji.
+  const leftKeys = await c.evaluate(function () {
+    return Object.keys(localStorage);
   });
-  check(cLeft <= 1, 'delete account: nothing of the account stays in the browser');
+  const belonging = leftKeys.filter(function ofAccount(key) {
+    return /session|pins|verified|activeGuild|emojiFreq/i.test(key);
+  });
+  check(
+    belonging.length === 0,
+    'delete account: nothing of the account stays in the browser' +
+      (belonging.length ? ' (left: ' + belonging.join(', ') + ')' : ''),
+  );
 
   step('API: requests without a session, and CORS');
   for (const route of [

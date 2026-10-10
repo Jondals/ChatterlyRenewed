@@ -50,7 +50,7 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
   hub.onRoomChange = announceRoom;
 
   app.get('/ws', { websocket: true }, function (socket: WebSocket, req) {
-    // Cross-site WebSocket hijacking guard. Non-browser clients send no Origin.
+    // ! Cross-site WebSocket hijacking guard. Non-browser clients send no Origin.
     const origin = req.headers.origin;
     if (origin && !config.corsOrigins.includes(origin) && !isSameHost(origin, req.headers.host)) {
       socket.close(1008, 'origin not allowed');
@@ -72,7 +72,7 @@ export function registerSocket(app: FastifyInstance, ctx: AppContext): void {
     let sessionId = '';
     const heartbeat = setInterval(function () {
       if (!alive) return socket.terminate();
-      // A connection must not outlive its session (sign out from another device, password change, erased account).
+      // ! A connection must not outlive its session (sign out from another device, password change, erased account).
       if (client && !isSessionLive(db, sessionId, client.userId)) {
         return socket.close(4401, 'session ended');
       }

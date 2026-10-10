@@ -3,7 +3,7 @@
  * Root component: the animated background, the routed pages, the notices, the sound under every press, the
  * block on the browser's own context menu, the mouse wheel on sliders and the late start of cursors and tooltips.
  */
-import { Component, HostListener, Injector, effect, inject } from '@angular/core';
+import { Component, HostListener, Injector, NgZone, effect, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { I18nService } from './core/i18n/i18n.service';
 import { ArrivalService } from './core/services/arrival.service';
@@ -12,6 +12,7 @@ import { SoundService } from './core/services/sound.service';
 import { ArrivalComponent } from './shared/components/arrival.component';
 import { MeshBackgroundComponent } from './shared/components/mesh-background.component';
 import { ToastHostComponent } from './shared/components/toast-host.component';
+import { watchFramePerformance } from './shared/util/perf-monitor';
 
 /** Things that make a press feel like a press: tiny sounds under controls. */
 const PRESSABLE =
@@ -121,6 +122,8 @@ export class AppComponent {
     }
     const fonts = await import('./core/services/font.service');
     this.injector.get(fonts.FontService);
+    // From here on the real frames are measured: a device that stutters gets the light mode by itself.
+    this.injector.get(NgZone).runOutsideAngular(watchFramePerformance);
   }
 
   /** The browser's own context menu is blocked everywhere (the app has its own menus). */

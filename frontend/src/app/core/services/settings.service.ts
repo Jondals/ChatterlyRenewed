@@ -138,6 +138,11 @@ export type BubbleStyle =
   | 'block'
   | 'dashed';
 export type ClickStyle =
+  | 'pop'
+  | 'tap'
+  | 'switch'
+  | 'pluck'
+  | 'bubble'
   | 'soft'
   | 'drop'
   | 'glass'
@@ -207,7 +212,7 @@ export class SettingsService {
   readonly callEffectsVolume = persisted('pref.callEffectsVolume', 100);
   /** Volume of the music shared in a call (only YouTube can be controlled from outside). */
   readonly musicVolume = persisted('pref.musicVolume', 80);
-  readonly clickStyle = persisted<ClickStyle>('pref.clickStyle', 'soft');
+  readonly clickStyle = persisted<ClickStyle>('pref.clickStyle', 'pop');
   /** The sound of an incoming call. */
   readonly ringtone = persisted<RingtoneId>('pref.ringtone', 'auto');
   /** File name of the custom ringtone (empty when there is none). */
@@ -220,6 +225,8 @@ export class SettingsService {
   /** Load the player of a video link as soon as the message is shown (off: it loads when you press play). */
   /** Tell the other people when you have read their messages (off: nobody sees it, and you do not see theirs). */
   readonly sendReadReceipts = persisted<boolean>('pref.sendReadReceipts', true);
+  /** Tell the other people when you are typing (off: nobody sees the three dots, and you still see theirs). */
+  readonly sendTyping = persisted<boolean>('pref.sendTyping', true);
   /** Show the sent, delivered and read marks under your messages. */
   readonly showMessageStatus = persisted<boolean>('pref.showMessageStatus', true);
 
@@ -315,6 +322,10 @@ export class SettingsService {
   // ---- calls
   readonly inputDeviceId = persisted<string>('pref.inputDevice', 'default');
   readonly outputDeviceId = persisted<string>('pref.outputDevice', 'default');
+  /** The camera of the calls ('default' lets the browser choose). */
+  readonly cameraDeviceId = persisted<string>('pref.cameraDevice', 'default');
+  /** How loud each person is for this device, in percent (0 to 200; missing means 100). Kept for the next calls. */
+  readonly peerVolumes = persisted<Record<string, number>>('pref.peerVolumes', {});
   readonly noiseSuppression = persisted('pref.noiseSuppression', true);
   readonly echoCancellation = persisted('pref.echoCancellation', true);
   readonly autoGain = persisted('pref.autoGain', true);

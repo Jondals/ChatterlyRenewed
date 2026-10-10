@@ -34,6 +34,8 @@ import { NameColorDirective } from '../../shared/util/name-color.directive';
 import { IconComponent } from '../../shared/components/icon.component';
 import { ModalComponent } from '../../shared/components/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
+import { DeviceMenuComponent } from './device-menu.component';
+import { PersonMenuComponent } from './person-menu.component';
 import { ToggleComponent } from '../../shared/components/controls.component';
 import { MediaStreamDirective } from '../../shared/util/media-stream.directive';
 import { GuildStore } from '../../store/guild.store';
@@ -78,6 +80,8 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
   selector: 'app-voice-stage',
   standalone: true,
   imports: [
+    PersonMenuComponent,
+    DeviceMenuComponent,
     DockableDirective,
     UserFontDirective,
     NameColorDirective,
@@ -141,26 +145,15 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
           <div class="flex min-w-0 flex-1 flex-col">
             <div #stageHost class="stage-host relative min-h-0 flex-1">
               @if (tileMenu(); as menu) {
-                <div
-                  animate.leave="leave-pop"
-                  class="panel anim-pop fixed z-50 min-w-44 p-1.5 shadow-2xl"
-                  [style.left.px]="menu.x"
-                  [style.top.px]="menu.y"
-                  (mousedown)="$event.stopPropagation()"
-                >
-                  <div
-                    class="truncate px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-dim"
-                  >
-                    {{ menu.label }}
-                  </div>
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2.5 rounded-ui px-3 py-2 text-left text-sm hover:bg-white/8"
-                    (click)="hideTile(menu.id)"
-                  >
-                    <app-icon name="eye-off" [size]="15" /> {{ 'Hide for me' | t }}
-                  </button>
-                </div>
+                <app-person-menu
+                  [x]="menu.x"
+                  [y]="menu.y"
+                  [label]="menu.label"
+                  [userId]="menu.userId"
+                  [canAdjust]="menu.canAdjust"
+                  (hide)="hideTile(menu.id)"
+                  (closed)="tileMenu.set(null)"
+                />
               }
 
               @if (musicTarget()) {
@@ -282,7 +275,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                             (click)="call.voteSkip()"
                           >
                             <app-icon name="skip-forward" [size]="14" />
-                            <span class="font-mono text-[11px]"
+                            <span class="font-mono text-[0.6875rem]"
                               >{{ call.skipVotes().length }}/{{ call.skipNeeded() }}</span
                             >
                           </button>
@@ -297,7 +290,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                           (click)="queueOpen.set(!queueOpen())"
                         >
                           <app-icon name="list" [size]="14" />
-                          <span class="font-mono text-[11px]">{{ queuedCount() }}</span>
+                          <span class="font-mono text-[0.6875rem]">{{ queuedCount() }}</span>
                         </button>
                         @if (musicSrc() && m.link.kind === 'youtube') {
                           <div class="relative shrink-0">
@@ -350,7 +343,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                       @if (musicSrc() && m.link.kind === 'youtube' && duration() > 0) {
                         <span class="timeline mt-2 flex min-w-0 items-center gap-2">
                           <span
-                            class="min-w-[2.7rem] text-right font-mono text-[10px] tabular-nums text-muted"
+                            class="min-w-[2.7rem] text-right font-mono text-[0.625rem] tabular-nums text-muted"
                             >{{ clock(elapsed()) }}</span
                           >
                           <input
@@ -366,7 +359,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                             (change)="seekTo(+$any($event.target).value)"
                           />
                           <span
-                            class="min-w-[2.7rem] font-mono text-[10px] tabular-nums text-muted"
+                            class="min-w-[2.7rem] font-mono text-[0.625rem] tabular-nums text-muted"
                             >{{ clock(duration()) }}</span
                           >
                         </span>
@@ -451,15 +444,18 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                 <div
                   class="call-bar flex flex-wrap items-center justify-center gap-3 rounded-ui-lg border border-white/8 bg-black/30 px-4 py-3"
                 >
-                  <button
-                    class="btn btn-icon h-12 w-12 tip"
-                    [class.btn-soft-danger]="call.muted()"
-                    [attr.data-tip]="(call.muted() ? 'Unmute' : 'Mute') | t"
-                    type="button"
-                    (click)="call.toggleMute()"
-                  >
-                    <app-icon [name]="call.muted() ? 'mic-off' : 'mic'" [size]="20" />
-                  </button>
+                  <div class="flex items-stretch gap-0.5">
+                    <button
+                      class="btn btn-icon h-12 w-12 tip !rounded-r-[calc(var(--r)*.4)]"
+                      [class.btn-soft-danger]="call.muted()"
+                      [attr.data-tip]="(call.muted() ? 'Unmute' : 'Mute') | t"
+                      type="button"
+                      (click)="call.toggleMute()"
+                    >
+                      <app-icon [name]="call.muted() ? 'mic-off' : 'mic'" [size]="20" />
+                    </button>
+                    <app-device-menu kind="audio" />
+                  </div>
                   <button
                     class="btn btn-icon h-12 w-12 tip"
                     [class.btn-soft-danger]="call.deafened()"
@@ -473,15 +469,18 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                     />
                   </button>
                   <span class="mx-1 h-8 w-px bg-white/10"></span>
-                  <button
-                    class="btn btn-icon h-12 w-12 tip"
-                    [class.btn-active]="call.cameraOn()"
-                    [attr.data-tip]="(call.cameraOn() ? 'Turn camera off' : 'Turn camera on') | t"
-                    type="button"
-                    (click)="call.toggleCamera()"
-                  >
-                    <app-icon [name]="call.cameraOn() ? 'video' : 'video-off'" [size]="20" />
-                  </button>
+                  <div class="flex items-stretch gap-0.5">
+                    <button
+                      class="btn btn-icon h-12 w-12 tip !rounded-r-[calc(var(--r)*.4)]"
+                      [class.btn-active]="call.cameraOn()"
+                      [attr.data-tip]="(call.cameraOn() ? 'Turn camera off' : 'Turn camera on') | t"
+                      type="button"
+                      (click)="call.toggleCamera()"
+                    >
+                      <app-icon [name]="call.cameraOn() ? 'video' : 'video-off'" [size]="20" />
+                    </button>
+                    <app-device-menu kind="video" />
+                  </div>
                   <div class="relative">
                     <button
                       class="btn btn-icon h-12 w-12 tip"
@@ -520,7 +519,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                               (click)="setShare({ surface: option.id })"
                             >
                               <app-icon [name]="option.icon" [size]="20" />
-                              <span class="text-[11px]">{{ option.label | t }}</span>
+                              <span class="text-[0.6875rem]">{{ option.label | t }}</span>
                             </button>
                           }
                         </div>
@@ -534,7 +533,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                               (click)="setShare({ quality: option.id })"
                             >
                               <b class="text-xs">{{ option.label }}</b>
-                              <span class="text-[10px] text-muted">{{ option.hint | t }}</span>
+                              <span class="text-[0.625rem] text-muted">{{ option.hint | t }}</span>
                             </button>
                           }
                         </div>
@@ -578,7 +577,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                       >
                         @if (!activityForm()) {
                           <div
-                            class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-dim"
+                            class="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-dim"
                           >
                             {{ 'Activities' | t }}
                           </div>
@@ -768,7 +767,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                           vector-effect="non-scaling-stroke"
                         />
                       </svg>
-                      <div class="flex justify-between font-mono text-[11px] text-muted">
+                      <div class="flex justify-between font-mono text-[0.6875rem] text-muted">
                         <span
                           >min <b class="text-fg">{{ latencyStats().min }}</b></span
                         ><span
@@ -1018,7 +1017,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
             >
               <span class="menu-icon !bg-white/5"><app-spinly-logo [size]="28" /></span>
               <b class="text-xs">Spinly</b>
-              <span class="text-[10px] text-muted">{{ 'Click to enlarge' | t }}</span>
+              <span class="text-[0.625rem] text-muted">{{ 'Click to enlarge' | t }}</span>
             </button>
           } @else {
             <app-spinly-call-panel class="block h-full" [embedded]="true" [tight]="short">
@@ -1045,11 +1044,14 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
               >
                 <app-icon name="play" [size]="small ? 13 : 16" class="shrink-0 text-accent" />
                 <div class="min-w-0 flex-1 leading-tight">
-                  <div class="truncate font-semibold" [class]="small ? 'text-[11px]' : 'text-sm'">
+                  <div
+                    class="truncate font-semibold"
+                    [class]="small ? 'text-[0.6875rem]' : 'text-sm'"
+                  >
                     {{ 'Watching together' | t }}
                   </div>
                   @if (!small) {
-                    <div class="truncate text-[11px] text-muted">
+                    <div class="truncate text-[0.6875rem] text-muted">
                       {{ directory.get(m.by)?.displayName }} · YouTube
                     </div>
                   }
@@ -1084,7 +1086,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                   (click)="toggleQueue($event)"
                 >
                   <app-icon name="list" [size]="14" />
-                  <span class="font-mono text-[11px]">{{ call.musicQueue().length }}</span>
+                  <span class="font-mono text-[0.6875rem]">{{ call.musicQueue().length }}</span>
                 </button>
                 @if (call.hasNext()) {
                   <button
@@ -1679,9 +1681,14 @@ export class VoiceStageComponent {
   private readonly hidden = signal<string[]>([]);
   protected readonly hiddenCount = computed(this.countHidden.bind(this));
   /** The little menu of a tile (right click). */
-  protected readonly tileMenu = signal<{ id: string; label: string; x: number; y: number } | null>(
-    null,
-  );
+  protected readonly tileMenu = signal<{
+    id: string;
+    label: string;
+    userId: string;
+    canAdjust: boolean;
+    x: number;
+    y: number;
+  } | null>(null);
 
   /** How many of the tiles that exist are hidden. */
   private countHidden(): number {
@@ -1727,11 +1734,14 @@ export class VoiceStageComponent {
   protected openTileMenu(event: MouseEvent, tile: Tile): void {
     event.preventDefault();
     event.stopPropagation();
+    // The menu is placed next to the cursor by the menu itself (it knows its own size).
     this.tileMenu.set({
       id: tile.id,
       label: tile.user?.displayName ?? '',
-      x: Math.min(event.clientX, window.innerWidth - 190),
-      y: Math.min(event.clientY, window.innerHeight - 110),
+      userId: tile.user?.id ?? '',
+      canAdjust: !tile.local && !!tile.user,
+      x: event.clientX,
+      y: event.clientY,
     });
   }
 

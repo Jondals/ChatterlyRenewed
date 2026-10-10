@@ -1,11 +1,11 @@
 # Block for the Caddy that runs on the machine itself (/etc/caddy/Caddyfile), next to the ones of other sites.
 # The app publishes the API on 127.0.0.1:3000 and the web app on 127.0.0.1:3001 (see docker-compose.yml).
-# Both are needed: if only 3001 is given, the sign-in fails with "JSON.parse: unexpected character" because the
+# ! Both are needed: if only 3001 is given, the sign-in fails with "JSON.parse: unexpected character" because the
 # requests to /api get the web page back instead of the API.
 chatterly.example.com {
 	encode zstd gzip
 
-	# The browser is told to use HTTPS only, not to guess types and not to send where it came from.
+	# * Defensive headers: HTTPS only (HSTS), no type guessing, no referrer, no framing, camera/microphone only here.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
@@ -15,7 +15,7 @@ chatterly.example.com {
 		Permissions-Policy "camera=(self), microphone=(self), geolocation=(), payment=()"
 	}
 
-	# Nothing bigger than the largest upload (12 MB of encrypted file) is passed on to the app.
+	# ? Nothing bigger than the largest upload (12 MB of encrypted file) is passed on to the app.
 	request_body {
 		max_size 14MB
 	}

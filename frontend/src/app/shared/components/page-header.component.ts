@@ -28,7 +28,7 @@ import { IconComponent } from './icon.component';
       }
       <div class="min-w-0 flex-1 leading-tight">
         <h1
-          class="truncate text-[15px] font-bold"
+          class="truncate text-[0.9375rem] font-bold"
           [class]="titleClass()"
           [appNameColor]="titleColor()"
         >

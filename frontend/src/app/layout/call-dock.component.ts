@@ -66,7 +66,7 @@ const PLACES: DockPlace[] = ['tl', 'tc', 'tr', 'bl', 'bc', 'br'];
           <span class="block text-sm font-semibold hover:text-accent">{{
             'Call in progress' | t
           }}</span>
-          <span class="block text-[11px] text-muted">{{ call.stats().rttMs ?? '—' }} ms</span>
+          <span class="block text-[0.6875rem] text-muted">{{ call.stats().rttMs ?? '—' }} ms</span>
         </a>
         @if (call.music(); as m) {
           <span class="mx-1 h-7 w-px bg-white/10"></span>

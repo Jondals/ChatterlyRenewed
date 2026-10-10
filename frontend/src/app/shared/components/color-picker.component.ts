@@ -114,7 +114,7 @@ function hexToHsv(hex: string): [number, number, number] {
           [attr.title]="'Drag to move' | t"
         >
           <span class="flex items-center gap-2">
-            <span class="label !text-[11px]">{{ 'Custom color' | t }}</span>
+            <span class="label !text-[0.6875rem]">{{ 'Custom color' | t }}</span>
           </span>
           <button
             type="button"
@@ -358,6 +358,7 @@ export class ColorPickerComponent {
 
   /** Opens the picker with its corner at a point of the screen (used when something else, like a slice of a wheel, is the button). */
   openAt(x: number, y: number): void {
+    this.anchor = null;
     this.begin({ x, y });
   }
 
@@ -372,14 +373,33 @@ export class ColorPickerComponent {
       return;
     }
     const rect = this.host.nativeElement.getBoundingClientRect();
-    const width = 296;
-    const height = 470;
-    const x = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
-    const below = rect.bottom + 8;
-    this.begin({
-      x,
-      y: below + height > window.innerHeight ? Math.max(8, rect.top - height - 8) : below,
-    });
+    this.anchor = rect;
+    // A first guess, right under the button; `fitToScreen` corrects it with the real size of the panel once it is drawn.
+    this.begin({ x: rect.left, y: rect.bottom + 8 });
+  }
+
+  /** The button the panel belongs to (null when it was opened at a point of the screen). */
+  private anchor: DOMRect | null = null;
+
+  /**
+   * Places the open panel by its real size: under its button when it fits, above it when it does not (touching the
+   * button, not at the top of the page) and inside the screen in any case.
+   */
+  private fitToScreen(): void {
+    const el = this.panel()?.nativeElement;
+    const anchor = this.anchor;
+    if (!el || !anchor) {
+      return;
+    }
+    const height = el.offsetHeight;
+    const width = el.offsetWidth;
+    let y = anchor.bottom + 8;
+    if (y + height > window.innerHeight - 8) {
+      const above = anchor.top - height - 8;
+      y = above >= 8 ? above : Math.max(8, window.innerHeight - height - 8);
+    }
+    const x = Math.min(Math.max(8, anchor.left), window.innerWidth - width - 8);
+    this.pos.set({ x, y });
   }
 
   /** Shows the panel at a place, with the sliders on the color the picker has. */
@@ -393,7 +413,8 @@ export class ColorPickerComponent {
     this.closing.set(false);
     this.pos.set({
       x: Math.min(Math.max(8, place.x), window.innerWidth - 304),
-      y: Math.min(Math.max(8, place.y), window.innerHeight - 470),
+      // Inside the screen from the first frame (a panel is about 420 px tall); `fitToScreen` then uses its real height.
+      y: Math.min(Math.max(8, place.y), Math.max(8, window.innerHeight - 420)),
     });
     this.open.set(true);
     this.listen(true);
@@ -410,6 +431,8 @@ export class ColorPickerComponent {
     } catch {
       /* ya estaba abierto */
     }
+    // The panel exists now, so its real height is known: sit next to the button.
+    if (cual === 'panel') requestAnimationFrame(this.fitToScreen.bind(this));
   }
 
   /** Tells the parent the color that is chosen now. */

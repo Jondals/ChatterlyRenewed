@@ -64,7 +64,7 @@ import { IconComponent } from '../shared/components/icon.component';
       <div class="flex items-center justify-between border-b border-white/8 px-5 py-3.5">
         <div>
           <div class="text-sm font-semibold">{{ 'Soundboard' | t }}</div>
-          <div class="text-[11px] text-muted">
+          <div class="text-[0.6875rem] text-muted">
             {{
               call.inCall()
                 ? 'Everybody in the call hears what you play.'
@@ -121,7 +121,7 @@ import { IconComponent } from '../shared/components/icon.component';
                 (click)="playBuiltin(effect.id)"
               >
                 <span class="emoji-glyph text-2xl leading-none">{{ effect.icon }}</span>
-                <span class="w-full truncate text-[11px]">{{ effect.label | t }}</span>
+                <span class="w-full truncate text-[0.6875rem]">{{ effect.label | t }}</span>
               </button>
             }
           </div>
@@ -140,7 +140,7 @@ import { IconComponent } from '../shared/components/icon.component';
                   } @else {
                     <app-icon name="music" [size]="22" class="text-accent" />
                   }
-                  <span class="w-full truncate text-[11px]">{{ c.name }}</span>
+                  <span class="w-full truncate text-[0.6875rem]">{{ c.name }}</span>
                 </button>
                 <button
                   type="button"
@@ -162,11 +162,13 @@ import { IconComponent } from '../shared/components/icon.component';
             }
             <button type="button" class="sb-tile sb-add" (click)="upload()">
               <app-icon name="plus" [size]="22" class="text-muted" />
-              <span class="text-[11px]">{{ 'Add a sound' | t }}</span>
-              <span class="text-[10px] text-dim">{{ 'Cut it, name it, add an emoji' | t }}</span>
+              <span class="text-[0.6875rem]">{{ 'Add a sound' | t }}</span>
+              <span class="text-[0.625rem] text-dim">{{
+                'Cut it, name it, add an emoji' | t
+              }}</span>
             </button>
           </div>
-          <p class="mt-3 text-[11px] leading-snug text-dim">
+          <p class="mt-3 text-[0.6875rem] leading-snug text-dim">
             {{
               'Add any audio file and keep the part you want (up to 30 seconds): you can cut it, rename it and give it an emoji. Everybody in the call hears it; it is sent once, encrypted, and kept only on your device.'
                 | t

@@ -10,7 +10,7 @@ import { clearHeaderBytes, MediaKeyChain, type MediaKind } from '../crypto/media
  * Runs inside a dedicated worker. Every encoded audio/video frame of every peer passes through here
  * (RTCRtpScriptTransform) and is encrypted/decrypted with that peer's ratcheting keys.
  *
- * Fail-closed: until keys have been agreed, outgoing frames are DROPPED rather than sent in clear,
+ * ! FAIL CLOSED: until keys have been agreed, outgoing frames are DROPPED rather than sent in clear,
  * and incoming frames that do not authenticate are dropped instead of being handed to the decoder.
  */
 interface PeerState {

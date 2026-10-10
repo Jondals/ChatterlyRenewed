@@ -81,7 +81,7 @@ const GROUPS: SectionEntry[][] = [
   ],
   template: `
     <div
-      class="settings-overlay fixed inset-0 z-[60] flex bg-ink-950/85"
+      class="settings-overlay fixed inset-0 z-[60] flex bg-ink-950 sm:bg-ink-950/85"
       [class.settings-out]="closing()"
       (mousedown)="closeOnBackdrop($event)"
     >

@@ -373,7 +373,7 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
               <span class="text-lg leading-tight" [style.font-family]="f.css + ', sans-serif'">
                 Aa Bb 123
               </span>
-              <span class="text-[11px] text-muted">{{ f.label | t }}</span>
+              <span class="text-[0.6875rem] text-muted">{{ f.label | t }}</span>
             </button>
           }
           <button
@@ -389,7 +389,8 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
                 style="font-family: 'Chatterly Custom UI', sans-serif"
                 >Aa Bb 123</span
               >
-              <span class="flex w-full items-center justify-between gap-2 text-[11px] text-muted"
+              <span
+                class="flex w-full items-center justify-between gap-2 text-[0.6875rem] text-muted"
                 ><span class="truncate">{{ s.customFontName() }}</span
                 ><span
                   class="cursor-pointer underline hover:text-fg"
@@ -404,7 +405,7 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
               <span class="flex items-center gap-2 text-sm font-medium text-muted"
                 ><app-icon name="upload" [size]="16" /> {{ 'Upload font' | t }}</span
               >
-              <span class="text-[11px] text-dim">.ttf .otf .woff2</span>
+              <span class="text-[0.6875rem] text-dim">.ttf .otf .woff2</span>
             }
           </button>
         </div>
@@ -566,7 +567,7 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
           <div class="flex min-w-0 flex-col justify-center gap-4">
             <div class="flex items-baseline justify-between gap-3">
               <b class="text-lg text-accent">{{ corners[s.cornerStep()].name | t }}</b>
-              <span class="font-mono text-[11px] text-muted"
+              <span class="font-mono text-[0.6875rem] text-muted"
                 >{{ corners[s.cornerStep()].small }} / {{ corners[s.cornerStep()].large }} px</span
               >
             </div>
@@ -678,15 +679,15 @@ const TRAILS: { id: TrailType | 'off'; label: string; hint: string }[] = [
                 @for (b of bubbles; track b.id) {
                   <button
                     type="button"
-                    class="rounded-ui border p-2 text-center text-[11px] hover:bg-white/5"
+                    class="rounded-ui border p-2 text-center text-[0.6875rem] hover:bg-white/5"
                     [class.border-accent]="s.bubbleStyle() === b.id"
                     [class.bg-accent/10]="s.bubbleStyle() === b.id"
                     [class.border-white/10]="s.bubbleStyle() !== b.id"
                     (click)="s.bubbleStyle.set(b.id)"
                   >
                     <span class="mb-1.5 flex flex-col gap-1" [class]="'bs-preview bs-' + b.id">
-                      <span class="bubble-in self-start px-2 py-1 text-[10px]">Hi</span>
-                      <span class="bubble-out self-end px-2 py-1 text-[10px]">Hey</span>
+                      <span class="bubble-in self-start px-2 py-1 text-[0.625rem]">Hi</span>
+                      <span class="bubble-out self-end px-2 py-1 text-[0.625rem]">Hey</span>
                     </span>
                     {{ b.label | t }}
                   </button>

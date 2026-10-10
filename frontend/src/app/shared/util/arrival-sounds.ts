@@ -2,11 +2,13 @@
  * src/app/shared/util/arrival-sounds.ts
  * The sounds of the animations of arriving: a rising sweep while the lights gather, the click of the padlock when it
  * shuts or opens, a deep boom with the flash, a shimmer of notes when the app appears and the pops of the fireworks.
- * They are made with Web Audio (no files), scheduled all at once against the clock of the audio so they match the
+ * They are made with Web Audio and, where one is loaded, layered with a small recorded sound (see sound-samples.ts)
+ * for a crisper click, chime or crack. They are scheduled all at once against the clock of the audio so they match the
  * animation, and go through the volume of the interface. They only play when the interface sounds are on and the
  * browser already allows sound (before the first press of the person it does not: then they are silent).
  */
 import type { ArrivalKind } from '../../core/services/arrival.service';
+import { SAMPLE_LEVEL, playSample, type SampleId } from '../../core/sound-samples';
 
 /** Where a sound goes and what it uses. */
 interface Rig {
@@ -80,8 +82,14 @@ function hiss(
   source.start(start);
 }
 
+/** A recorded sound at a moment of the animation (nothing if it is not loaded: the synthesized layer carries it alone). */
+function recorded(rig: Rig, id: SampleId, at: number, rate: number, level: number): void {
+  playSample(rig.context, rig.bus, id, { at, rate, gain: SAMPLE_LEVEL * level });
+}
+
 /** The padlock shutting: a sharp click, a second softer one, and a low knock. */
 function lockShut(rig: Rig, at: number): void {
+  recorded(rig, 'shut', at, 0.95, 1.4);
   hiss(rig, at, 0.05, 0.9, 3200, 2600);
   hiss(rig, at + 0.075, 0.07, 0.6, 1700, 1200);
   note(rig, at, 150, 0.12, 'sine', 0.35, 70);
@@ -89,6 +97,7 @@ function lockShut(rig: Rig, at: number): void {
 
 /** The padlock opening: a click, then the little spring of the shackle. */
 function lockOpen(rig: Rig, at: number): void {
+  recorded(rig, 'unlock', at, 1, 1.3);
   hiss(rig, at, 0.05, 0.8, 2400, 2000);
   note(rig, at + 0.06, 520, 0.16, 'triangle', 0.14, 980);
   hiss(rig, at + 0.1, 0.1, 0.25, 4200, 6200);
@@ -97,6 +106,7 @@ function lockOpen(rig: Rig, at: number): void {
 /** A bright chord arpeggiated upwards (the app appears). */
 function shimmer(rig: Rig, at: number): void {
   [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach(function play(frequency: number, index: number) {
+    recorded(rig, index % 2 ? 'glassb' : 'glassa', at + index * 0.07, frequency / 523.25, 0.9);
     note(rig, at + index * 0.07, frequency, 0.7, 'sine', 0.13);
     note(rig, at + index * 0.07, frequency * 2, 0.5, 'sine', 0.04);
   });
@@ -110,6 +120,7 @@ function boom(rig: Rig, at: number): void {
 
 /** The pop of a firework: a crack and a falling sparkle. */
 function pop(rig: Rig, at: number): void {
+  recorded(rig, 'crack', at, 0.85 + Math.random() * 0.5, 1.2);
   hiss(rig, at, 0.09, 0.7, 1800, 900);
   note(rig, at + 0.03, 1900, 0.35, 'sine', 0.07, 700);
 }

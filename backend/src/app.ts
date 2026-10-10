@@ -50,7 +50,7 @@ function logResponse(response: { statusCode?: number }): { status?: number } {
 }
 
 /**
- * How many reverse proxies stand in front of the app (the TRUST_PROXY variable: 1 for a single Caddy). Fastify then
+ * ! How many reverse proxies stand in front of the app (the TRUST_PROXY variable: 1 for a single Caddy). Fastify then
  * believes exactly that many entries of X-Forwarded-For, counted from the end, so a client cannot choose the address
  * the rate limits see. 0 or anything that is not a positive whole number means no proxy is trusted.
  */
@@ -125,7 +125,7 @@ export async function buildApp(overrides: Partial<AppConfig> = {}) {
 
   const db = openDatabase(config.dbPath);
   /**
-   * Authenticates a request: the signature of the access token must be valid AND the session it names must still
+   * ! Authenticates a request: the signature of the access token must be valid AND the session it names must still
    * be open. A token whose session was closed (sign out, password change, erased account) is refused at once.
    */
   app.decorate('authenticate', async function (req: FastifyRequest, reply: FastifyReply) {

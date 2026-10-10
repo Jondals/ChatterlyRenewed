@@ -18,7 +18,7 @@ import type { SpinlyResult } from './spinly-result';
       class="mt-1 w-72 max-w-full overflow-hidden rounded-ui-lg border border-white/10 bg-black/25"
     >
       <div
-        class="flex items-center gap-2 border-b border-white/8 bg-accent/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-accent"
+        class="flex items-center gap-2 border-b border-white/8 bg-accent/10 px-3 py-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-accent"
       >
         <app-icon [name]="icon()" [size]="14" />
         {{ heading() | t }}
@@ -27,12 +27,12 @@ import type { SpinlyResult } from './spinly-result';
         }
       </div>
       <div class="px-3 py-3">
-        <div class="text-[11px] text-muted">{{ caption() | t }}</div>
+        <div class="text-[0.6875rem] text-muted">{{ caption() | t }}</div>
         <div class="break-words text-2xl font-black leading-tight">{{ result().winner }}</div>
         <div class="mt-3 flex flex-wrap gap-1.5">
           @for (name of result().names; track $index; let i = $index) {
             <span
-              class="rounded-full border px-2 py-0.5 text-[11px]"
+              class="rounded-full border px-2 py-0.5 text-[0.6875rem]"
               [class]="
                 name === result().winner && result().kind === 'wheel'
                   ? 'border-accent bg-accent/15 font-bold'

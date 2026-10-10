@@ -71,7 +71,7 @@ export interface WheelRun {
       <div class="mt-1 flex min-h-[4.75rem] flex-col items-center justify-center gap-1.5">
         @if (shownWinner() !== null) {
           <div class="anim-pop text-center">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <div class="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">
               {{ 'The wheel says' | t }}
             </div>
             <div class="break-words text-xl font-black leading-tight text-accent">

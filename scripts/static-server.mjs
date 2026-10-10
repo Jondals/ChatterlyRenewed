@@ -9,7 +9,7 @@
  * Why it is a separate file: the handler used to live inside produccion.mjs, which starts the backend as soon as it is
  * loaded, so it could not be tested. Here it only needs the folder to serve, and the single test exercises it directly.
  *
- * Safety: nothing outside the folder is ever served (the path is resolved and checked against the folder, not matched
+ * ! Safety: nothing outside the folder is ever served (the path is resolved and checked against the folder, not matched
  * by prefix), a malformed address answers 400 instead of throwing (an exception in a request handler would stop the
  * whole process), and only GET and HEAD are accepted.
  */
@@ -26,6 +26,10 @@ const TYPES = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
+  '.ogg': 'audio/ogg',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.xml': 'application/xml',
   '.json': 'application/json',
   '.webmanifest': 'application/manifest+json',
   '.txt': 'text/plain; charset=utf-8',
@@ -67,6 +71,17 @@ export function resolveFile(webDir, rawUrl) {
   } catch {
     return index;
   }
+}
+
+/** Whether an address is one of the app (a route like /direct/<id>) and not a request for a file (it has an extension or is under /.well-known/). */
+function isAppRoute(rawUrl) {
+  let route;
+  try {
+    route = decodeURIComponent(new URL(rawUrl, 'http://x').pathname);
+  } catch {
+    return false;
+  }
+  return !route.startsWith('/.well-known/') && path.extname(route) === '';
 }
 
 /**
@@ -126,7 +141,15 @@ export function createStaticHandler(webDir) {
       response.end();
       return;
     }
+    // A file that does not exist is a 404, not the page of the app: only addresses of the app (no extension) get index.html.
+    if (file === path.join(root, 'index.html') && !isAppRoute(request.url ?? '/')) {
+      response.writeHead(404, SECURITY_HEADERS);
+      response.end();
+      return;
+    }
     const hashed = /-[A-Za-z0-9]{8}\.(js|css|woff2?)$/.test(file);
+    // The recorded sounds do not change between versions (and are small): a week in the cache of the browser.
+    const sound = file.endsWith('.ogg');
     const { body, encoding } = readForClient(
       file,
       String(request.headers['accept-encoding'] ?? ''),
@@ -135,7 +158,11 @@ export function createStaticHandler(webDir) {
       ...SECURITY_HEADERS,
       'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream',
       'content-length': body.length,
-      'cache-control': hashed ? 'public, max-age=31536000, immutable' : 'no-cache',
+      'cache-control': hashed
+        ? 'public, max-age=31536000, immutable'
+        : sound
+          ? 'public, max-age=604800'
+          : 'no-cache',
       vary: 'Accept-Encoding',
     };
     if (encoding) headers['content-encoding'] = encoding;

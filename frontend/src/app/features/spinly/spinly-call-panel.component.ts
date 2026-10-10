@@ -47,7 +47,7 @@ import { SpinlyWheelCardComponent, type WheelRun } from './spinly-wheel-card.com
                   <span class="font-normal text-muted">· {{ title() }}</span>
                 }
               </div>
-              <div class="truncate text-[11px] text-muted">
+              <div class="truncate text-[0.6875rem] text-muted">
                 {{ 'Everybody in the call can spin, edit and play it.' | t }}
                 @if (author(); as name) {
                   · {{ 'Last change by {name}' | t: { name } }}

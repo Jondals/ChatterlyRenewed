@@ -573,6 +573,7 @@ export class MessageStore {
 
   /** Tells the others that the person is typing. */
   sendTyping(channelId: string): void {
+    if (!this.settings.sendTyping()) return;
     this.socket.send({ t: 'typing', channelId });
   }
 

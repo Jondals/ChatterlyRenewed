@@ -674,7 +674,17 @@ export const ES: Record<string, string> = {
   // Language & sounds
   'Choose the language of the interface. Emoji search follows it too.':
     'Elige el idioma de la interfaz. La búsqueda de emojis también lo sigue.',
+  'Tap': 'Toque',
+  'Switch': 'Interruptor',
+  'Pluck': 'Pulsación',
+  'Audio devices': 'Dispositivos de audio',
+  'Camera': 'Cámara',
+  'This browser cannot choose the speakers.': 'Este navegador no puede elegir los altavoces.',
+  'More options': 'Más opciones',
+  'Fewer options': 'Menos opciones',
   'Automatic': 'Automático',
+  'English': 'Inglés',
+  'Spanish': 'Español',
   'Use the browser language': 'Usar el idioma del navegador',
   'Missing a language? Translations live in one small file — contributions are welcome.':
     '¿Falta un idioma? Las traducciones están en un archivo pequeño: se aceptan contribuciones.',
@@ -810,6 +820,7 @@ export const ES: Record<string, string> = {
   'Import': 'Importar',
   'Starter pack': 'Paquete inicial',
   'Results': 'Resultados',
+  'All emoji': 'Todos los emojis',
   'Frequently used': 'Más usados',
   'Emoji': 'Emojis',
   'GIFs': 'GIFs',
@@ -1235,14 +1246,33 @@ export const ES: Record<string, string> = {
   'Up to 8 MB': 'Hasta 8 MB',
   'Delete account': 'Eliminar cuenta',
   'Delete my account': 'Eliminar mi cuenta',
-  'Erases your account for good: your messages, files, friends, direct chats and the groups you own. It cannot be undone.':
-    'Borra tu cuenta para siempre: tus mensajes, archivos, amigos, chats directos y los grupos que tienes. No se puede deshacer.',
+  'Erases your account for good: your messages, files, friends and direct chats. A group you own goes to its longest-standing member. It cannot be undone.':
+    'Borra tu cuenta para siempre: tus mensajes, archivos, amigos y chats directos. Un grupo que tengas pasa al miembro más antiguo. No se puede deshacer.',
   'This cannot be undone.': 'No se puede deshacer.',
   'Your messages, files, reactions and pictures are erased from the server.':
     'Tus mensajes, archivos, reacciones e imágenes se borran del servidor.',
   'Your friendships and direct chats disappear.': 'Tus amistades y chats directos desaparecen.',
-  'The groups you own are deleted for everybody; in the others you just leave.':
-    'Los grupos que tienes se borran para todos; de los demás simplemente sales.',
+  'The groups you own pass to the member who has been in them the longest (a group with nobody else is deleted); in the others you just leave.':
+    'Los grupos que tienes pasan al miembro más antiguo (un grupo sin nadie más se borra); de los demás simplemente sales.',
+  'Who can see you online': 'Quién puede verte en línea',
+  'Everybody': 'Todo el mundo',
+  'Friends only': 'Solo amigos',
+  'Nobody': 'Nadie',
+  'Your online status. Anybody who is not allowed sees you as offline, whatever you do.':
+    'Tu estado en línea. Quien no tenga permiso te verá desconectado, hagas lo que hagas.',
+  'Who can send you friend requests': 'Quién puede enviarte solicitudes de amistad',
+  'Closed requests do not affect the friends you already have.':
+    'Cerrar las solicitudes no afecta a los amigos que ya tienes.',
+  'Appear in search': 'Aparecer en las búsquedas',
+  'Other people can find you by typing your username. If you turn it off they need your exact username.':
+    'Otras personas te encuentran escribiendo tu nombre de usuario. Si lo desactivas, necesitan tu nombre exacto.',
+  'Visibility': 'Visibilidad',
+  'Contact': 'Contacto',
+  'Conversations': 'Conversaciones',
+  'Show when you are typing': 'Mostrar que estás escribiendo',
+  'Others see the three dots while you write. Turn it off to write without them knowing.':
+    'Los demás ven los tres puntos mientras escribes. Desactívalo para escribir sin que lo sepan.',
+  'Could not save the change.': 'No se pudo guardar el cambio.',
   'Your keys, your preferences and everything kept on this device are erased too.':
     'Tus claves, tus preferencias y todo lo guardado en este dispositivo también se borran.',
   'Type your username to confirm': 'Escribe tu nombre de usuario para confirmar',

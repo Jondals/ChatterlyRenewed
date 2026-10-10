@@ -298,7 +298,7 @@ interface Entry {
               <div class="max-h-[min(21rem,42dvh)] space-y-1.5 overflow-y-auto pr-1">
                 @for (entry of entries(); track entry.id; let i = $index) {
                   <div class="anim-fade-up flex items-center gap-2" style="--d: 0ms">
-                    <span class="w-5 shrink-0 text-right font-mono text-[11px] text-dim">{{
+                    <span class="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-dim">{{
                       i + 1
                     }}</span>
                     <input
@@ -341,7 +341,7 @@ interface Entry {
                     /></span>
                     <span class="min-w-0 text-left">
                       <b class="block text-sm">{{ p.name | t }}</b>
-                      <span class="block text-[11px] leading-tight text-muted">{{
+                      <span class="block text-[0.6875rem] leading-tight text-muted">{{
                         p.hint | t
                       }}</span>
                     </span>

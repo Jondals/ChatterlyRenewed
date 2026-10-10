@@ -89,7 +89,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
             >
               {{ sender()?.displayName ?? auth.user()?.displayName ?? '…' }}
             </button>
-            <span class="text-[13px] text-muted">{{ m.createdAt | timestamp }}</span>
+            <span class="text-[0.8125rem] text-muted">{{ m.createdAt | timestamp }}</span>
             @if (mine() && settings.showMessageStatus() && !m.pending && !m.failed && m.verified) {
               <app-status-mark [status]="store.statusOf(m)" />
             }
@@ -115,7 +115,9 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
               (keydown.enter)="$event.preventDefault(); saveEdit()"
               (keydown.escape)="editing.set(false)"
             ></textarea>
-            <div class="mt-1 text-[11px] text-muted">{{ 'Enter to save · Esc to cancel' | t }}</div>
+            <div class="mt-1 text-[0.6875rem] text-muted">
+              {{ 'Enter to save · Esc to cancel' | t }}
+            </div>
           </div>
         } @else if ((m.text || m.undecryptable) && textShown()) {
           <div
@@ -173,7 +175,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
         }
 
         <div
-          class="mt-0.5 flex items-center gap-1.5 px-1 text-[10px]"
+          class="mt-0.5 flex items-center gap-1.5 px-1 text-[0.625rem]"
           [class.flex-row-reverse]="bubbles() && mine()"
         >
           @if (m.pending) {

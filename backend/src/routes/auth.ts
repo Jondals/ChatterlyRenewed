@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context';
-import { getUser, toPublicUser, presenceAudience, type UserRow } from '../models';
+import { getUser, toPublicUser, toSelfUser, presenceAudience, type UserRow } from '../models';
 import { hashAuthSecret, verifyAuthSecret, needsUpgrade } from '../security/password';
 import { deleteImage, imageFile, ownsImage } from './images';
 import {
@@ -277,7 +277,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         return reply.code(409).send({ error: 'username_taken' });
       }
       const row = getUser(db, id)!;
-      return reply.code(201).send({ user: toPublicUser(row), ...issueTokens(id) });
+      return reply.code(201).send({ user: toSelfUser(row), ...issueTokens(id) });
     },
   );
 
@@ -338,7 +338,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         );
       }
       return {
-        user: toPublicUser(row),
+        user: toSelfUser(row),
         wrappedKeys: { ecdh: row.wrapped_ecdh, ecdsa: row.wrapped_ecdsa },
         ...issueTokens(row.id),
       };
@@ -371,7 +371,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         | { id: string; user_id: string; expires_at: number }
         | undefined;
       if (!session) {
-        // Reusing a token that was already rotated means it was copied: every session of that account is closed.
+        // ! Reusing a token that was already rotated means it was copied: every session of that account is closed.
         const spent = db
           .prepare('SELECT user_id FROM spent_tokens WHERE token_hash = ?')
           .get(sha256(refreshToken)) as { user_id: string } | undefined;
@@ -385,7 +385,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
         return reply.code(401).send({ error: 'invalid_refresh_token' });
       }
-      // Rotation: a refresh token works exactly once. The session keeps its id, only the refresh token changes.
+      // ! Rotation: a refresh token works exactly once. The session keeps its id, only the refresh token changes.
       db.prepare(
         'INSERT OR IGNORE INTO spent_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
       ).run(sha256(refreshToken), session.user_id, session.expires_at);
@@ -427,7 +427,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
   app.get('/api/me', { onRequest: [app.authenticate] }, async function (req, reply) {
     const row = getUser(db, userId(req));
     if (!row) return reply.code(404).send({ error: 'not_found' });
-    return { user: toPublicUser(row) };
+    return { user: toSelfUser(row) };
   });
 
   app.patch(
@@ -461,6 +461,9 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
               pattern:
                 '^(#[0-9a-fA-F]{6}|g:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6},[0-9]{1,3}(,[0-9]{1,3},[0-9]{1,3}(,#[0-9a-fA-F]{6})?)?|m:[0-9]{1,3}:[0-9]{1,3}:#[0-9a-fA-F]{6}@[0-9]{1,3}(,#[0-9a-fA-F]{6}@[0-9]{1,3}){1,4})?$',
             },
+            presenceVisibility: { type: 'string', enum: ['everyone', 'friends', 'nobody'] },
+            friendRequests: { type: 'string', enum: ['everyone', 'nobody'] },
+            searchable: { type: 'boolean' },
             avatarImage: { type: ['string', 'null'], pattern: UUID },
             bannerImage: { type: ['string', 'null'], pattern: UUID },
           },
@@ -485,7 +488,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         profileColor: 'profile_color',
       };
       const sets: string[] = [];
-      const values: (string | null)[] = [];
+      const values: (string | number | null)[] = [];
       for (const [key, column] of Object.entries(columns)) {
         const value = body[key];
         if (typeof value === 'string') {
@@ -493,6 +496,24 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
           // Bio keeps newlines; everything else is single-line.
           values.push(key === 'bio' ? value.replace(/\u0000/g, '') : clean(value));
         }
+      }
+      // Privacy choices: who sees the person online, who may ask for their friendship, and whether they appear in searches.
+      let presenceChanged = false;
+      for (const [key, column] of [
+        ['presenceVisibility', 'presence_visibility'],
+        ['friendRequests', 'friend_requests'],
+      ] as const) {
+        const value = body[key];
+        if (typeof value === 'string') {
+          sets.push(`${column} = ?`);
+          values.push(value);
+          presenceChanged ||= key === 'presenceVisibility';
+        }
+      }
+      const searchable = (body as Record<string, unknown>)['searchable'];
+      if (typeof searchable === 'boolean') {
+        sets.push('searchable = ?');
+        values.push(searchable ? 1 : 0);
       }
       const previous = getUser(db, id)!;
       const orphans: (string | null)[] = [];
@@ -514,10 +535,14 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       orphans.forEach(function (o) {
         return deleteImage(ctx, o);
       });
-      const user = toPublicUser(getUser(db, id)!);
+      const row = getUser(db, id)!;
+      const user = toPublicUser(row);
+      const own = toSelfUser(row);
       ctx.hub.sendToMany(presenceAudience(db, id), { t: 'user.update', user });
-      ctx.hub.sendTo(id, { t: 'user.update', user });
-      return { user };
+      ctx.hub.sendTo(id, { t: 'user.update', user: own });
+      // Each person around now gets what the new choice allows them to see (or "offline").
+      if (presenceChanged) ctx.hub.refreshPresence(id);
+      return { user: own };
     },
   );
 
@@ -589,7 +614,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
         body.wrappedKeys.ecdsa,
         id,
       );
-      // Every other device must log in again: their sessions end and so do their connections.
+      // * Every other device must log in again: their sessions end and so do their connections.
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
       const sessionId = randomUUID();
       const tokens = issueTokens(id, sessionId);

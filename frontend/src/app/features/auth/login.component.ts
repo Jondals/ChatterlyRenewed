@@ -55,7 +55,7 @@ import { ArrivalService } from '../../core/services/arrival.service';
             (click)="reveal.set(!reveal())"
             [attr.aria-label]="(reveal() ? 'Hide password' : 'Show password') | t"
           >
-            <app-icon [name]="reveal() ? 'eye' : 'lock'" [size]="15" />
+            <app-icon [name]="reveal() ? 'eye' : 'eye-off'" [size]="15" />
           </button>
         </div>
       </label>

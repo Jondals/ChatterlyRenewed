@@ -15,7 +15,7 @@ const MAX_REDIRECTS = 3;
 /** The longest `<meta>` tag read. Bounding it keeps the scan linear even on hostile pages. */
 const MAX_TAG = 2000;
 
-/** Ranges the server must never connect to: private, loopback, link-local, shared, documentation, multicast, reserved. */
+/** ! Ranges the server must never connect to: private, loopback, link-local, shared, documentation, multicast, reserved. */
 const BLOCKED = new net.BlockList();
 for (const [address, prefix] of [
   ['0.0.0.0', 8],
@@ -66,7 +66,7 @@ export function isPrivateAddress(ip: string): boolean {
 }
 
 /**
- * Checks that a URL may be fetched by the server: https only, no credentials, the standard port, and (when the host is
+ * ! Checks that a URL may be fetched by the server: https only, no credentials, the standard port, and (when the host is
  * an IP literal, which skips name resolution) a public address. Throws with a short reason otherwise.
  *
  * Names are not resolved here: that is done when connecting (see `safeLookup`), so a name that changes its address
@@ -186,7 +186,7 @@ function decodeEntities(text: string): string {
 }
 
 /**
- * Reads the `<meta>` tags of a page in one pass: name (or property) to content, first one wins. The pattern cannot
+ * ! Reads the `<meta>` tags of a page in one pass: name (or property) to content, first one wins. The pattern cannot
  * cross a `<`, so every attempt ends at the next tag: the cost grows with the size of the page, never with its square
  * (a page made of thousands of unclosed `<meta` could otherwise block the whole server).
  */

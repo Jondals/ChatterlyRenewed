@@ -277,6 +277,11 @@ body {
   height: 100%;
   overflow-x: hidden;
 }
+/* The text size of the settings is the size of the page itself: 14 px is the usual 16 px of the root, so everything in rem
+   (all the text sizes, spacing and widths) follows it, not only the text that happens to inherit from the body. */
+html {
+  font-size: calc(var(--font-size) * 16 / 14);
+}
 /* Flags as pictures where the system has none (Windows draws two letters): Twemoji flags, only for flag characters. */
 @font-face {
   font-family: 'Twemoji Country Flags';
@@ -297,7 +302,7 @@ body {
     var(--flag-font,) var(--font-ui),
     'Noto Color Emoji',
     sans-serif;
-  font-size: var(--font-size);
+  font-size: 0.875rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -888,6 +893,7 @@ body.is-busy * {
     color: var(--muted);
     font-size: 0.85rem;
     font-weight: 600;
+    white-space: nowrap;
     transition:
       background-color 0.3s var(--ease-suave),
       border-color 0.3s var(--ease-suave),
@@ -933,7 +939,8 @@ body.is-busy * {
       gap: 0.35rem;
       font-size: 0.8rem;
     }
-    .friend-tab > app-icon {
+    .friend-tab > app-icon,
+    .friend-tab-dot {
       display: none;
     }
   }
@@ -975,7 +982,7 @@ body.is-busy * {
     position: absolute;
     top: 0;
     transform: translateX(-50%);
-    font-size: 10.5px;
+    font-size: 0.65625rem;
     color: var(--dim);
     transition: color 0.3s var(--ease-suave);
     white-space: nowrap;
@@ -1399,6 +1406,8 @@ body.is-busy * {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  /* The rings only turn, scale or fade: the browser keeps them on their own layer and never repaints them. */
+  will-change: transform;
 }
 .aura::before {
   inset: calc(var(--ring, 6px) * -1);
@@ -1520,9 +1529,8 @@ body.is-busy * {
     #d946ef,
     #f43f5e
   );
-  animation:
-    spin 3.5s linear infinite,
-    aura-hue 6s linear infinite;
+  /* The colors already cover the whole wheel: the old hue-rotate filter only forced a repaint on every frame. */
+  animation: spin 3.5s linear infinite;
 }
 .aura > .aura-core {
   position: relative;
@@ -2071,6 +2079,14 @@ body.is-busy * {
 [data-perf='low'] * {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
+}
+/* ...and so do the decorative animations that never stop: the rings of the avatars and the scenes stay still. */
+[data-perf='low'] .aura::before,
+[data-perf='low'] .aura::after,
+[data-perf='low'] .scene,
+[data-perf='low'] .scene * {
+  animation-play-state: paused !important;
+  will-change: auto;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

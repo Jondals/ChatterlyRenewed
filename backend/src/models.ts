@@ -27,7 +27,17 @@ export interface UserRow {
   profile_color: string;
   name_font: string;
   avatar_color: string;
+  presence_visibility: 'everyone' | 'friends' | 'nobody';
+  friend_requests: 'everyone' | 'nobody';
+  searchable: number;
   created_at: number;
+}
+
+/** The privacy choices of a person. Only the person themselves receive them (see `toSelfUser`). */
+export interface PrivacyChoices {
+  presenceVisibility: 'everyone' | 'friends' | 'nobody';
+  friendRequests: 'everyone' | 'nobody';
+  searchable: boolean;
 }
 
 export interface PublicUser {
@@ -70,6 +80,18 @@ export function toPublicUser(row: UserRow): PublicUser {
     avatarColor: row.avatar_color,
     publicKeys: { ecdh: row.pub_ecdh, ecdsa: row.pub_ecdsa },
     createdAt: row.created_at,
+  };
+}
+
+/** The user as the person themselves see it: the public profile plus their own privacy choices (nobody else gets those). */
+export function toSelfUser(row: UserRow): PublicUser & { privacy: PrivacyChoices } {
+  return {
+    ...toPublicUser(row),
+    privacy: {
+      presenceVisibility: row.presence_visibility,
+      friendRequests: row.friend_requests,
+      searchable: row.searchable === 1,
+    },
   };
 }
 

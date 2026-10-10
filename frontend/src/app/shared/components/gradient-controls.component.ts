@@ -1,7 +1,8 @@
 /**
  * src/app/shared/components/gradient-controls.component.ts
- * The controls of a gradient, folded away until they are needed: a thin bar with a marker for each color (up to five),
- * which can be chosen and dragged along the bar, the color of the chosen marker and the angle.
+ * The controls of a gradient: ONE bar that shows the gradient and, when the person asks for more options, becomes the
+ * editor (a marker for each color, up to five, which can be chosen and dragged along it), with the color of the chosen
+ * marker, its place, the buttons to add or remove colors, and the angle.
  */
 import { Component, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../core/i18n/i18n.service';
@@ -15,26 +16,19 @@ import { IconComponent } from './icon.component';
   standalone: true,
   imports: [ColorPickerComponent, IconComponent, TranslatePipe],
   template: `
-    <div class="space-y-2.5">
+    <div class="space-y-3">
       <div class="flex items-center gap-3">
+        <!-- The only bar: it shows the gradient, and with more options open its markers can be moved -->
         <div
-          class="h-2.5 flex-1 rounded-full border border-white/10"
+          #bar
+          class="gbar min-w-0 flex-1"
+          [class.is-editing]="open()"
           [style.background]="css()"
-        ></div>
-        <button type="button" class="btn btn-sm" (click)="open.set(!open())">
-          <app-icon name="settings" [size]="13" /> {{ (open() ? 'Hide' : 'Edit') | t }}
-        </button>
-      </div>
-      @if (open()) {
-        <div class="anim-fade-up space-y-3 rounded-ui border border-white/8 bg-black/15 p-3">
-          <div
-            #bar
-            class="gbar"
-            [style.background]="css()"
-            (pointermove)="drag($event, bar)"
-            (pointerup)="drop($event)"
-            (pointercancel)="drop($event)"
-          >
+          (pointermove)="drag($event, bar)"
+          (pointerup)="drop($event)"
+          (pointercancel)="drop($event)"
+        >
+          @if (open()) {
             @for (stop of parts().stops; track $index) {
               <button
                 type="button"
@@ -46,21 +40,38 @@ import { IconComponent } from './icon.component';
                 (pointerdown)="grab($event, $index)"
               ></button>
             }
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
+          }
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm shrink-0"
+          [attr.aria-expanded]="open()"
+          (click)="open.set(!open())"
+        >
+          <app-icon name="settings" [size]="13" />
+          {{ (open() ? 'Fewer options' : 'More options') | t }}
+        </button>
+      </div>
+      @if (open()) {
+        <div class="gpanel anim-fade-up">
+          <div class="flex items-center gap-2.5">
             <app-color-picker
               [value]="current().color"
-              [size]="26"
+              [size]="34"
               label="Color"
               (valueChange)="setColor($event)"
             />
-            <span class="font-mono text-xs text-muted">{{ current().pos }}%</span>
+            <span class="gchip font-mono">{{ current().color }}</span>
+            @if (showPosition()) {
+              <span class="gchip font-mono">{{ current().pos }}%</span>
+            }
             <span class="flex-1"></span>
             @if (parts().stops.length < 5) {
               <button
                 type="button"
                 class="btn btn-sm btn-icon"
                 [attr.aria-label]="'Add a color' | t"
+                [attr.title]="'Add a color' | t"
                 (click)="add()"
               >
                 <app-icon name="plus" [size]="14" />
@@ -71,22 +82,25 @@ import { IconComponent } from './icon.component';
                 type="button"
                 class="btn btn-sm btn-icon btn-soft-danger"
                 [attr.aria-label]="'Remove this color' | t"
+                [attr.title]="'Remove this color' | t"
                 (click)="remove()"
               >
                 <app-icon name="trash" [size]="14" />
               </button>
             }
           </div>
-          <label class="block text-xs text-muted"
-            >{{ 'Angle' | t }} <b class="float-right text-fg">{{ parts().angle }}°</b>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              class="mt-1 w-full accent-[var(--accent)]"
-              [value]="parts().angle"
-              (input)="changed.emit({ angle: +$any($event.target).value })"
-          /></label>
+          @if (showAngle()) {
+            <label class="block text-xs text-muted"
+              >{{ 'Angle' | t }} <b class="float-right text-fg">{{ parts().angle }}°</b>
+              <input
+                type="range"
+                min="0"
+                max="360"
+                class="mt-1.5 w-full accent-[var(--accent)]"
+                [value]="parts().angle"
+                (input)="changed.emit({ angle: +$any($event.target).value })"
+            /></label>
+          }
         </div>
       }
     </div>
@@ -94,34 +108,57 @@ import { IconComponent } from './icon.component';
   styles: `
     .gbar {
       position: relative;
-      height: 0.7rem;
-      margin: 0.5rem 0.55rem;
+      height: 0.75rem;
+      margin: 0.55rem 0.7rem;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       touch-action: none;
+      transition: height 0.18s ease;
+    }
+    .gbar.is-editing {
+      height: 1rem;
     }
     .gstop {
       position: absolute;
       top: 50%;
-      width: 1.1rem;
-      height: 1.1rem;
-      margin: -0.55rem 0 0 -0.55rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      margin: -0.575rem 0 0 -0.575rem;
       border-radius: 999px;
       border: 2px solid #fff;
       box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
       cursor: var(--cur-grab, grab);
     }
     .gstop.is-on {
-      width: 1.35rem;
-      height: 1.35rem;
-      margin: -0.675rem 0 0 -0.675rem;
+      width: 1.45rem;
+      height: 1.45rem;
+      margin: -0.725rem 0 0 -0.725rem;
       border-color: var(--accent);
       z-index: 1;
+    }
+    .gpanel {
+      display: grid;
+      gap: 0.85rem;
+      padding: 0.8rem;
+      border-radius: var(--r);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .gchip {
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.72rem;
+      color: var(--muted, #9aa3b5);
     }
   `,
 })
 export class GradientControlsComponent {
   readonly parts = input.required<GradientParts>();
+  /** Show the angle slider (a gradient on text has no angle). */
+  readonly showAngle = input(true);
+  /** Show the place of the chosen color (where colors have no place of their own, only their order counts). */
+  readonly showPosition = input(true);
   readonly changed = output<Partial<GradientParts>>();
   protected readonly open = signal(false);
   protected readonly selected = signal(0);

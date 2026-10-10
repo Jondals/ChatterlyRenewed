@@ -165,7 +165,7 @@ type Tab = 'online' | 'all' | 'pending';
                         <app-avatar [user]="u" [size]="42" />
                         <div class="min-w-0 flex-1 leading-tight">
                           <div
-                            class="truncate text-[15px] font-semibold"
+                            class="truncate text-[0.9375rem] font-semibold"
                             [appNameColor]="u.profileColor"
                             [appUserFont]="u.nameFont"
                           >
@@ -217,7 +217,7 @@ type Tab = 'online' | 'all' | 'pending';
                         <app-avatar [user]="u" [size]="42" />
                         <div class="min-w-0 flex-1 leading-tight">
                           <div
-                            class="truncate text-[15px] font-semibold"
+                            class="truncate text-[0.9375rem] font-semibold"
                             [appNameColor]="u.profileColor"
                             [appUserFont]="u.nameFont"
                           >
@@ -278,7 +278,7 @@ type Tab = 'online' | 'all' | 'pending';
                       <app-avatar [user]="u" [size]="42" [status]="social.statusOf(u.id)" />
                       <div class="min-w-0 flex-1 leading-tight">
                         <div
-                          class="truncate text-[15px] font-semibold"
+                          class="truncate text-[0.9375rem] font-semibold"
                           [class]="nameClass(u)"
                           [appNameColor]="u.profileColor"
                           [appUserFont]="u.nameFont"

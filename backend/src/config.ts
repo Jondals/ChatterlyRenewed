@@ -42,7 +42,7 @@ export interface AppConfig {
   stunUrls: string[];
   /**
    * Every call must go through the relay (no peer learns the address of another and no third party sees it).
-   * This is the REQUESTED policy: it stays true even when the relay is not configured, so the calls fail closed
+   * ! This is the REQUESTED policy: it stays true even when the relay is not configured, so the calls fail closed
    * (see `relayProblem`) instead of silently falling back to direct or STUN-assisted connections.
    */
   relayOnly: boolean;
@@ -51,9 +51,9 @@ export interface AppConfig {
   logger: boolean;
 }
 
-export const APP_VERSION = '2.16.0';
+export const APP_VERSION = '2.17.0';
 
-/** The shortest secret the server accepts from the environment (generated ones are 64 characters). */
+/** ! The shortest secret the server accepts from the environment (generated ones are 64 characters). */
 const MIN_SECRET_LENGTH = 32;
 
 /** A list from an environment variable, separated by commas. */
@@ -120,7 +120,8 @@ function isTurnUrl(url: string): boolean {
 }
 
 /**
- * Why the calls cannot start under the requested policy, or null when everything needed is in place. When the
+ * * Why the calls cannot start under the requested policy, or null when everything needed is in place.
+ * ! When the
  * operator asked for relay-only calls but no usable TURN relay is configured, the server must refuse to hand out
  * ICE servers: handing out a STUN server (or nothing) would let the browsers connect directly and expose addresses.
  */

@@ -48,7 +48,11 @@ const PAUSE_MS = 900;
       gap: 0.5rem 0.75rem;
     }
     .tour-round {
-      font-size: 0.7rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 99px;
+      border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
+      font-size: 0.68rem;
       font-weight: 800;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -65,7 +69,7 @@ const PAUSE_MS = 900;
       min-width: 4rem;
     }
     .tour-progress i {
-      height: 4px;
+      height: 5px;
       flex: 1;
       border-radius: 99px;
       background: rgba(255, 255, 255, 0.12);
@@ -89,8 +93,9 @@ const PAUSE_MS = 900;
       min-width: 0;
       flex-direction: column;
       gap: 0.35rem;
-      padding: 0.55rem 0.7rem;
-      border-radius: var(--r);
+      padding: 0.65rem 0.8rem 0.65rem 1rem;
+      overflow: hidden;
+      border-radius: calc(var(--r) * 1.1);
       border: 1px solid color-mix(in oklab, var(--side) 45%, transparent);
       background: linear-gradient(
         160deg,
@@ -101,11 +106,25 @@ const PAUSE_MS = 900;
         background-color 0.4s var(--ease-suave),
         box-shadow 0.4s var(--ease-suave);
     }
+    /* The colour of the side as a bar on its outer edge. */
+    .tour-side::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--side);
+    }
+    .tour-side.right::before {
+      inset: 0 0 0 auto;
+    }
     .tour-side.is-lead {
-      box-shadow: 0 0 22px -8px var(--side);
+      box-shadow:
+        0 0 26px -8px var(--side),
+        inset 0 0 0 1px color-mix(in oklab, var(--side) 35%, transparent);
     }
     .tour-side.right {
       align-items: flex-end;
+      padding: 0.65rem 1rem 0.65rem 0.8rem;
       text-align: right;
     }
     .tour-name {
@@ -113,7 +132,7 @@ const PAUSE_MS = 900;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: 0.9rem;
+      font-size: 1rem;
       font-weight: 800;
     }
     .tour-pips {
@@ -136,20 +155,50 @@ const PAUSE_MS = 900;
     .tour-score {
       display: flex;
       align-items: center;
-      padding: 0 0.7rem;
-      border-radius: var(--r);
-      background: rgba(0, 0, 0, 0.35);
-      font-size: 1.5rem;
+      padding: 0 0.85rem;
+      border-radius: calc(var(--r) * 1.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.4));
+      box-shadow: 0 6px 18px -8px #000;
+      font-size: 1.6rem;
       font-weight: 800;
       letter-spacing: 0.02em;
       font-variant-numeric: tabular-nums;
     }
     .tour-match {
-      overflow: hidden;
+      position: relative;
       border-radius: calc(var(--r) * 0.8);
       border: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(0, 0, 0, 0.22);
       font-size: 0.75rem;
+    }
+    /* Lines that join a match to the next round, so the bracket reads from left to right. */
+    .bracket-col:not(:last-child) .tour-match::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -0.8rem;
+      width: 0.8rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    .bracket-col:not(:first-child) .tour-match::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: -0.8rem;
+      width: 0.8rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    .bracket-title {
+      align-self: center;
+      padding: 0.15rem 0.6rem;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
     .tour-match.is-now {
       border-color: var(--accent);
@@ -162,15 +211,27 @@ const PAUSE_MS = 900;
       gap: 0.4rem;
       padding: 0.3rem 0.5rem;
     }
+    .tour-row:first-child {
+      border-radius: calc(var(--r) * 0.8) calc(var(--r) * 0.8) 0 0;
+    }
+    .tour-row:last-child {
+      border-radius: 0 0 calc(var(--r) * 0.8) calc(var(--r) * 0.8);
+    }
     .tour-row + .tour-row {
       border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
     .tour-row.is-win {
       font-weight: 800;
       color: var(--accent);
+      background: color-mix(in oklab, var(--accent) 10%, transparent);
+    }
+    .tour-row.is-win::after {
+      content: '✓';
+      font-size: 0.7rem;
     }
     .tour-row.is-out {
       color: var(--muted);
+      opacity: 0.6;
     }
     .tour-row-dot {
       width: 0.5rem;
@@ -298,7 +359,7 @@ const PAUSE_MS = 900;
               <span class="tour-trophy"><app-icon name="trophy" [size]="40" /></span>
               <div class="tour-badge">{{ 'Champion' | t }}</div>
               <div class="tour-champion-name">{{ names()[0] }}</div>
-              <div class="mt-1 text-[11px] text-muted">
+              <div class="mt-1 text-[0.6875rem] text-muted">
                 {{
                   '{n} participants · {d} duels'
                     | t: { n: view().participants.length, d: playedDuels() }
@@ -417,14 +478,10 @@ const PAUSE_MS = 900;
 
         <div class="bracket-fold" [class.is-open]="!view().bracket.champion || bracketOpen()">
           <div class="min-h-0 overflow-hidden">
-            <div class="flex min-w-0 gap-3 overflow-x-auto pb-1">
+            <div class="flex min-w-0 gap-[1.6rem] overflow-x-auto px-1 pb-1">
               @for (round of rounds(); track round.title) {
-                <div class="flex min-w-[9rem] flex-1 flex-col justify-around gap-2">
-                  <div
-                    class="text-center text-[10px] font-semibold uppercase tracking-wider text-muted"
-                  >
-                    {{ round.title | t }}
-                  </div>
+                <div class="bracket-col flex min-w-[9rem] flex-1 flex-col justify-around gap-2">
+                  <div class="bracket-title">{{ round.title | t }}</div>
                   @for (m of round.matches; track m.id) {
                     <div class="tour-match" [class.is-now]="m.id === view().bracket.current?.id">
                       @for (id of [m.a, m.b]; track $index) {
@@ -439,7 +496,7 @@ const PAUSE_MS = 900;
                           ></span>
                           <span class="min-w-0 flex-1 truncate">{{ id ? nameOf(id) : '—' }}</span>
                           @if (m.bye && id) {
-                            <span class="text-[9px] uppercase">bye</span>
+                            <span class="text-[0.5625rem] uppercase">bye</span>
                           } @else if (id && (m.winner || m.id === view().bracket.current?.id)) {
                             <span class="font-mono tabular-nums">{{
                               id === m.a ? m.winsA : m.winsB

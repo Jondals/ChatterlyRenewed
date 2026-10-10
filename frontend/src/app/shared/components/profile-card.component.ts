@@ -45,12 +45,19 @@ import { fontClassOf } from '../util/user-font.directive';
           >
             {{ u.displayName }}
           </h2>
-          <p class="text-xs text-muted">
-            &#64;{{ u.username }}
-            @if (u.pronouns) {
-              · {{ u.pronouns }}
-            }
-          </p>
+          @if (showHandle() || u.pronouns) {
+            <p class="text-xs text-muted">
+              @if (showHandle()) {
+                &#64;{{ u.username }}
+              }
+              @if (u.pronouns) {
+                @if (showHandle()) {
+                  ·
+                }
+                {{ u.pronouns }}
+              }
+            </p>
+          }
           @if (tags().length) {
             <div class="mt-2 flex flex-wrap gap-1.5">
               @for (tag of tags(); track tag.id) {
@@ -81,6 +88,8 @@ import { fontClassOf } from '../util/user-font.directive';
 export class ProfileCardComponent {
   readonly user = input<User | null | undefined>(undefined);
   readonly status = input<PresenceStatus | null>(null);
+  /** Show "@username" under the name (not inside a group, where people go by their display name). */
+  readonly showHandle = input(true);
   /** The tags the person has in the group this profile is shown in. */
   readonly tags = input<GuildTag[]>([]);
 

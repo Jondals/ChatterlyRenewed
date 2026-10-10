@@ -1,2 +1,14 @@
+# Chatterly-Renewed: the sign-in and registration pages can be indexed; the app itself (private, behind a login) and the API cannot.
 User-agent: *
-Allow: /
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /og-image.jpg
+Disallow: /api/
+Disallow: /ws
+Disallow: /direct
+Disallow: /groups
+Disallow: /voice
+Disallow: /sounds/
+
+Sitemap: __SITE_URL__/sitemap.xml

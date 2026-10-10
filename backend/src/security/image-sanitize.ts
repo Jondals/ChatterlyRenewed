@@ -2,11 +2,11 @@
  * src/security/image-sanitize.ts
  * Server-side check and cleaning of the pictures people upload (profile pictures, banners, group icons).
  *
- * What it does: it walks the container of a PNG, JPEG, WebP or GIF, refuses files that are malformed or whose
+ * * What it does: it walks the container of a PNG, JPEG, WebP or GIF, refuses files that are malformed or whose
  * dimensions are absurd (decompression bombs), and copies only the parts a picture needs to be drawn. Everything
  * that carries metadata is left out: EXIF (camera, GPS position), XMP, text chunks, comments, thumbnails.
  *
- * Why it exists: the web client already re-encodes pictures before upload (which drops the metadata), but a
+ * ? Why it exists: the web client already re-encodes pictures before upload (which drops the metadata), but a
  * modified client or a direct API call can send anything, and the server cannot rely on the browser. The check
  * has to run where the data is stored.
  *
@@ -15,7 +15,7 @@
  * no dependency, and only parses length-prefixed containers with strict bounds checks, so malformed input is
  * rejected instead of being interpreted.
  *
- * Limits: this is a container filter, not a decoder. A file can still be an invalid image whose compressed data
+ * ! Limits: this is a container filter, not a decoder. A file can still be an invalid image whose compressed data
  * is corrupt; the browsers that display it are the ones that decode it, and the response is sent with
  * `nosniff` and a sandboxing Content-Security-Policy.
  */

@@ -14,6 +14,7 @@ import {
   type RingtoneId,
   type Timbre,
 } from '../ringtones';
+import { SAMPLES, SAMPLE_LEVEL, playSample, preloadSamples, type SampleId } from '../sound-samples';
 import { SettingsService } from './settings.service';
 
 export type UiSound =
@@ -79,6 +80,32 @@ export const SOUNDBOARD: { id: SfxId; label: string; icon: string; group: string
   { id: 'sparkle', label: 'Sparkle', icon: '✨', group: 'ambient' },
   { id: 'spell', label: 'Spell', icon: '🔮', group: 'ambient' },
 ];
+
+/** The recorded sound of each interface sound (the synthesized one plays until it is loaded), with its speed and level. */
+const UI_SAMPLES: Partial<Record<UiSound, { id: SampleId; rate?: number; level?: number }>> = {
+  message: { id: 'message', level: 1.1 },
+  send: { id: 'send', level: 0.9 },
+  join: { id: 'join', level: 0.9 },
+  leave: { id: 'leave', level: 0.9 },
+  mute: { id: 'mute', level: 0.8 },
+  unmute: { id: 'unmute', level: 0.8 },
+  deafen: { id: 'deafen', level: 0.9 },
+  undeafen: { id: 'undeafen', level: 0.9 },
+  toggle: { id: 'toggle', level: 0.9 },
+  open: { id: 'open', level: 0.8 },
+  success: { id: 'success', level: 1 },
+  connect: { id: 'connect', level: 1 },
+  error: { id: 'error', level: 1 },
+};
+
+/** The click styles that are recorded sounds. Their sound is also what a slider plays, higher or lower along its way. */
+const CLICK_SAMPLES: Partial<Record<string, SampleId>> = {
+  pop: 'pop',
+  tap: 'tap',
+  switch: 'switch',
+  pluck: 'pluck',
+  bubble: 'bubble',
+};
 
 /** General level of the synthesized sounds (so the quiet gains used below end up clearly audible). */
 const MASTER_BOOST = 6;
@@ -157,6 +184,8 @@ export class SoundService {
       limiter.attack.value = 0.003;
       limiter.release.value = 0.15;
       this.master.connect(limiter).connect(this.audioContext.destination);
+      // The recorded sounds (about 250 KB in all, once) start loading now that the person has interacted.
+      preloadSamples(this.audioContext, Object.keys(SAMPLES) as SampleId[]);
     }
     if (this.audioContext.state === 'suspended') {
       void this.audioContext.resume();
@@ -186,9 +215,21 @@ export class SoundService {
       this.levelScale = weight ? weight.level : 1;
       this.clickSound(weight ? weight.pitch : 1);
       this.levelScale = 1;
-    } else {
+    } else if (!this.playRecorded(sound)) {
       this.synth(sound);
     }
+  }
+
+  /** Plays the recorded version of an interface sound; false when there is none or it is not loaded yet. */
+  private playRecorded(sound: UiSound): boolean {
+    const entry = UI_SAMPLES[sound];
+    if (!entry) {
+      return false;
+    }
+    return playSample(this.context, this.output, entry.id, {
+      rate: entry.rate,
+      gain: SAMPLE_LEVEL * (entry.level ?? 1) * this.levelScale,
+    });
   }
 
   /** A soft tick for a step of a slider (`position` is 0 to 1): it rises in pitch as the slider goes up. */
@@ -205,9 +246,54 @@ export class SoundService {
       return;
     }
     this.lastSlide = now;
-    const hertz = 420 + Math.max(0, Math.min(1, position)) * 700;
-    this.tone(hertz, 0.07, 'sine', 0.05, 0);
-    this.tone(hertz * 2, 0.04, 'sine', 0.012, 0);
+    this.slideTick(this.settings.clickStyle(), Math.max(0, Math.min(1, position)));
+  }
+
+  /**
+   * The tick of one step of a slider, in the character of the chosen click sound: a recorded click is played faster
+   * as the slider goes up, a synthesized style gets its own kind of tick (pitch, notes of a scale, a tap of noise...).
+   */
+  private slideTick(style: string, position: number): void {
+    const sample = CLICK_SAMPLES[style];
+    if (sample) {
+      const rate = 0.8 + position * 0.8;
+      if (playSample(this.context, this.output, sample, { rate, gain: SAMPLE_LEVEL * 0.7 })) {
+        return;
+      }
+    }
+    const scale = [0, 2, 4, 7, 9];
+    const degree = Math.round(position * 9);
+    const note = 523.25 * Math.pow(2, Math.floor(degree / 5) + scale[degree % 5]! / 12);
+    switch (style) {
+      case 'custom':
+        this.playClickClip(0.75 + position * 0.75);
+        break;
+      case 'glass':
+        this.tone(1100 + position * 1500, 0.1, 'sine', 0.05, 0);
+        this.tone((1100 + position * 1500) * 1.5, 0.06, 'sine', 0.02, 0.004);
+        break;
+      case 'drop':
+        this.tone(650 + position * 650, 0.07, 'sine', 0.07, 0, 330 + position * 200);
+        break;
+      case 'typewriter':
+        this.noise(0.012, 0.08, 1600 + position * 2800, 0);
+        this.tone(150 + position * 140, 0.03, 'sine', 0.05, 0, 100);
+        break;
+      case 'marimba':
+        this.tone(note, 0.16, 'sine', 0.08, 0);
+        this.tone(note * 2, 0.06, 'sine', 0.025, 0);
+        break;
+      case 'kalimba':
+        this.tone(note * 2, 0.22, 'sine', 0.06, 0);
+        this.tone(note * 4, 0.07, 'sine', 0.02, 0);
+        break;
+      default: {
+        const hertz = 420 + position * 700;
+        this.tone(hertz, 0.07, 'sine', 0.05, 0);
+        this.tone(hertz * 2, 0.04, 'sine', 0.012, 0);
+        break;
+      }
+    }
   }
 
   /** Plays a soundboard effect; it is always audible when asked for explicitly (by you or by someone in the call). */
@@ -406,6 +492,16 @@ export class SoundService {
       return;
     }
     const jitter = (1 + (Math.random() - 0.5) * 0.08) * pitch;
+    const sample = CLICK_SAMPLES[style];
+    if (
+      sample &&
+      playSample(this.context, this.output, sample, {
+        rate: jitter,
+        gain: SAMPLE_LEVEL * this.levelScale,
+      })
+    ) {
+      return;
+    }
     switch (style) {
       case 'custom':
         this.playClickClip(jitter);

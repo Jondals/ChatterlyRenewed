@@ -1,6 +1,31 @@
 # Putting Chatterly-Renewed on a free server (Oracle Cloud)
 
-1. **The machine.** In Oracle Cloud create an _Always Free_ instance: shape `VM.Standard.A1.Flex` (ARM, up to 4 cores and 24 GB), image Ubuntu 24.04, and download the SSH key.
+Spanish version, step by step and easier to follow: [DEPLOY.es.md](DEPLOY.es.md).
+
+<!-- ! CRITICAL: read this block before touching the server. In the editor (Better Comments) the "!" lines show in red. -->
+
+> [!CAUTION]
+> **Critical points of this deployment**
+>
+> 1. **`RELAY_ONLY=1` must be in the server `.env`.** The switch "Hide my IP address" no longer exists: the server alone decides. Without that variable calls can connect directly and show the addresses. Set it with `bash deploy/turn-setup.sh --private`.
+> 2. **`deploy/turnserver.generated.conf` must exist** (it is made by `turn-setup.sh`). Without it the `turn` service does not start. Its mode must be `640` with group `65534`: with `600` coturn (user `nobody`) cannot read it and starts **without any configuration**.
+> 3. **Never add `-n` to the coturn command** (it means "do not read the config file") and keep `NET_BIND_SERVICE` if `cap_drop: ALL` is used.
+> 4. **Secrets** (`.env`, `TURN_SECRET`, `JWT_SECRET`, `SERVER_SECRET`) live only on the server, never in Git. Rotate `TURN_SECRET` with `bash deploy/turn-setup.sh --rotate-secret` if it was ever shown.
+> 5. **Firewall and Oracle:** only TCP 22, 80, 443, UDP 443 and TCP+UDP 3478 are public. With `RELAY_ONLY=1` the range UDP 49152-49252 is **not** needed.
+
+<!-- * After EVERY deploy of a version that changes the sessions (2.16.0 and later), do the checks below. -->
+
+### After a deploy
+
+- **First sessions:** the old access tokens carry no session and stop working. The clients renew them by themselves with the refresh token, or ask the person to sign in again. This is expected.
+- **API on another origin than the web:** add that origin to `connect-src` in `frontend/src/index.html`. With Caddy on the same domain (our case) it is not needed.
+- **Health:** `curl -s http://127.0.0.1:3000/api/health` answers `{"status":"ok"}` and `docker compose ps` shows `app` healthy and `turn` running (not restarting).
+- **Relay check:** make a test call and follow "Check that a call really uses the relay" below (`chrome://webrtc-internals`: the selected pair must be `relay`).
+- **If calls say "Private call unavailable":** the relay is down or its configuration was not read: `docker compose logs --tail 50 turn` (a healthy start shows `Default realm: <your domain>` and listens only on the private IP).
+
+1. **The machine.** In Oracle Cloud create an _Always Free_ instance: shape `VM.Standard.A1.Flex` (ARM; Oracle's page currently says 2 OCPU and 12 GB in total, 200 GB of block storage in total, 10 TB of outbound traffic per month), image Ubuntu 24.04, and download the SSH key. <!-- ! Only A1.Flex (Arm) and E2.1.Micro (1 GB) are Always Free. A shape such as VM.Standard.E5.Flex is billed per OCPU-hour and GB-hour. -->
+   > [!WARNING]
+   > Check the shape in the Oracle console before you create it: **only `VM.Standard.A1.Flex` (up to the limits above) and `VM.Standard.E2.1.Micro` are free**. Any other shape (for example `VM.Standard.E5.Flex`) is charged. See [Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm).
 2. **Open the ports.** In the VCN of the instance (Networking > Security List) add _ingress_ rules for TCP 80 and 443. Ubuntu images of Oracle also block them with iptables:
    `sudo iptables -I INPUT 6 -p tcp --dport 80 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT && sudo netfilter-persistent save`
 3. **A domain.** The browser only allows microphone, camera and encryption on HTTPS, so you need a name: a free one from [duckdns.org](https://www.duckdns.org) pointing to the public IP of the instance.
@@ -20,7 +45,7 @@
 4. `docker compose up -d --build app`. The first build takes a few minutes on the ARM machine. HTTPS: if the machine already has a Caddy, add the block of `deploy/Caddyfile.host` (the API on 3000 AND the web on 3001, or sign-in fails with "JSON.parse: unexpected character") and `sudo systemctl reload caddy`; if not, `docker compose --profile caddy up -d --build` runs one inside Docker.
 5. Update: `git pull && docker compose up -d --build app`, or let GitHub do it after every push (`.github/workflows/deploy.yml`; the branch must be the one named in the file: `master` or `main`). Logs: `docker compose logs -f app`.
 6. The database, the uploads and the secrets are in the volume `chatterly-data`. Copy it now and then: `docker run --rm -v chatterly-data:/d -v $PWD:/b alpine tar czf /b/chatterly-data.tgz -C /d .` (the real name of the volume starts with the name of the folder, see `docker volume ls`).
-7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478**, **TCP 3478** and **UDP 49152-49252**. Without that last step Oracle drops the packets before they reach the machine. To make every call private set `RELAY_ONLY=1` (`bash deploy/turn-setup.sh --private`): calls then use only the relay, and are refused when it is down. To check it, make a call and follow "Check that a call really uses the relay" below.
+7. Calls between different networks need a relay (TURN): run `bash deploy/turn-setup.sh` on the server (it writes the TURN variables of `.env`, opens the ports with iptables and starts coturn and the app), and then, in Oracle Cloud > Networking > your VCN > Security List, add ingress rules (source 0.0.0.0/0) for **UDP 3478** and **TCP 3478** (and **UDP 49152-49252** when calls may connect without the relay; `--private` does not need it). Without that last step Oracle drops the packets before they reach the machine. To make every call private set `RELAY_ONLY=1` (`bash deploy/turn-setup.sh --private`): calls then use only the relay, and are refused when it is down. To check it, make a call and follow "Check that a call really uses the relay" below.
 
 ### Secrets of GitHub for the automatic update
 
@@ -36,7 +61,7 @@ Install and start coturn on the machine:
 
 1. `sudo apt install -y coturn` and set `TURNSERVER_ENABLED=1` in `/etc/default/coturn`.
 2. Copy `deploy/turnserver.conf` to `/etc/turnserver.conf`, and change `static-auth-secret`, `realm` and `external-ip` (the public IP and the private one of the instance, `ip a` shows it).
-3. Open **UDP and TCP 3478** and **UDP 49152-49252**, in the VCN (Security List) _and_ in iptables: `sudo iptables -I INPUT 6 -p udp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p udp --dport 49152:49252 -j ACCEPT && sudo netfilter-persistent save`.
+3. Open **UDP and TCP 3478** (and **UDP 49152-49252** only if calls may also connect without the relay: with `RELAY_ONLY=1` that range does not need to be public), in the VCN (Security List) _and_ in iptables: `sudo iptables -I INPUT 6 -p udp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p tcp --dport 3478 -j ACCEPT && sudo iptables -I INPUT 6 -p udp --dport 49152:49252 -j ACCEPT && sudo netfilter-persistent save`.
 4. `sudo systemctl enable --now coturn`.
 5. Tell the backend, in `chatterly.service`: `Environment=STUN_URLS=stun:chatterly.example.com:3478`, `Environment=TURN_URLS=turn:chatterly.example.com:3478?transport=udp,turn:chatterly.example.com:3478?transport=tcp` and `Environment=TURN_SECRET=<the same secret>`. Then `sudo systemctl daemon-reload && sudo systemctl restart chatterly`. The backend gives every user short-lived TURN credentials (one hour) made from that secret; nobody receives the secret.
 
@@ -55,7 +80,7 @@ Install and start coturn on the machine:
 
 ## Other servers inside the same machine
 
-Everything above runs in one Always Free instance (the ARM one has 4 cores and 24 GB, enough for the app, Caddy and coturn). Keep it healthy: `sudo apt install -y unattended-upgrades`, copy the folder `DATA_DIR` now and then (`rsync` to your computer) and keep an eye on the disk with `df -h`.
+Everything above runs in one Always Free instance (the Arm A1 one has, today, 2 OCPU and 12 GB in total, enough for the app, Caddy and coturn). Keep it healthy: `sudo apt install -y unattended-upgrades`, copy the folder `DATA_DIR` now and then (`rsync` to your computer) and keep an eye on the disk with `df -h`.
 
 ## Check that a call really uses the relay
 
@@ -71,12 +96,12 @@ With `RELAY_ONLY=1` the app refuses to call when the relay is unavailable, and c
 
 Nothing here can be verified from the code; check each point in the Oracle Cloud Console or on the machine.
 
-- [ ] **Security List / NSG** (Networking > VCN): ingress only for TCP 22 (restricted to your own address, not 0.0.0.0/0), TCP 80, TCP 443, UDP 443 (HTTP/3), UDP 3478, TCP 3478 and UDP 49152-49252. Nothing for 3000, 3001, 4200.
+- [ ] **Security List / NSG** (Networking > VCN): ingress only for TCP 22 (restricted to your own address, not 0.0.0.0/0), TCP 80, TCP 443, UDP 443 (HTTP/3), UDP 3478 and TCP 3478 (plus UDP 49152-49252 only when `RELAY_ONLY` is not 1). Nothing for 3000, 3001, 4200.
 - [ ] **Host firewall** (`sudo iptables -S INPUT`): the same ports; nothing else open.
 - [ ] **Listening ports** (`sudo ss -tulpn`): 3000 and 3001 only on `127.0.0.1`; no other service reachable from outside (databases, Docker API on 2375, admin panels).
 - [ ] **SSH**: key only (`PasswordAuthentication no`, `PermitRootLogin no`), the deploy key of GitHub limited to this machine.
 - [ ] **Secrets**: `.env` has permissions 600 and is not in the repository; `JWT_SECRET`, `SERVER_SECRET`, `TURN_SECRET` are long random values. A TURN secret that was ever shown outside the server must be replaced: `bash deploy/turn-setup.sh --rotate-secret`. If a real secret was ever committed, rotate it and remove it from the Git history (that needs a decision of the owner: it rewrites history).
-- [ ] **TURN**: `deploy/turnserver.generated.conf` has permissions 600; from outside, an allocation without a valid credential is refused (`turnutils_uclient` with a wrong password fails); the relay answers only on the ports above.
+- [ ] **TURN**: `deploy/turnserver.generated.conf` has mode 640 and group 65534 (coturn runs as `nobody` and must be able to read it, nobody else may); from outside, an allocation without a valid credential is refused (`turnutils_uclient` with a wrong password fails); the relay answers only on the ports above.
 - [ ] **TLS**: `curl -I https://your.domain` shows HSTS; the certificate renews (Caddy logs); HTTP redirects to HTTPS; WebSocket works over `wss://`.
 - [ ] **Reverse proxy**: the app sees one proxy (`TRUST_PROXY=1`) and Caddy replaces any `X-Forwarded-For` sent by a client.
 - [ ] **Updates**: `unattended-upgrades` on; Docker images updated on purpose (the tags are pinned in `docker-compose.yml`; change them deliberately and test).

@@ -1,8 +1,11 @@
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════
 # .github/workflows/deploy.yml
-# Every push to the main branch (master or main) updates the server: it downloads the new code and rebuilds the
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════
+# * Every push to the main branch (master or main) updates the server: it downloads the new code and rebuilds the
 # container, which holds both the backend and the web app. Secrets to create in GitHub (Settings > Secrets and variables
 # > Actions): SSH_HOST (IP or domain), SSH_USER (for example ubuntu), SSH_KEY (the whole private key) and, if it is not
 # 22, SSH_PORT. It can also be started by hand from the Actions tab.
+# ! SSH_KEY is a PRIVATE key: use one made only for this (ssh-keygen -t ed25519), never your personal one.
 name: Deploy Chatterly-Renewed to VPS
 
 on:
@@ -14,7 +17,7 @@ on:
 permissions:
   contents: read
 
-# One update at a time: a push that arrives while another is running waits for it.
+# * One update at a time: a push that arrives while another is running waits for it.
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -36,12 +39,13 @@ jobs:
             git fetch origin ${{ github.ref_name }}
             git reset --hard origin/${{ github.ref_name }}
             if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"; else COMPOSE="docker-compose"; fi
-            # Build first (the site keeps running), then replace the container. Removing the old one before creating the
+            # ! The server is reset to GitHub (git reset --hard): files not in Git (.env, docker-compose.override.yml) survive.
+            # * Build first (the site keeps running), then replace the container. Removing the old one before creating the
             # new one avoids the "KeyError: 'ContainerConfig'" crash of docker-compose 1.29 when it recreates a container.
             $COMPOSE build app
             $COMPOSE rm -sf app
             $COMPOSE up -d app
-            # The TURN relay (when it was set up with deploy/turn-setup.sh) is started if it is not running, and left as it is
+            # ? The TURN relay (when it was set up with deploy/turn-setup.sh) is started if it is not running, and left as it is
             # otherwise (recreating it with docker-compose 1.x fails with 'ContainerConfig'; deploy/turn-setup.sh replaces it).
             if grep -q '^TURN_SECRET=.' .env; then $COMPOSE --profile turn up -d --no-recreate turn; fi
             docker image prune -f

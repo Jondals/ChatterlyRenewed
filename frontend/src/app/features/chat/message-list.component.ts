@@ -50,6 +50,9 @@ function dayLabel(ts: number, i18n: I18nService): string {
     <div
       #scroller
       class="h-full overflow-y-auto px-3 py-4"
+      [style.opacity]="revealed() ? 1 : 0"
+      [style.transform]="revealed() ? 'none' : 'translateY(10px)'"
+      [style.transition]="revealed() ? 'opacity 0.24s ease, transform 0.24s ease' : 'none'"
       (scroll)="onScroll()"
       (wheel)="stopFollowing()"
       (touchstart)="stopFollowing()"
@@ -81,7 +84,7 @@ function dayLabel(ts: number, i18n: I18nService): string {
 
           @for (row of rows(); track row.message.id) {
             @if (row.dayLabel) {
-              <div class="my-4 flex items-center gap-3 text-[11px] font-semibold text-dim">
+              <div class="my-4 flex items-center gap-3 text-[0.6875rem] font-semibold text-dim">
                 <span class="h-px flex-1 bg-white/6"></span>{{ row.dayLabel
                 }}<span class="h-px flex-1 bg-white/6"></span>
               </div>
@@ -156,6 +159,12 @@ export class MessageListComponent {
     }.bind(this),
   );
   protected readonly atBottom = signal(true);
+  /**
+   * False from the moment another conversation is opened until it is drawn and already at its end: it is hidden meanwhile
+   * (so the person never sees it start at the top and fall to the bottom) and then fades in where the end is.
+   */
+  protected readonly revealed = signal(true);
+  private revealTimer: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly rows = computed<Row[]>(
     function (this: MessageListComponent) {
@@ -223,13 +232,7 @@ export class MessageListComponent {
         this.channelId();
         untracked(
           function (this: MessageListComponent) {
-            this.stick = true;
-            setTimeout(
-              function (this: MessageListComponent) {
-                return this.scrollToBottom(false);
-              }.bind(this),
-              60,
-            );
+            this.openConversation();
           }.bind(this),
         );
       }.bind(this),
@@ -247,9 +250,50 @@ export class MessageListComponent {
     if (isNew && (mine || writing)) {
       this.stick = true;
     }
+    if (!this.revealed()) {
+      // The conversation that was just opened is being drawn: it is not glided to, it is shown already at its end.
+      requestAnimationFrame(this.tryReveal.bind(this));
+      return;
+    }
     if (this.stick) {
       queueMicrotask(this.glideToEnd.bind(this));
     }
+  }
+
+  /** Another conversation was opened: hide it, and show it as soon as it is drawn and at its end (or after a short wait). */
+  private openConversation(): void {
+    this.stick = true;
+    this.stopFollowing();
+    clearTimeout(this.revealTimer);
+    if (document.documentElement.dataset['motion'] === 'reduced') {
+      this.revealed.set(true);
+      setTimeout(this.scrollToBottom.bind(this, false), 0);
+      return;
+    }
+    this.revealed.set(false);
+    // If the messages take long to arrive, the list is shown anyway so the screen never stays empty.
+    this.revealTimer = setTimeout(this.reveal.bind(this), 700);
+    requestAnimationFrame(this.tryReveal.bind(this));
+  }
+
+  /** Shows the conversation once it has messages (or is known to be empty): at its end, then it fades in. */
+  private tryReveal(): void {
+    if (this.revealed()) return;
+    const state = this.state();
+    if (state.messages().length || state.loaded()) this.reveal();
+  }
+
+  /** Puts the conversation at its end at once and fades it in. */
+  private reveal(): void {
+    clearTimeout(this.revealTimer);
+    if (this.revealed()) return;
+    this.scrollToBottom(false);
+    requestAnimationFrame(
+      function (this: MessageListComponent) {
+        this.scrollToBottom(false);
+        this.revealed.set(true);
+      }.bind(this),
+    );
   }
 
   /** Starts watching how tall the conversation is: a picture, a GIF or a block of code that loads must not leave the end out of sight. */
@@ -264,6 +308,10 @@ export class MessageListComponent {
     const height = this.content().nativeElement.offsetHeight;
     const grew = height > this.lastHeight;
     this.lastHeight = height;
+    if (!this.revealed()) {
+      requestAnimationFrame(this.tryReveal.bind(this));
+      return;
+    }
     if (grew && this.stick) {
       this.glideToEnd();
     }
@@ -271,6 +319,7 @@ export class MessageListComponent {
 
   /** Stops watching and gliding. */
   private stopWatching(): void {
+    clearTimeout(this.revealTimer);
     this.resizer?.disconnect();
     cancelAnimationFrame(this.glide);
   }

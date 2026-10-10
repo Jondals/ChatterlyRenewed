@@ -60,7 +60,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
             (mousedown)="$event.stopPropagation()"
             (click)="groupMenu.set(!groupMenu())"
           >
-            <span class="min-w-0 flex-1 truncate text-[15px] font-bold">{{ g.name }}</span>
+            <span class="min-w-0 flex-1 truncate text-[0.9375rem] font-bold">{{ g.name }}</span>
             <app-icon
               name="chevron-down"
               [size]="16"
@@ -84,7 +84,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                 /></span>
                 <span class="min-w-0 flex-1"
                   ><b class="block text-sm">{{ 'Invite people' | t }}</b
-                  ><span class="block text-[11px] text-muted">{{
+                  ><span class="block text-[0.6875rem] text-muted">{{
                     'Friends get the group key' | t
                   }}</span></span
                 >
@@ -101,7 +101,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                   /></span>
                   <span class="min-w-0 flex-1"
                     ><b class="block text-sm">{{ 'Create text channel' | t }}</b
-                    ><span class="block text-[11px] text-muted">{{
+                    ><span class="block text-[0.6875rem] text-muted">{{
                       'Messages, files and GIFs' | t
                     }}</span></span
                   >
@@ -117,7 +117,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                   /></span>
                   <span class="min-w-0 flex-1"
                     ><b class="block text-sm">{{ 'Create voice channel' | t }}</b
-                    ><span class="block text-[11px] text-muted">{{
+                    ><span class="block text-[0.6875rem] text-muted">{{
                       'Talk, video and share your screen' | t
                     }}</span></span
                   >
@@ -134,7 +134,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                 /></span>
                 <span class="min-w-0 flex-1"
                   ><b class="block text-sm">{{ 'Group settings' | t }}</b
-                  ><span class="block text-[11px] text-muted">{{
+                  ><span class="block text-[0.6875rem] text-muted">{{
                     'Name, icon, channels and keys' | t
                   }}</span></span
                 >
@@ -223,14 +223,14 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                 <app-icon name="volume" [size]="17" class="nav-icon" />
                 <span class="min-w-0 flex-1 truncate">{{ c.name | channelLabel }}</span>
                 @if (occupants(c.id).length) {
-                  <span class="text-[11px] text-muted">{{ occupants(c.id).length }}</span>
+                  <span class="text-[0.6875rem] text-muted">{{ occupants(c.id).length }}</span>
                 }
               </button>
               @if (occupants(c.id).length) {
                 <div class="mb-2 ml-[1.35rem] mt-0.5 space-y-0.5 border-l border-white/8 pl-3">
                   @for (id of occupants(c.id); track id) {
                     <div
-                      class="flex items-center gap-3 rounded-ui px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-white/5 hover:text-fg"
+                      class="flex items-center gap-3 rounded-ui px-2.5 py-1.5 text-[0.8125rem] text-muted transition-colors hover:bg-white/5 hover:text-fg"
                     >
                       <app-avatar
                         [user]="directory.get(id)"
@@ -256,7 +256,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
       } @else {
         <!-- Home -->
         <div class="flex h-14 items-center justify-between border-b border-white/6 px-4">
-          <span class="text-[15px] font-bold">{{ 'Home' | t }}</span>
+          <span class="text-[0.9375rem] font-bold">{{ 'Home' | t }}</span>
           <div class="relative">
             <button
               type="button"
@@ -337,7 +337,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
             @if (social.incoming().length) {
               <span class="badge badge-red">{{ social.incoming().length }}</span>
             } @else if (social.onlineFriends().length) {
-              <span class="text-[11px] text-muted"
+              <span class="text-[0.6875rem] text-muted"
                 >{{ social.onlineFriends().length }} {{ 'online' | t }}</span
               >
             }
@@ -369,7 +369,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                     >{{ dm.user.displayName }}</span
                   >
                   @if (call.rooms()[dm.channelId]?.length) {
-                    <span class="flex items-center gap-1 text-[10px] text-accent"
+                    <span class="flex items-center gap-1 text-[0.625rem] text-accent"
                       ><app-icon name="phone" [size]="10" /> {{ 'In a call' | t }}</span
                     >
                   }
@@ -397,7 +397,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
             <span class="block text-xs font-bold text-accent">{{
               'Secure voice connected' | t
             }}</span>
-            <span class="block truncate text-[11px] text-muted"
+            <span class="block truncate text-[0.6875rem] text-muted"
               >{{ call.stats().rttMs ?? '—' }} ms · {{ roomLabel() }}</span
             >
           </a>

@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
+import { DeleteAccountComponent } from './delete-account.component';
 import type { AuraId, NameFont, User } from '../../core/models';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -29,6 +30,7 @@ import { IconComponent } from '../../shared/components/icon.component';
 import { QUICK_COLORS, QUICK_GRADIENTS, parseRichText } from '../../shared/util/rich-text';
 import { ExpressionPickerComponent } from '../../shared/components/expression-picker.component';
 import { ProfileCardComponent } from '../../shared/components/profile-card.component';
+import { sortedStops, type GradientParts } from '../../shared/util/gradient';
 import { GradientControlsComponent } from '../../shared/components/gradient-controls.component';
 import { encodeBanner, parseBanner, type BannerColor } from '../../shared/util/banner';
 import {
@@ -94,6 +96,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
     IconComponent,
     ProfileCardComponent,
     ExpressionPickerComponent,
+    DeleteAccountComponent,
     TranslatePipe,
   ],
   template: `
@@ -218,7 +221,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                   (input)="patch({ displayName: $any($event.target).value })"
                   [attr.aria-label]="'Display name' | t"
                 />
-                <span class="font-mono text-[11px] text-dim"
+                <span class="font-mono text-[0.6875rem] text-dim"
                   >{{ draft().displayName.length }} / 32</span
                 >
               </label>
@@ -245,7 +248,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                           [appUserFont]="draft().nameFont"
                           >{{ draft().displayName || 'Name' }}</span
                         >
-                        <span class="text-[11px] text-muted">{{ f.label | t }}</span>
+                        <span class="text-[0.6875rem] text-muted">{{ f.label | t }}</span>
                       </button>
                     }
                     <button
@@ -263,7 +266,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                           >{{ draft().displayName || 'Name' }}</span
                         >
                         <span
-                          class="flex w-full items-center justify-between gap-2 text-[11px] text-muted"
+                          class="flex w-full items-center justify-between gap-2 text-[0.6875rem] text-muted"
                           ><span class="truncate">{{ settings.customNameFontName() }}</span
                           ><span
                             class="cursor-pointer underline hover:text-fg"
@@ -278,7 +281,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                         <span class="flex items-center gap-2 text-sm font-medium text-muted"
                           ><app-icon name="upload" [size]="16" /> {{ 'Upload font' | t }}</span
                         >
-                        <span class="text-[11px] text-dim"
+                        <span class="text-[0.6875rem] text-dim"
                           >.ttf .otf .woff2 · {{ 'Up to 5 MB' | t }}</span
                         >
                       }
@@ -394,7 +397,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
             <div class="rounded-ui-lg border border-white/8 bg-black/10 p-5">
               <div class="mb-2 flex items-center justify-between">
                 <span class="label">{{ 'Status' | t }}</span>
-                <span class="font-mono text-[11px] text-dim"
+                <span class="font-mono text-[0.6875rem] text-dim"
                   >{{ draft().statusText.length }} / 80</span
                 >
               </div>
@@ -434,12 +437,12 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
               <div class="mb-3 flex items-end justify-between gap-3">
                 <div>
                   <span class="label">{{ 'About me' | t }}</span>
-                  <p class="mt-0.5 text-[11px] text-dim">
+                  <p class="mt-0.5 text-[0.6875rem] text-dim">
                     {{ 'Shown on your profile card. Make it yours with styles and colors.' | t }}
                   </p>
                 </div>
                 <span
-                  class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[11px] tabular-nums"
+                  class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[0.6875rem] tabular-nums"
                   [class]="
                     draft().bio.length > 900
                       ? 'border-amber/50 text-amber'
@@ -573,31 +576,21 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                     <div
                       class="mt-3 flex items-center gap-2 border-t border-white/8 pt-3 text-xs text-muted"
                     >
-                      <app-color-picker
-                        [value]="bioA()"
-                        [size]="24"
-                        shape="round"
-                        label="First color"
-                        (valueChange)="bioA.set($event)"
-                      />
-                      <app-color-picker
-                        [value]="bioB()"
-                        [size]="24"
-                        shape="round"
-                        label="Second color"
-                        (valueChange)="bioB.set($event)"
-                      />
-                      <span
-                        class="h-6 flex-1 rounded-full ring-1 ring-white/20"
-                        [style.background]="'linear-gradient(90deg,' + bioA() + ',' + bioB() + ')'"
-                      ></span>
+                      <div class="min-w-0 flex-1">
+                        <app-gradient-controls
+                          [parts]="bioGradient()"
+                          [showAngle]="false"
+                          [showPosition]="false"
+                          (changed)="setBioGradient($event)"
+                        />
+                      </div>
+                    </div>
+                    <div class="mt-3 flex justify-end">
                       <button
                         type="button"
                         class="btn btn-sm btn-primary"
                         (mousedown)="$event.preventDefault()"
-                        (click)="
-                          wrapBio('[g=' + bioA() + ',' + bioB() + ']', '[/g]'); bioPanel.set(null)
-                        "
+                        (click)="applyBioGradient()"
                       >
                         {{ 'Apply' | t }}
                       </button>
@@ -617,7 +610,7 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
                   (focus)="bioPanel.set(null)"
                 ></textarea>
               </div>
-              <p class="mt-2 text-[11px] text-dim">
+              <p class="mt-2 text-[0.6875rem] text-dim">
                 {{
                   'Select some text and pick a style. With nothing selected, the style applies to what you type next.'
                     | t
@@ -633,6 +626,8 @@ import { UserFontDirective } from '../../shared/util/user-font.directive';
         <app-profile-card [user]="preview()" status="online" />
       </aside>
     </div>
+
+    <app-delete-account />
 
     @if (dirty()) {
       <div class="anim-pop pointer-events-none sticky bottom-4 z-[70] mt-8 flex justify-center">
@@ -714,6 +709,28 @@ export class ProfileSectionComponent {
   protected readonly bioPanel = signal<'color' | 'gradient' | null>(null);
   protected readonly bioA = signal('#ff512f');
   protected readonly bioB = signal('#7f5af0');
+  /** The colours of the gradient that is being made for About me (two to five; their order is what counts). */
+  protected readonly bioGradient = signal<GradientParts>({
+    angle: 90,
+    stops: [
+      { color: '#ff512f', pos: 0 },
+      { color: '#7f5af0', pos: 100 },
+    ],
+  });
+
+  /** A change in the editor of the gradient of About me. */
+  protected setBioGradient(change: Partial<GradientParts>): void {
+    this.bioGradient.set({ ...this.bioGradient(), ...change });
+  }
+
+  /** Wraps the selected text with the gradient, using the colours in the order of the bar. */
+  protected applyBioGradient(): void {
+    const colors = sortedStops(this.bioGradient().stops).map(function colour(stop) {
+      return stop.color;
+    });
+    this.wrapBio('[g=' + colors.join(',') + ']', '[/g]');
+    this.bioPanel.set(null);
+  }
   protected readonly statusEmojiOpen = signal(false);
   private readonly status = viewChild<ElementRef<HTMLInputElement>>('status');
 

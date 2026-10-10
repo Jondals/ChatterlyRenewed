@@ -42,7 +42,7 @@ import { APP_NAME, APP_VERSION } from '../../version';
             <img src="favicon.svg" alt="" class="h-12 w-12 rounded-xl" />
             <div>
               <div class="text-xl font-bold leading-tight tracking-tight">{{ appName }}</div>
-              <span class="chip chip-accent !text-[10px] uppercase tracking-wide"
+              <span class="chip chip-accent !text-[0.625rem] uppercase tracking-wide"
                 >v{{ version }}</span
               >
             </div>
@@ -85,7 +85,7 @@ import { APP_NAME, APP_VERSION } from '../../version';
             <router-outlet />
           </div>
           <p
-            class="mt-4 flex items-center justify-center gap-1.5 whitespace-nowrap text-center text-[11px] text-dim"
+            class="mt-4 flex items-center justify-center gap-1.5 whitespace-nowrap text-center text-[0.6875rem] text-dim"
           >
             <app-icon name="lock" [size]="11" /> {{ 'End-to-end encrypted' | t }} · v{{ version }}
           </p>

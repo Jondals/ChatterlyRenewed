@@ -48,7 +48,7 @@ import { TranslatePipe } from '../../core/i18n/i18n.service';
       @case ('codeblock') {
         <span class="code-block my-2 block overflow-hidden text-left text-fg">
           <span
-            class="flex items-center justify-between border-b border-white/6 bg-white/[.03] px-3 py-1.5 font-sans text-[11px] text-muted"
+            class="flex items-center justify-between border-b border-white/6 bg-white/[.03] px-3 py-1.5 font-sans text-[0.6875rem] text-muted"
           >
             <span class="flex items-center gap-1.5"
               ><app-icon name="code" [size]="12" class="text-accent" />

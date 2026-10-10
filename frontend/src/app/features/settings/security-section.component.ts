@@ -10,7 +10,13 @@ import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/components/icon.component';
-import { SettingRowComponent, ToggleComponent } from '../../shared/components/controls.component';
+import {
+  SegmentedComponent,
+  SettingRowComponent,
+  ToggleComponent,
+} from '../../shared/components/controls.component';
+import { ApiService } from '../../core/services/api.service';
+import type { User } from '../../core/models';
 import { SettingsService } from '../../core/services/settings.service';
 import { ModalComponent } from '../../shared/components/modal.component';
 import { describeError, passwordScore } from '../../shared/util/errors';
@@ -18,7 +24,14 @@ import { describeError, passwordScore } from '../../shared/util/errors';
 @Component({
   selector: 'app-security-section',
   standalone: true,
-  imports: [IconComponent, ModalComponent, SettingRowComponent, ToggleComponent, TranslatePipe],
+  imports: [
+    IconComponent,
+    ModalComponent,
+    SegmentedComponent,
+    SettingRowComponent,
+    ToggleComponent,
+    TranslatePipe,
+  ],
   template: `
     <section class="rounded-ui-lg border border-white/8 bg-black/20 p-5">
       <h2 class="mb-1 flex items-center gap-2 text-sm font-semibold">
@@ -50,7 +63,45 @@ import { describeError, passwordScore } from '../../shared/util/errors';
     </section>
 
     <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
-      <h2 class="pt-3 text-sm font-semibold">{{ 'Privacy' | t }}</h2>
+      <h2 class="pt-3 text-sm font-semibold">{{ 'Visibility' | t }}</h2>
+      <app-setting-row
+        title="Who can see you online"
+        hint="Your online status. Anybody who is not allowed sees you as offline, whatever you do."
+      >
+        <app-segmented
+          [options]="presenceOptions"
+          [value]="presenceVisibility()"
+          (valueChange)="choose({ presenceVisibility: $event })"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Appear in search"
+        hint="Other people can find you by typing your username. If you turn it off they need your exact username."
+      >
+        <app-toggle
+          [checked]="searchable()"
+          (checkedChange)="choose({ searchable: $event })"
+          [label]="'Appear in search' | t"
+        />
+      </app-setting-row>
+    </section>
+
+    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
+      <h2 class="pt-3 text-sm font-semibold">{{ 'Contact' | t }}</h2>
+      <app-setting-row
+        title="Who can send you friend requests"
+        hint="Closed requests do not affect the friends you already have."
+      >
+        <app-segmented
+          [options]="requestOptions"
+          [value]="friendRequests()"
+          (valueChange)="choose({ friendRequests: $event })"
+        />
+      </app-setting-row>
+    </section>
+
+    <section class="mt-6 rounded-ui-lg border border-white/8 bg-black/20 px-5 py-2">
+      <h2 class="pt-3 text-sm font-semibold">{{ 'Conversations' | t }}</h2>
       <app-setting-row
         title="Send read receipts"
         hint="Others see when you have read their messages. If you turn it off, nobody knows you read them and you do not see when they read yours. Unread counts keep working."
@@ -59,6 +110,16 @@ import { describeError, passwordScore } from '../../shared/util/errors';
           [checked]="settings.sendReadReceipts()"
           (checkedChange)="settings.sendReadReceipts.set($event)"
           [label]="'Send read receipts' | t"
+        />
+      </app-setting-row>
+      <app-setting-row
+        title="Show when you are typing"
+        hint="Others see the three dots while you write. Turn it off to write without them knowing."
+      >
+        <app-toggle
+          [checked]="settings.sendTyping()"
+          (checkedChange)="settings.sendTyping.set($event)"
+          [label]="'Show when you are typing' | t"
         />
       </app-setting-row>
       <app-setting-row
@@ -71,20 +132,6 @@ import { describeError, passwordScore } from '../../shared/util/errors';
           [label]="'Show message marks' | t"
         />
       </app-setting-row>
-    </section>
-    <section class="mt-6 rounded-ui-lg border border-red-400/20 bg-red-500/[.04] p-5">
-      <h2 class="mb-1 flex items-center gap-2 text-sm font-semibold text-red-300">
-        <app-icon name="trash" [size]="16" /> {{ 'Delete account' | t }}
-      </h2>
-      <p class="mb-3 text-sm text-muted">
-        {{
-          'Erases your account for good: your messages, files, friends, direct chats and the groups you own. It cannot be undone.'
-            | t
-        }}
-      </p>
-      <button class="btn btn-sm btn-soft-danger" type="button" (click)="deleteOpen.set(true)">
-        <app-icon name="trash" [size]="14" /> {{ 'Delete my account' | t }}
-      </button>
     </section>
     <section class="mt-6">
       <h2 class="mb-3 text-sm font-semibold">{{ 'How your data is protected' | t }}</h2>
@@ -117,62 +164,6 @@ import { describeError, passwordScore } from '../../shared/util/errors';
         }
       </ul>
     </section>
-
-    @if (deleteOpen()) {
-      <app-modal
-        [title]="'Delete account' | t"
-        [subtitle]="'This cannot be undone.' | t"
-        (closed)="closeDelete()"
-      >
-        <form class="space-y-3" (submit)="deleteAccount($event)">
-          <ul class="list-disc space-y-1 pl-5 text-sm text-muted">
-            <li>
-              {{ 'Your messages, files, reactions and pictures are erased from the server.' | t }}
-            </li>
-            <li>{{ 'Your friendships and direct chats disappear.' | t }}</li>
-            <li>
-              {{
-                'The groups you own are deleted for everybody; in the others you just leave.' | t
-              }}
-            </li>
-            <li>
-              {{
-                'Your keys, your preferences and everything kept on this device are erased too.' | t
-              }}
-            </li>
-          </ul>
-          <input
-            class="input"
-            type="text"
-            autocomplete="off"
-            [placeholder]="'Type your username to confirm' | t"
-            [value]="confirmName()"
-            (input)="confirmName.set($any($event.target).value)"
-          />
-          <input
-            class="input"
-            type="password"
-            autocomplete="current-password"
-            [placeholder]="'Your password' | t"
-            [value]="deletePw()"
-            (input)="deletePw.set($any($event.target).value)"
-          />
-          @if (deleteError()) {
-            <p class="text-sm text-red-300">{{ deleteError() }}</p>
-          }
-          <div class="flex justify-end gap-2">
-            <button class="btn" type="button" (click)="closeDelete()">{{ 'Cancel' | t }}</button
-            ><button class="btn btn-danger" type="submit" [disabled]="!canDelete() || deleteBusy()">
-              @if (deleteBusy()) {
-                {{ 'Erasing…' | t }}
-              } @else {
-                {{ 'Delete my account forever' | t }}
-              }
-            </button>
-          </div>
-        </form>
-      </app-modal>
-    }
 
     @if (pwOpen()) {
       <app-modal
@@ -236,26 +227,39 @@ export class SecuritySectionComponent {
   private readonly i18n = inject(I18nService);
   protected readonly settings = inject(SettingsService);
 
+  private readonly api = inject(ApiService);
+
+  protected readonly presenceOptions = [
+    { id: 'everyone', label: 'Everybody' },
+    { id: 'friends', label: 'Friends only' },
+    { id: 'nobody', label: 'Nobody' },
+  ];
+  protected readonly requestOptions = [
+    { id: 'everyone', label: 'Everybody' },
+    { id: 'nobody', label: 'Nobody' },
+  ];
+  protected readonly presenceVisibility = computed(
+    function (this: SecuritySectionComponent) {
+      return this.auth.user()?.privacy?.presenceVisibility ?? 'everyone';
+    }.bind(this),
+  );
+  protected readonly friendRequests = computed(
+    function (this: SecuritySectionComponent) {
+      return this.auth.user()?.privacy?.friendRequests ?? 'everyone';
+    }.bind(this),
+  );
+  protected readonly searchable = computed(
+    function (this: SecuritySectionComponent) {
+      return this.auth.user()?.privacy?.searchable ?? true;
+    }.bind(this),
+  );
+
   protected readonly fingerprintText = signal('…');
   protected readonly pwOpen = signal(false);
   protected readonly oldPw = signal('');
   protected readonly newPw = signal('');
   protected readonly pwError = signal('');
   protected readonly pwBusy = signal(false);
-  protected readonly deleteOpen = signal(false);
-  protected readonly confirmName = signal('');
-  protected readonly deletePw = signal('');
-  protected readonly deleteError = signal('');
-  protected readonly deleteBusy = signal(false);
-  /** The account can be erased when the username was typed right and a password is there. */
-  protected readonly canDelete = computed(
-    function (this: SecuritySectionComponent) {
-      return (
-        this.confirmName().trim().toLowerCase() === this.auth.user()?.username.toLowerCase() &&
-        this.deletePw().length > 0
-      );
-    }.bind(this),
-  );
   protected readonly score = computed(
     function (this: SecuritySectionComponent) {
       return passwordScore(this.newPw());
@@ -303,29 +307,13 @@ export class SecuritySectionComponent {
     );
   }
 
-  /** Closes the window to erase the account and forgets what was typed in it. */
-  protected closeDelete(): void {
-    this.deleteOpen.set(false);
-    this.confirmName.set('');
-    this.deletePw.set('');
-    this.deleteError.set('');
-  }
-
-  /** Erases the account (the server checks the proof of the password) and starts again from the sign-in page. */
-  protected async deleteAccount(event: Event): Promise<void> {
-    event.preventDefault();
-    if (!this.canDelete()) {
-      return;
-    }
-    this.deleteBusy.set(true);
-    this.deleteError.set('');
+  /** Saves a privacy choice on the server, which is the one that enforces it, and shows the answer. */
+  protected async choose(patch: Record<string, unknown>): Promise<void> {
     try {
-      await this.auth.deleteAccount(this.auth.user()!.username, this.deletePw());
-      // A new load of the page leaves nothing of the account in memory (keys, open calls, sockets).
-      window.location.assign('/login');
-    } catch (e) {
-      this.deleteError.set(describeError(e));
-      this.deleteBusy.set(false);
+      const response = await this.api.patch<{ user: User }>('/api/me', patch);
+      this.auth.setUser(response.user);
+    } catch {
+      this.toast.error(this.i18n.t('Could not save the change.'));
     }
   }
 

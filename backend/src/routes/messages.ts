@@ -536,8 +536,8 @@ export function registerMessageRoutes(app: FastifyInstance, ctx: AppContext): vo
 
   /**
    * GET /api/rtc/config: the ICE servers of a call and the relay policy.
-   * Fail closed: when relay-only calls are requested but no TURN relay is configured the answer is 503, never a
-   * STUN-only list, because a STUN server would let the browsers connect directly and show their addresses. In
+   * ! FAIL CLOSED: when relay-only calls are requested but no TURN relay is configured the answer is 503, never a
+   * ! STUN-only list, because a STUN server would let the browsers connect directly and show their addresses. In
    * relay-only mode no STUN server is listed at all (the relay is the only thing a browser may contact).
    */
   app.get('/api/rtc/config', auth, async function (req, reply) {

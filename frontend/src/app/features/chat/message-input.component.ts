@@ -130,7 +130,7 @@ const GRADIENTS = [
           class="anim-fade-up mb-2 overflow-hidden rounded-ui border border-accent/30 bg-ink-800"
         >
           <div
-            class="flex items-center gap-2 border-b border-white/8 bg-accent/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent"
+            class="flex items-center gap-2 border-b border-white/8 bg-accent/10 px-3 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-accent"
           >
             <app-icon name="code" [size]="13" />
             <span class="flex-1">{{ 'It will be sent as code' | t }}</span>
@@ -171,7 +171,7 @@ const GRADIENTS = [
                   />
                 }
                 <div class="min-w-0 flex-1 p-3">
-                  <div class="flex items-center gap-1 text-[11px] text-muted">
+                  <div class="flex items-center gap-1 text-[0.6875rem] text-muted">
                     <app-icon name="link" [size]="11" />
                     <span class="truncate">{{ linkPreview().card!.site }}</span>
                   </div>
@@ -181,7 +181,7 @@ const GRADIENTS = [
                   <div class="line-clamp-1 text-xs text-muted">
                     {{ linkPreview().card!.description }}
                   </div>
-                  <div class="mt-1 text-[11px] text-accent">
+                  <div class="mt-1 text-[0.6875rem] text-accent">
                     {{ 'The preview will be sent with your message.' | t }}
                   </div>
                 </div>
@@ -448,7 +448,7 @@ const GRADIENTS = [
                 (mousedown)="$event.stopPropagation()"
               >
                 <div
-                  class="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-dim"
+                  class="px-4 pb-1 pt-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-dim"
                 >
                   {{ 'Add to your message' | t }}
                 </div>
@@ -516,7 +516,7 @@ const GRADIENTS = [
           }
         </div>
       }
-      <div class="mt-1 flex items-center justify-between px-1 text-[10px] text-dim">
+      <div class="mt-1 flex items-center justify-between px-1 text-[0.625rem] text-dim">
         <span>{{ 'Enter to send · Shift+Enter for a new line' | t }}</span>
       </div>
     </div>

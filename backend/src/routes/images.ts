@@ -40,7 +40,7 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
   const me = callerId;
   const auth = { onRequest: [app.authenticate] };
 
-  // Profile pictures, banners and group icons are readable by every signed-in user who knows the id (ids are random
+  // ! Profile pictures, banners and group icons are readable by every signed-in user who knows the id (ids are random
   // and only appear in profiles, but they are NOT a secret and the pictures are NOT end-to-end encrypted: the server
   // stores them in clear). The client re-encodes them to a small WebP first and the server strips any metadata that
   // is still there. Private photographs belong in chat attachments, which are encrypted in the browser.
@@ -83,7 +83,7 @@ export function registerImageRoutes(app: FastifyInstance, ctx: AppContext): void
           'INSERT INTO images (id, owner_id, kind, mime, size, created_at) VALUES (?,?,?,?,?,?)',
         ).run(id, owner, kind, clean.mime, clean.data.length, Date.now());
       } catch (error) {
-        // No row, no file: an upload that cannot be recorded must not leave bytes on the disk.
+        // * No row, no file: an upload that cannot be recorded must not leave bytes on the disk.
         await fs.promises.rm(imageFile(ctx, id), { force: true });
         throw error;
       }

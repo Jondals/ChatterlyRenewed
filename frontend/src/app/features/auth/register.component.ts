@@ -58,16 +58,26 @@ const COLORS = ['#4b5263', '#ef4444', '#fbbf24', '#2ef2b0', '#38e8ff'];
       </label>
       <label class="block">
         <span class="label">{{ 'Password' | t }}</span>
-        <input
-          class="input mt-1.5"
-          name="password"
-          type="password"
-          autocomplete="new-password"
-          [placeholder]="'At least 10 characters' | t"
-          [value]="password()"
-          (input)="password.set($any($event.target).value)"
-          required
-        />
+        <div class="relative mt-1.5">
+          <input
+            class="input pr-11"
+            name="password"
+            [type]="reveal() ? 'text' : 'password'"
+            autocomplete="new-password"
+            [placeholder]="'At least 10 characters' | t"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+            required
+          />
+          <button
+            type="button"
+            class="btn btn-icon btn-sm btn-ghost absolute right-1.5 top-1.5"
+            (click)="reveal.set(!reveal())"
+            [attr.aria-label]="(reveal() ? 'Hide password' : 'Show password') | t"
+          >
+            <app-icon [name]="reveal() ? 'eye' : 'eye-off'" [size]="15" />
+          </button>
+        </div>
         <div class="mt-2 flex gap-1.5">
           @for (i of [1, 2, 3, 4]; track i) {
             <div
@@ -80,15 +90,25 @@ const COLORS = ['#4b5263', '#ef4444', '#fbbf24', '#2ef2b0', '#38e8ff'];
       </label>
       <label class="block">
         <span class="label">{{ 'Confirm password' | t }}</span>
-        <input
-          class="input mt-1.5"
-          name="confirm"
-          type="password"
-          autocomplete="new-password"
-          [value]="confirm()"
-          (input)="confirm.set($any($event.target).value)"
-          required
-        />
+        <div class="relative mt-1.5">
+          <input
+            class="input pr-11"
+            name="confirm"
+            [type]="reveal() ? 'text' : 'password'"
+            autocomplete="new-password"
+            [value]="confirm()"
+            (input)="confirm.set($any($event.target).value)"
+            required
+          />
+          <button
+            type="button"
+            class="btn btn-icon btn-sm btn-ghost absolute right-1.5 top-1.5"
+            (click)="reveal.set(!reveal())"
+            [attr.aria-label]="(reveal() ? 'Hide password' : 'Show password') | t"
+          >
+            <app-icon [name]="reveal() ? 'eye' : 'eye-off'" [size]="15" />
+          </button>
+        </div>
         @if (confirm() && confirm() !== password()) {
           <span class="mt-1 block text-xs text-amber">{{ 'Passwords do not match.' | t }}</span>
         }
@@ -141,6 +161,8 @@ export class RegisterComponent {
   readonly displayName = signal('');
   readonly password = signal('');
   readonly confirm = signal('');
+  /** Whether the two password fields show what is typed (the eye button toggles both). */
+  readonly reveal = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly shake = signal(false);

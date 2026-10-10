@@ -79,7 +79,7 @@ import { IconComponent } from '../../shared/components/icon.component';
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-3 border-t border-white/8 pt-4">
-            <p class="flex min-w-[14rem] flex-1 items-center gap-1.5 text-[11px] text-dim">
+            <p class="flex min-w-[14rem] flex-1 items-center gap-1.5 text-[0.6875rem] text-dim">
               <app-icon name="lock" [size]="11" class="shrink-0" />
               {{ 'Only names and colors are copied, never your login.' | t }}
             </p>
@@ -99,7 +99,7 @@ import { IconComponent } from '../../shared/components/icon.component';
               <app-icon name="link" [size]="15" /> {{ 'Link my Spinly account' | t }}
             </button>
           </div>
-          <p class="flex items-center gap-1.5 text-[11px] text-dim">
+          <p class="flex items-center gap-1.5 text-[0.6875rem] text-dim">
             <app-icon name="lock" [size]="11" class="shrink-0" />
             {{ 'Only names and colors are copied, never your login.' | t }}
           </p>

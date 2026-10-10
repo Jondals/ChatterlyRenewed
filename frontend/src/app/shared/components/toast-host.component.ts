@@ -24,9 +24,9 @@ import { TranslatePipe } from '../../core/i18n/i18n.service';
         >
           <span class="text-base leading-none">{{ t.icon }}</span>
           <div class="min-w-0 flex-1">
-            <div class="truncate text-[13px] font-semibold">{{ t.title | t }}</div>
+            <div class="truncate text-[0.8125rem] font-semibold">{{ t.title | t }}</div>
             @if (t.body) {
-              <div class="line-clamp-1 text-[11px] text-muted">{{ t.body | t }}</div>
+              <div class="line-clamp-1 text-[0.6875rem] text-muted">{{ t.body | t }}</div>
             }
           </div>
         </div>

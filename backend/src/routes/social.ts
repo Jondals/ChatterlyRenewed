@@ -45,7 +45,7 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
       });
       const rows = db
         .prepare(
-          `SELECT * FROM users WHERE username LIKE ? ESCAPE '\\' AND id <> ? ORDER BY username LIMIT 10`,
+          `SELECT * FROM users WHERE username LIKE ? ESCAPE '\\' AND id <> ? AND searchable = 1 ORDER BY username LIMIT 10`,
         )
         .all(escaped + '%', me(req)) as UserRow[];
       return { users: rows.map(toPublicUser) };
@@ -129,13 +129,18 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
       const self = me(req);
       const { username } = req.body as { username: string };
       const target = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
-        UserRow | undefined;
+        | UserRow
+        | undefined;
       if (!target) return reply.code(404).send({ error: 'user_not_found' });
       if (target.id === self) return reply.code(400).send({ error: 'cannot_friend_self' });
       const [a, b] = orderedPair(self, target.id);
       const existing = db
         .prepare('SELECT * FROM friendships WHERE user_a = ? AND user_b = ?')
         .get(a, b) as FriendRow | undefined;
+      // A person who closed their friend requests cannot be asked (an answer to a request they sent is still fine).
+      if (!existing && target.friend_requests === 'nobody') {
+        return reply.code(403).send({ error: 'requests_closed' });
+      }
       if (existing) {
         if (existing.status === 'accepted')
           return reply.code(409).send({ error: 'already_friends' });
@@ -245,7 +250,8 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
       const [a, b] = orderedPair(self, userId);
       const dmKey = `${a}:${b}`;
       let channel = db.prepare('SELECT id FROM channels WHERE dm_key = ?').get(dmKey) as
-        { id: string } | undefined;
+        | { id: string }
+        | undefined;
       if (!channel) {
         const id = randomUUID();
         db.transaction(function () {

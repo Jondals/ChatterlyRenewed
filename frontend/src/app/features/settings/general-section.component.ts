@@ -68,7 +68,7 @@ const FLAGS: Record<string, string> = {
         >
           <span class="lang-flag text-sky"><app-icon name="globe" [size]="30" /></span>
           <b class="text-sm">{{ 'Automatic' | t }}</b>
-          <span class="text-[11px] text-muted">{{ 'Use the browser language' | t }}</span>
+          <span class="text-[0.6875rem] text-muted">{{ 'Use the browser language' | t }}</span>
         </button>
         @for (l of languages; track l.id) {
           <button
@@ -85,7 +85,9 @@ const FLAGS: Record<string, string> = {
                 [attr.title]="l.flag"
             /></span>
             <b class="text-sm">{{ l.native }}</b>
-            <span class="text-[11px] text-muted">{{ l.name }}</span>
+            @if (languageHint(l); as hint) {
+              <span class="text-[0.6875rem] text-muted">{{ hint }}</span>
+            }
           </button>
         }
       </div>
@@ -216,9 +218,11 @@ const FLAGS: Record<string, string> = {
                   }
                 </span>
                 <span class="mt-1 text-sm font-semibold">{{ ringtoneName(id) | t }}</span>
-                <span class="text-[11px] leading-snug text-muted">{{ ringtoneHint(id) | t }}</span>
+                <span class="text-[0.6875rem] leading-snug text-muted">{{
+                  ringtoneHint(id) | t
+                }}</span>
                 @if (id === 'auto') {
-                  <span class="mt-0.5 text-[11px] font-semibold text-accent"
+                  <span class="mt-0.5 text-[0.6875rem] font-semibold text-accent"
                     >{{ 'Today' | t }}: {{ ringtoneName(today()) | t }}</span
                   >
                 }
@@ -283,6 +287,15 @@ const FLAGS: Record<string, string> = {
   `,
 })
 export class GeneralSectionComponent {
+  /**
+   * The small line under the name of a language: its name in the language of the interface ("Spanish" in English,
+   * "Inglés" in Spanish). It is left out when it would only repeat the name above it ("Español" under "Español").
+   */
+  protected languageHint(language: { name: string; native: string }): string {
+    const translated = this.i18n.t(language.name);
+    return translated === language.native ? '' : translated;
+  }
+
   /** The address of the picture of the flag of a language. */
   protected flagPicture(id: string): string {
     return 'data:image/svg+xml,' + encodeURIComponent(FLAGS[id] ?? '');
@@ -302,6 +315,11 @@ export class GeneralSectionComponent {
 
   protected readonly languages = LANGUAGES;
   protected readonly clickStyles: { id: ClickStyle; label: string }[] = [
+    { id: 'pop', label: 'Pop' },
+    { id: 'tap', label: 'Tap' },
+    { id: 'switch', label: 'Switch' },
+    { id: 'pluck', label: 'Pluck' },
+    { id: 'bubble', label: 'Bubble' },
     { id: 'soft', label: 'Soft' },
     { id: 'drop', label: 'Drop' },
     { id: 'glass', label: 'Glass' },

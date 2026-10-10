@@ -3,7 +3,7 @@
  * Registry of WebSocket connections, presence and call rooms; it delivers the events to whoever should get them.
  */
 import type { Db } from '../db';
-import { presenceAudience } from '../models';
+import { areFriends, presenceAudience } from '../models';
 
 export type Presence = 'online' | 'idle' | 'dnd' | 'invisible';
 export type PublicPresence = 'online' | 'idle' | 'dnd' | 'offline';
@@ -93,7 +93,7 @@ export class Hub {
   }
 
   /**
-   * Closes the connections of a person that belong to revoked sessions: all of them, or all except the session
+   * * Closes the connections of a person that belong to revoked sessions: all of them, or all except the session
    * that is being kept (the one that has just changed the password).
    *
    * @param userId Owner of the sessions.
@@ -151,12 +151,29 @@ export class Hub {
     return status === 'invisible' ? 'offline' : status;
   }
 
-  /** The presence of everybody who may see the person, to send it when they connect. */
+  /**
+   * Whether `viewerId` may see the online status of `targetId`, by the choice of the second one: everybody (the default),
+   * only their friends, or nobody (they look offline to everybody else).
+   */
+  canSeePresence(targetId: string, viewerId: string): boolean {
+    const row = this.db
+      .prepare('SELECT presence_visibility AS choice FROM users WHERE id = ?')
+      .get(targetId) as { choice: string } | undefined;
+    const choice = row?.choice ?? 'everyone';
+    if (choice === 'nobody') return false;
+    if (choice === 'friends') return areFriends(this.db, targetId, viewerId);
+    return true;
+  }
+
+  /** The presence of the people the person may see (each one's own privacy choice applies), to send it when they connect. */
   snapshotFor(userId: string): { userId: string; status: PublicPresence }[] {
     return presenceAudience(this.db, userId)
       .map(
         function (this: Hub, id: string) {
-          return { userId: id, status: this.presenceOf(id) };
+          return {
+            userId: id,
+            status: this.canSeePresence(id, userId) ? this.presenceOf(id) : ('offline' as const),
+          };
         }.bind(this),
       )
       .filter(function (p) {
@@ -164,12 +181,23 @@ export class Hub {
       });
   }
 
-  /** Tells everybody who may see a person that their presence changed. */
+  /**
+   * Tells the people around a person that their presence changed. Each one gets what the person allows them to see:
+   * somebody who is not allowed gets "offline", whatever the real state is (also right after the choice changes).
+   */
+  refreshPresence(userId: string): void {
+    this.broadcastPresence(userId);
+  }
+
+  /** Sends the presence of a person to each one who may know it (and "offline" to those who may not). */
   private broadcastPresence(userId: string): void {
-    const message = { t: 'presence', userId, status: this.presenceOf(userId) };
-    this.sendToMany(presenceAudience(this.db, userId), message);
+    const real = this.presenceOf(userId);
+    for (const id of presenceAudience(this.db, userId)) {
+      const status = this.canSeePresence(userId, id) ? real : 'offline';
+      this.sendTo(id, { t: 'presence', userId, status });
+    }
     // The user's other devices should also reflect the new state.
-    this.sendTo(userId, message);
+    this.sendTo(userId, { t: 'presence', userId, status: real });
   }
 
   // ---- call rooms --------------------------------------------------------------------------

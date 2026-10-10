@@ -40,7 +40,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
             />
           } @else if (error()) {
             <div
-              class="mt-1 flex h-36 w-36 flex-col items-center justify-center gap-1 rounded-ui border border-dashed border-white/15 p-2 text-center text-[11px] text-muted"
+              class="mt-1 flex h-36 w-36 flex-col items-center justify-center gap-1 rounded-ui border border-dashed border-white/15 p-2 text-center text-[0.6875rem] text-muted"
             >
               <app-icon name="alert-triangle" [size]="18" /> {{ 'Sticker not available' | t }}
             </div>
@@ -67,12 +67,12 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
             }
             @if (att().gif) {
               <span
-                class="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white backdrop-blur-sm"
+                class="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[0.625rem] font-bold tracking-wider text-white backdrop-blur-sm"
                 >GIF</span
               >
             }
             <div
-              class="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-3 pb-2 pt-8 text-[11px] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              class="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-3 pb-2 pt-8 text-[0.6875rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             >
               <span class="truncate text-white/85">{{ att().name }}</span>
               @if (url()) {
@@ -124,7 +124,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
                 ></span>
               }
             </div>
-            <div class="mt-0.5 flex justify-between font-mono text-[10px] text-muted">
+            <div class="mt-0.5 flex justify-between font-mono text-[0.625rem] text-muted">
               <span>{{ elapsed() }}</span
               ><span>{{ total() }}</span>
             </div>
@@ -160,7 +160,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
           /></span>
           <div class="min-w-0 flex-1">
             <div class="truncate text-sm font-bold">{{ att().name }}</div>
-            <div class="font-mono text-[11px] text-muted">
+            <div class="font-mono text-[0.6875rem] text-muted">
               {{ size() }} · SHA-256 {{ att().secret.sha256.slice(0, 8) }}…
             </div>
           </div>

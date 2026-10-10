@@ -205,7 +205,7 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
                               <app-icon name="crown" [size]="12" class="text-amber" />
                             }
                           </span>
-                          <span class="block truncate text-[11px]">{{
+                          <span class="block truncate text-[0.6875rem]">{{
                             m.user.statusText || '&#64;' + m.user.username
                           }}</span>
                           @if (m.tags.length) {
@@ -327,6 +327,7 @@ function tagsOf(all: GuildTag[], ids: string[]): GuildTag[] {
                 [user]="u"
                 [status]="social.statusOf(u.id)"
                 [tags]="tagsOfMember(u.id)"
+                [showHandle]="false"
               />
             </app-modal>
           }

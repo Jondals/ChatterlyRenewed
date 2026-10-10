@@ -29,7 +29,7 @@ import { IconComponent } from '../../shared/components/icon.component';
           <span class="chip">.webp</span>
           <span class="chip">.png</span>
         </span>
-        <span class="text-[11px] text-dim">{{
+        <span class="text-[0.6875rem] text-dim">{{
           'Each sticker up to 1 MB; packs (.zip, .wastickers) up to 48 MB' | t
         }}</span>
       </button>

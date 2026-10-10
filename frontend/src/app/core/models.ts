@@ -51,6 +51,18 @@ export interface User {
   avatarColor: string;
   publicKeys: PublicKeys;
   createdAt: number;
+  /** The privacy choices of the person. The server sends them only to the person themselves. */
+  privacy?: PrivacyChoices;
+}
+
+/** Who sees what: the choices that the server itself enforces. */
+export interface PrivacyChoices {
+  /** Who sees that the person is online. */
+  presenceVisibility: 'everyone' | 'friends' | 'nobody';
+  /** Who may send them a friend request. */
+  friendRequests: 'everyone' | 'nobody';
+  /** Whether they appear when somebody searches for people. */
+  searchable: boolean;
 }
 
 export interface Tokens {

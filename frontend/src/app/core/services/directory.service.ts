@@ -188,7 +188,7 @@ export class DirectoryService {
   }
 
   /**
-   * Whether the identity key the server currently publishes for a person is the one pinned the first time they were
+   * ! Whether the identity key the server currently publishes for a person is the one pinned the first time they were
    * seen (or no key was pinned yet). A calling session must not be set up with a key that changed: the server could
    * have swapped it to read the call, and only the person at the other end can say that the change is legitimate.
    * This reads the pins directly instead of the `keyChanges` signal, because that one is filled in a moment later.

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.17.0
+
+- Emoji picker: changing category no longer freezes the page. A category draws its first screenful at once and the rest follows in small steps while the browser is idle (before, 100 to 390 emoji were created in one go). There is a new tab, "All emoji" (🌐), that shows all of them (about 1900), also drawn little by little so it never hurts performance, and it stops when the picker closes.
+- Animations: a monitor now watches the real frames of the page for the first minute and, if the device stutters (more than a third of the frames under 30 per second in two windows of 3 seconds in a row), switches to the light mode by itself: no blur, decorative animations of the avatar rings and of the scenes paused. Changing tab never counts as lag. The rainbow ring no longer animates a colour filter (it repainted on every frame; the colours already cover the whole wheel), and the rings are kept on their own layer.
+- Sign-in and sign-up: the button of the password uses an eye when the password is visible and a crossed-out eye when it is hidden (before, a padlock). The sign-up form has the button in both password fields.
+- Privacy, in the order it is shown (Settings > Privacy & security): **Visibility** (who can see you online: everybody, friends only or nobody; whether you appear in searches), **Contact** (who can send you friend requests) and **Conversations** (read receipts, typing indicator, message marks). The server enforces the first three: somebody who is not allowed sees you offline, whatever your real state is, and a closed request is refused with an error. "Delete account" moved to Settings > My profile; its text now says that a group you own goes to its longest-standing member.
+- About me: the gradient panel uses the same editor as the banner and the name (up to five colors, add and remove them, drag the markers). The gradient editor has **one** bar: it shows the gradient and, with "More options", the same bar gets its markers; the color, the place and the buttons are tidier. The custom color picker opens next to its button (below when it fits, above when it does not), not at the top of the page.
+- Sounds: the interface sounds now use small recorded sounds (Kenney "Interface Sounds", CC0, 5 to 18 KB each, about 250 KB in all, loaded once after the first interaction) with the synthesized ones as the fallback; five new click styles (Pop, which is the new default, Tap, Switch, Pluck and Bubble). The sound of a slider follows the chosen click style (the recorded click gets higher as the slider goes up; the other styles tick in their own way). The animations of arriving (padlock, chimes, fireworks) have recorded layers.
+- Chats: opening another conversation no longer starts at the top and falls to the bottom: it is shown already at its end and fades in.
+- Text size: the whole interface follows it (before only the text that inherited from the page did; everything sized in rem or in pixels stayed). Text sizes written in pixels were converted to rem.
+- Languages: the card of a language shows its own name and, under it, its name in the language of the interface (and nothing when both would be the same, so no more "Español / Spanish").
+- Emoji: "All emoji" does not fill by itself: it draws the first rows and more as you scroll.
+- Search engines and social networks: canonical address, Open Graph and Twitter cards with a share picture, structured data (WebApplication), web manifest and PNG icons, `sitemap.xml` and a `robots.txt` that lets crawlers see the sign-in and registration pages and nothing private. The public address comes from `SITE_URL` when building (default: the public site).
+- README in Spanish (`README.es.md`).
+- Calls: the microphone and the camera buttons have an arrow (like Discord) that opens the list of devices: microphone and speakers on one, cameras on the other. Choosing one switches at once, also in the middle of a call (the camera restarts with the new one; a camera that is gone falls back to the default).
+- Right click on a person in a call: a **volume slider from 0 to 200 %** for that person (double click resets it; it is kept for the next calls with them), the menu opens next to the cursor in the top layer of the browser (it was far from it because a container moved it), can be **dragged** by its title and closes with a press anywhere else, with Escape or with the cross.
+- Groups: the profile card of a member no longer shows "@username".
+- Spinly tournaments look better in the chat and in the call: the round as a chip, side cards with a colored edge, a glassy score, and a bracket with connecting lines, check marks on the winners and faded losers.
+- Comments of the audited code use the tags of the Better Comments extension (red `!` for what must never be relaxed, green `*`, blue `?`); the extension is recommended in `.vscode/extensions.json`.
+
 ## 2.16.0
 
 Security audit release. Nothing changes in how the app is used, except that the "Hide my IP address" switch is gone: whether calls must use the relay is now decided only by the server (`RELAY_ONLY=1`).

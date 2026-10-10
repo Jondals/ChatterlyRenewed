@@ -189,6 +189,10 @@ const MIGRATIONS: [table: string, column: string, definition: string][] = [
   ['guilds', 'icon_image', 'TEXT'],
   ['guild_members', 'sort_order', 'INTEGER'],
   ['guild_tags', 'position', 'INTEGER NOT NULL DEFAULT 0'],
+  // Privacy choices of the person (see routes/auth.ts): who sees them online, who may ask for their friendship, search.
+  ['users', 'presence_visibility', "TEXT NOT NULL DEFAULT 'everyone'"],
+  ['users', 'friend_requests', "TEXT NOT NULL DEFAULT 'everyone'"],
+  ['users', 'searchable', 'INTEGER NOT NULL DEFAULT 1'],
 ];
 
 /**
@@ -242,15 +246,16 @@ function migrate(db: Database.Database): void {
 }
 
 /** Version of the schema, kept in `PRAGMA user_version`: it only grows, and a database from the future is refused. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /**
  * Opens the database (creating the folder and the tables) with foreign keys on and the journal that allows reading while writing.
- * `secure_delete` makes SQLite overwrite deleted content with zeros, so erased messages, accounts and sessions do not
+ * * `secure_delete` makes SQLite overwrite deleted content with zeros, so erased messages, accounts and sessions do not
  * stay readable in the free pages of the file (nor in the write-ahead log once it is checkpointed).
  *
  * Opening is repeatable: the tables are created only when missing, the columns of older versions are added, and a
- * second open of the same file changes nothing. A database written by a newer version of the app is not touched.
+ * second open of the same file changes nothing.
+ * ! A database written by a newer version of the app is not touched.
  */
 export function openDatabase(dbPath: string): Db {
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });

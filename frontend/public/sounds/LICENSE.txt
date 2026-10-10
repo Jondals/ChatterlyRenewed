@@ -1,0 +1,4 @@
+The sound effects in this folder come from "Interface Sounds" by Kenney (https://www.kenney.nl),
+released under Creative Commons Zero (CC0 1.0): https://creativecommons.org/publicdomain/zero/1.0/
+They are free for personal, educational and commercial use; crediting Kenney is appreciated but not required.
+The files are used as they come (Ogg Vorbis, 5-18 KB each) and are only downloaded when the sounds are used.

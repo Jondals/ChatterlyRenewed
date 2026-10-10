@@ -232,6 +232,34 @@ const SPLASH = {
     '<circle cx="26" cy="28" r="2.6" fill="#06070b"/><circle cx="38" cy="28" r="2.6" fill="#06070b"/></svg></div>',
 };
 
+/** The public address of the site (no trailing slash): the canonical link, the social cards, the sitemap and robots.txt use it. */
+const SITE_URL = (process.env.SITE_URL ?? 'https://chatterlyrenewed.duckdns.org').replace(
+  /\/+$/,
+  '',
+);
+
+/** Writes sitemap.xml (the only pages a search engine can see are the sign-in and registration ones) and points robots.txt at it. */
+function writeSearchFiles() {
+  const pages = ['/', '/login', '/register'];
+  const urls = pages
+    .map(function entry(page) {
+      return '  <url><loc>' + SITE_URL + page + '</loc></url>';
+    })
+    .join('\n');
+  fs.writeFileSync(
+    path.join(DIST, 'sitemap.xml'),
+    '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+      urls +
+      '\n</urlset>\n',
+  );
+  for (const name of ['robots.txt', 'llms.txt']) {
+    const file = path.join(DIST, name);
+    if (fs.existsSync(file)) {
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').split('__SITE_URL__').join(SITE_URL));
+    }
+  }
+}
+
 /** Builds the final index.html. */
 async function main() {
   const indexPath = path.join(DIST, 'index.html');
@@ -263,7 +291,9 @@ async function main() {
     /<app-root([^>]*)>\s*<\/app-root>/,
     '<app-root$1 data-snapshot>' + SPLASH.markup + snapshots.replace(/\$/g, '$$$$') + '</app-root>',
   );
+  html = html.split('__SITE_URL__').join(SITE_URL);
   fs.writeFileSync(indexPath, html);
+  writeSearchFiles();
   console.log('Sign-in snapshot and inline stylesheet added to ' + indexPath);
 }
 

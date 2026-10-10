@@ -27,7 +27,7 @@ import { SpinlyWheelCardComponent, type WheelRun } from './spinly-wheel-card.com
         class="anim-fade-up mt-1 w-[min(24rem,calc(100vw-7rem))] overflow-hidden rounded-ui-lg border border-white/10 bg-black/25"
       >
         <div
-          class="sp-head flex items-center gap-2 border-b border-white/8 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-accent"
+          class="sp-head flex items-center gap-2 border-b border-white/8 px-3 py-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-accent"
         >
           <app-icon [name]="activity.kind === 'wheel' ? 'wheel' : 'trophy'" [size]="14" />
           {{ (activity.kind === 'wheel' ? 'Spinly wheel' : 'Spinly tournament') | t }}
@@ -52,11 +52,11 @@ import { SpinlyWheelCardComponent, type WheelRun } from './spinly-wheel-card.com
             />
           }
           @if (runner(); as name) {
-            <div class="mt-2 text-center text-[11px] text-muted">
+            <div class="mt-2 text-center text-[0.6875rem] text-muted">
               {{ 'Spun by {name}' | t: { name } }}
             </div>
           } @else if (!canRun() && !message().pending) {
-            <div class="mt-2 text-center text-[11px] text-muted">
+            <div class="mt-2 text-center text-[0.6875rem] text-muted">
               {{ 'Starting…' | t }}
             </div>
           }

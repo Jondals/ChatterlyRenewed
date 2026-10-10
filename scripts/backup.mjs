@@ -7,12 +7,12 @@
  *   BACKUP_PASSPHRASE=... node scripts/backup.mjs restore <file.db.enc> <target.db>   decrypts a backup
  *   (in Docker: docker compose exec app node scripts/backup.mjs backup /data/backups, then copy it off the machine)
  *
- * Why it exists: copying the .db file of a running SQLite database (with its -wal file) can give a broken copy. SQLite's own
+ * ? Why it exists: copying the .db file of a running SQLite database (with its -wal file) can give a broken copy. SQLite's own
  * online backup API gives a consistent snapshot without stopping the app. The database holds only ciphertext of messages,
  * but also the hashes of the passwords and the public keys of everybody, so a backup is sensitive: it is written with
  * permissions 600 and can be encrypted (AES-256-GCM, key from the passphrase with scrypt) before it leaves the machine.
  *
- * What it does NOT save: the uploaded files (copy the uploads folder with the same care) and secrets.json (the server
+ * ! What it does NOT save: the uploaded files (copy the uploads folder with the same care) and secrets.json (the server
  * secrets; without SERVER_SECRET the password hashes no longer verify). Keep those in a separate, encrypted place. Never
  * restore over a running app, and never delete the original database to "test" a restore: restore to another path first.
  */

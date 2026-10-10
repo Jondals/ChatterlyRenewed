@@ -264,7 +264,7 @@ export class CallService {
   );
 
   /**
-   * How peer connections are configured for the current call. Null until `loadIce` succeeds: there is deliberately
+   * ! How peer connections are configured for the current call. Null until `loadIce` succeeds: there is deliberately
    * no default (a built-in public STUN server would reveal the addresses of everybody in the call).
    */
   private peerConfiguration: RTCConfiguration | null = null;
@@ -299,7 +299,7 @@ export class CallService {
         })
       )
         return 'failing';
-      // 'active' needs proof, not only keys: at least one frame from every person authenticated under their key.
+      // * 'active' needs proof, not only keys: at least one frame from every person authenticated under their key.
       return peers.every(function (p) {
         return p.encrypted && p.mediaStats.decrypted > 0;
       })
@@ -315,6 +315,8 @@ export class CallService {
         const spatial = this.settings.spatialAudio();
         const angles = this.angles();
         const deaf = this.deafened();
+        // The volumes of the people are read here so the chains follow them when somebody moves a slider.
+        this.settings.peerVolumes();
         for (const link of this.links.values())
           this.configureChain(link, spatial, angles[link.userId] ?? 0, deaf);
       }.bind(this),
@@ -811,9 +813,7 @@ export class CallService {
       this.cameraOn.set(false);
     } else {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-        });
+        const stream = await this.openCamera();
         this.localCamera.set(stream);
         this.cameraOn.set(true);
         for (const link of this.links.values()) this.addVideo(link, stream, 'camera');
@@ -823,6 +823,34 @@ export class CallService {
       }
     }
     this.socket.send({ t: 'call.update', video: this.cameraOn() });
+  }
+
+  /**
+   * Opens the camera the person chose. If that device is gone (unplugged, another computer) the default one is used
+   * instead of failing, and the choice goes back to "default".
+   */
+  private async openCamera(): Promise<MediaStream> {
+    const quality = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
+    const id = this.settings.cameraDeviceId();
+    if (id !== 'default') {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { ...quality, deviceId: { exact: id } },
+        });
+      } catch {
+        this.settings.cameraDeviceId.set('default');
+      }
+    }
+    return navigator.mediaDevices.getUserMedia({ video: quality });
+  }
+
+  /** The person chose another camera: if the camera is on it restarts with the new one (the others see it change). */
+  async changeCamera(): Promise<void> {
+    if (!this.cameraOn()) {
+      return;
+    }
+    await this.toggleCamera();
+    await this.toggleCamera();
   }
 
   /** Starts or stops sharing the screen. */
@@ -1062,7 +1090,7 @@ export class CallService {
 
   /**
    * Asks the server how to connect and builds the configuration of the peer connections of this call.
-   * Fail closed: if the configuration cannot be loaded, or a relay is required and there is none with valid
+   * ! FAIL CLOSED: if the configuration cannot be loaded, or a relay is required and there is none with valid
    * credentials, this throws and the call does not start. It never falls back to a public STUN server or to a direct
    * connection, because that would silently show the address of every person in the call.
    */
@@ -1111,7 +1139,7 @@ export class CallService {
   }
 
   /**
-   * Checks, from the statistics of a connection, that it really goes through the relay when one is required. A direct
+   * ! Checks, from the statistics of a connection, that it really goes through the relay when one is required. A direct
    * path in a private call means the address was exposed: the connection is closed instead of being kept.
    */
   private enforceRelay(link: Link, report: RTCStatsReport): void {
@@ -1330,7 +1358,7 @@ export class CallService {
     const existing = this.links.get(userId);
     if (existing) return existing;
     const me = this.auth.user()!.id;
-    // No configuration means `loadIce` did not succeed: a connection is never opened with default (open) settings.
+    // ! No configuration means `loadIce` did not succeed: a connection is never opened with default (open) settings.
     if (!this.peerConfiguration) throw new RelayUnavailableError('The call is not configured.');
     const pc = new RTCPeerConnection(this.peerConfiguration);
     const link: Link = {
@@ -1390,7 +1418,7 @@ export class CallService {
     }.bind(this);
     pc.onicecandidate = function (this: CallService, { candidate }: RTCPeerConnectionIceEvent) {
       if (!candidate) return;
-      // Defence in depth: with a relay-only policy the browser gathers nothing else, but if it ever did, an address
+      // ! Defence in depth: with a relay-only policy the browser gathers nothing else, but if it ever did, an address
       // that is not relayed must not leave this device.
       if (link.relayRequired && !isRelayCandidate(candidate.candidate)) return;
       this.sendSignal(link, { candidate: candidate.toJSON() });
@@ -1617,7 +1645,7 @@ export class CallService {
   private readonly untrustedWarned = new Set<string>();
 
   /**
-   * Refuses to set up a call with a person whose identity key is not the one that was pinned. The connection with
+   * ! Refuses to set up a call with a person whose identity key is not the one that was pinned. The connection with
    * them is closed and the person is told once. They can review the new key in the chat with that contact; until
    * they accept it, no call is set up with that key.
    */
@@ -1832,7 +1860,27 @@ export class CallService {
       chain.gain.connect(ctx.destination);
     }
     chain.spatial = spatial;
-    chain.gain.gain.value = deafened ? 0 : 1;
+    chain.gain.gain.value = deafened ? 0 : this.volumeOf(link.userId);
+  }
+
+  /** The volume of a person as the gain of the audio chain (1 is the normal level, 2 is double). */
+  private volumeOf(userId: string): number {
+    const percent = this.settings.peerVolumes()[userId] ?? 100;
+    return Math.max(0, Math.min(200, percent)) / 100;
+  }
+
+  /**
+   * Sets how loud a person is for this device, from 0 to 200 percent. It applies right away to the call that is going
+   * on (even if they are speaking) and is remembered for the next calls with them.
+   */
+  setPeerVolume(userId: string, percent: number): void {
+    const value = Math.max(0, Math.min(200, Math.round(percent)));
+    const volumes = { ...this.settings.peerVolumes() };
+    if (value === 100) delete volumes[userId];
+    else volumes[userId] = value;
+    this.settings.peerVolumes.set(volumes);
+    const link = this.links.get(userId);
+    if (link?.audioIn && !this.deafened()) link.audioIn.gain.gain.value = value / 100;
   }
 
   /** Disconnects and removes the audio chain of a person. */

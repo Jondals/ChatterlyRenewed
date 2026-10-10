@@ -48,7 +48,7 @@ import { SpinlyComposerComponent } from './spinly-composer.component';
           <header class="flex flex-wrap items-center gap-3 border-b border-white/8 px-4 py-3">
             <app-spinly-logo [size]="36" />
             <div class="min-w-0 leading-tight">
-              <h2 class="text-[15px] font-bold">Spinly</h2>
+              <h2 class="text-[0.9375rem] font-bold">Spinly</h2>
               <p class="truncate text-xs text-muted">{{ subtitle() | t }}</p>
             </div>
             <span class="flex-1"></span>

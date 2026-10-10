@@ -1,9 +1,9 @@
 # /etc/caddy/Caddyfile: HTTPS certificates are requested and renewed by Caddy by itself.
-# Replace chatterly.example.com with your domain (a free one from duckdns.org works).
+# TODO: replace chatterly.example.com with your domain (a free one from duckdns.org works).
 chatterly.example.com {
 	encode zstd gzip
 
-	# The browser is told to use HTTPS only, not to guess types and not to send where it came from.
+	# * Defensive headers: HTTPS only (HSTS), no type guessing, no referrer, no framing, camera/microphone only here.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
@@ -13,12 +13,13 @@ chatterly.example.com {
 		Permissions-Policy "camera=(self), microphone=(self), geolocation=(), payment=()"
 	}
 
-	# Nothing bigger than the largest upload (12 MB of encrypted file) is passed on to the app.
+	# ? Nothing bigger than the largest upload (12 MB of encrypted file) is passed on to the app.
 	request_body {
 		max_size 14MB
 	}
 
-	# The API and the WebSocket go to the backend, everything else is the web app.
+	# ! The API AND the WebSocket must go to the backend (3000), or sign-in fails with "JSON.parse: unexpected character".
+	#   Everything else is the web app.
 	@backend path /api/* /ws
 	reverse_proxy @backend 127.0.0.1:3000
 	reverse_proxy 127.0.0.1:4200

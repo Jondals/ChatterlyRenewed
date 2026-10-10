@@ -103,7 +103,7 @@ function toWav(buffer: AudioBuffer, from: number, to: number): Blob {
         (pointerup)="endMove($event)"
         (pointercancel)="endMove($event)"
       ></canvas>
-      <div class="mt-1 flex justify-between text-[11px] tabular-nums text-dim">
+      <div class="mt-1 flex justify-between text-[0.6875rem] tabular-nums text-dim">
         <span>{{ start().toFixed(2) }} s</span>
         <span class="text-accent">{{
           'Kept: {n} s' | t: { n: (end() - start()).toFixed(2) }
@@ -111,7 +111,7 @@ function toWav(buffer: AudioBuffer, from: number, to: number): Blob {
         <span>{{ end().toFixed(2) }} s</span>
       </div>
       @if (tooLong()) {
-        <p class="mt-1 text-[11px] text-amber-300">
+        <p class="mt-1 text-[0.6875rem] text-amber-300">
           {{
             'Only up to {n} seconds can be kept: choose the part you want.' | t: { n: maxSeconds }
           }}
