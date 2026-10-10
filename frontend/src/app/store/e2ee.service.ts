@@ -52,6 +52,10 @@ export interface AttachmentPayload {
   gif?: boolean;
   /** The sender offers this audio or video for the soundboard: the others get a button to add it to theirs. */
   soundboard?: boolean;
+  /** The name of the pack of sounds this one belongs to (the people who receive it can add the whole pack). */
+  pack?: string;
+  /** The emoji of a sound that is shared for the soundboard. */
+  emoji?: string;
 }
 
 export interface SealedForServer extends Sealed {

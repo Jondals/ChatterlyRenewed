@@ -8,8 +8,10 @@ import {
   EnvironmentInjector,
   HostListener,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
@@ -21,6 +23,7 @@ import { DirectoryService } from '../../core/services/directory.service';
 import { FontService } from '../../core/services/font.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ImageService } from '../../core/services/image.service';
+import { ProfileDraftStore, type ProfileDraft } from '../../core/services/profile-draft.store';
 import { ToastService } from '../../core/services/toast.service';
 import { AvatarComponent } from '../../shared/components/avatar.component';
 import { BannerComponent } from '../../shared/components/banner.component';
@@ -47,17 +50,7 @@ function themeColor(value: string, fallback: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(color) ? color : fallback;
 }
 
-interface Draft {
-  displayName: string;
-  pronouns: string;
-  statusText: string;
-  bio: string;
-  nameFont: NameFont;
-  profileColor: string;
-  bannerColor: string;
-  aura: AuraId;
-  auraColor: string;
-}
+type Draft = ProfileDraft;
 
 const FONTS: { id: NameFont; label: string }[] = [
   { id: 'default', label: 'Default' },
@@ -664,6 +657,7 @@ export class ProfileSectionComponent {
   private readonly i18n = inject(I18nService);
   protected readonly settings = inject(SettingsService);
   private readonly fontFiles = inject(FontService);
+  private readonly kept = inject(ProfileDraftStore);
 
   protected readonly fonts = FONTS;
   protected readonly auras = AURAS;
@@ -754,6 +748,24 @@ export class ProfileSectionComponent {
 
   constructor() {
     this.images.ensure(this.auth.user()?.bannerImage);
+    // What was written and not saved before the settings were closed is still here.
+    const waiting = this.kept.pending();
+    if (waiting && waiting.userId === this.auth.user()?.id) {
+      this.draft.set(waiting.draft);
+    }
+    // Every change is kept outside of the page, until it is saved or thrown away.
+    effect(
+      function keep(this: ProfileSectionComponent) {
+        const draft = this.draft();
+        const dirty = this.dirty();
+        const userId = this.auth.user()?.id;
+        untracked(
+          function store(this: ProfileSectionComponent) {
+            this.kept.pending.set(dirty && userId ? { userId, draft } : null);
+          }.bind(this),
+        );
+      }.bind(this),
+    );
   }
 
   /** The draft of the profile (what the forms edit) from the saved user. */

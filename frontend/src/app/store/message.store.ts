@@ -75,6 +75,8 @@ export interface OutgoingFile {
   gif?: boolean;
   /** Offered for the soundboard of the others (audio and video only). */
   soundboard?: boolean;
+  pack?: string;
+  emoji?: string;
 }
 
 export interface ChannelState {
@@ -339,7 +341,13 @@ export class MessageStore {
       text: payload?.text ?? '',
       replyTo: payload?.replyTo,
       attachments: (payload?.attachments ?? []).map(function (a) {
-        return { ...a, kind: attachmentKind(a.mime) };
+        // What comes from another person is cut to what is shown: a pack name and an emoji, nothing longer.
+        return {
+          ...a,
+          kind: attachmentKind(a.mime),
+          pack: typeof a.pack === 'string' ? a.pack.slice(0, 20) : undefined,
+          emoji: typeof a.emoji === 'string' ? a.emoji.slice(0, 8) : undefined,
+        };
       }),
       spinly: payload?.spinly ? (sanitizeResult(payload.spinly) ?? undefined) : undefined,
       activity: payload?.spinlyLive
@@ -421,6 +429,8 @@ export class MessageStore {
           sticker: file.sticker,
           gif: file.gif,
           soundboard: file.soundboard || undefined,
+          pack: file.pack || undefined,
+          emoji: file.emoji || undefined,
         });
       }
       const payload: MessagePayload = {

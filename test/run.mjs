@@ -923,10 +923,10 @@ async function main() {
   await b.waitForSelector('text=Incoming encrypted call', { timeout: 10000 });
   await b.click('button[aria-label=Accept]');
   await b.waitForURL('**/voice');
-  await a.waitForSelector('button.chip:has-text("End-to-end encrypted")', {
+  await a.waitForSelector('button.chip[title="End-to-end encrypted"]', {
     timeout: 40000,
   });
-  await b.waitForSelector('button.chip:has-text("End-to-end encrypted")', {
+  await b.waitForSelector('button.chip[title="End-to-end encrypted"]', {
     timeout: 40000,
   });
   await a.waitForTimeout(4500);
@@ -987,15 +987,15 @@ async function main() {
     (await a.locator('app-person-menu').count()) === 0,
     'a press anywhere else closes the menu of a person',
   );
-  await a.click('button.chip:has-text("End-to-end encrypted")');
-  await b.click('button.chip:has-text("End-to-end encrypted")');
+  await a.click('button.chip[title="End-to-end encrypted"]');
+  await b.click('button.chip[title="End-to-end encrypted"]');
   await a.waitForSelector('text=Verify this call');
   const codeOf = async function (p) {
     return (await p.locator('[role=dialog] .font-mono.tracking-widest').first().innerText()).trim();
   };
   const [codeA, codeB] = [await codeOf(a), await codeOf(b)];
   check(!!codeA && codeA === codeB, `identical security codes on both sides (${codeA})`);
-  const stats = await a.locator('text=frames encrypted').first().innerText();
+  const stats = await a.locator('text=Sent, encrypted').first().innerText();
   const sent = Number(/encrypted: (\d+)/.exec(stats)?.[1] ?? 0);
   const received = Number(/decrypted: (\d+)/.exec(stats)?.[1] ?? 0);
   check(
@@ -1056,6 +1056,33 @@ async function main() {
     'a video replaces the music instead of playing on top of it',
   );
   await shot(b, '11c-ver-juntos');
+  // The bar of the call controls the video (needs the network: the player reports its length only when it plays).
+  await b.waitForSelector('.timeline input[type=range]:not([disabled])', { timeout: 25000 });
+  check(true, 'the timeline of the video is enabled once the player reports its length');
+  const videoFrom = Number(await b.locator('.timeline input[type=range]').inputValue());
+  await b.locator('.timeline input[type=range]').fill('120');
+  await b.waitForFunction(
+    function (from) {
+      return Number(document.querySelector('.timeline input[type=range]').value) >= from;
+    },
+    100,
+    { timeout: 8000 },
+  );
+  // The player itself must have jumped (the bar follows what the player says: if the jump had not happened it would go back).
+  await b.waitForTimeout(2500);
+  check(
+    videoFrom < 100 && Number(await b.locator('.timeline input[type=range]').inputValue()) >= 118,
+    'the timeline moves the video',
+  );
+  await a.waitForFunction(
+    function () {
+      const bar = document.querySelector('.timeline input[type=range]');
+      return !!bar && Number(bar.value) >= 110;
+    },
+    null,
+    { timeout: 12000 },
+  );
+  check(true, 'and everybody else is taken to the same second');
   // Closing is personal; stopping from the Activities menu ends it for everybody.
   await b.click('button[aria-label="Close for me"]');
   await b.waitForSelector('text=Watching together', {
@@ -1280,6 +1307,17 @@ async function main() {
     }),
     'when the settings open the screen underneath is still there',
   );
+  // What is written in the profile and not saved is kept when the settings are closed and opened again.
+  await a.fill('input[maxlength="80"]', 'unsaved status');
+  await a.keyboard.press('Escape');
+  await a.waitForSelector('.settings-overlay', { state: 'detached' });
+  await a.click('[data-tip="Settings"]');
+  await a.waitForSelector('.settings-overlay');
+  check(
+    (await a.inputValue('input[maxlength="80"]')) === 'unsaved status',
+    'an unsaved status is still there after closing and opening the settings',
+  );
+  await a.fill('input[maxlength="80"]', '');
   const avatarChooser = a.waitForEvent('filechooser');
   await a.click('[aria-label="Change picture"]');
   (await avatarChooser).setFiles(pngPath);
@@ -1583,6 +1621,28 @@ async function main() {
   await a.click('button:has-text("Open soundboard")');
   await a.waitForSelector('.sb-pill:has-text("All")');
   await shot(a, '06-soundboard');
+  // The first press of an effect must sound (the effects are loaded before the person asks for them).
+  const antesSfx = await a.evaluate(function () {
+    return window.__snd;
+  });
+  await a.locator('.sb-grid .sb-tile:not(.sb-add)').first().click();
+  await a
+    .waitForFunction(
+      function (n) {
+        return window.__snd > n;
+      },
+      antesSfx,
+      { timeout: 1500 },
+    )
+    .catch(function () {
+      return undefined;
+    });
+  check(
+    (await a.evaluate(function () {
+      return window.__snd;
+    })) > antesSfx,
+    'the first press of an effect of the soundboard sounds',
+  );
   const soundChooser = a.waitForEvent('filechooser');
   await a.click('button:has-text("Add a sound")');
   (await soundChooser).setFiles(wavPath);

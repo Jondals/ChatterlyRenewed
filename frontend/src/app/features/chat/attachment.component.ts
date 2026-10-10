@@ -5,7 +5,6 @@
 import {
   Component,
   ElementRef,
-  EnvironmentInjector,
   OnDestroy,
   computed,
   effect,
@@ -15,10 +14,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { I18nService, TranslatePipe } from '../../core/i18n/i18n.service';
-import { SoundboardStore } from '../../core/services/soundboard.store';
-import { SoundService } from '../../core/services/sound.service';
-import { ToastService } from '../../core/services/toast.service';
+import { TranslatePipe } from '../../core/i18n/i18n.service';
+import { SoundImportService } from './sound-import.service';
 import { formatBytes, formatDuration } from '../../shared/pipes/timestamp.pipe';
 import { IconComponent } from '../../shared/components/icon.component';
 import { MessageStore, type ViewAttachment } from '../../store/message.store';
@@ -133,7 +130,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
               ><span>{{ total() }}</span>
             </div>
           </div>
-          @if (att().soundboard) {
+          @if (att().kind === 'audio' || att().kind === 'video') {
             <button
               class="btn btn-icon btn-sm"
               type="button"
@@ -161,7 +158,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
         <div class="mt-2 max-w-sm overflow-hidden rounded-ui border border-white/8 bg-black">
           @if (url(); as src) {
             <video [src]="src" controls class="max-h-80 w-full"></video>
-            @if (att().soundboard) {
+            @if (att().kind === 'audio' || att().kind === 'video') {
               <button
                 class="btn btn-sm m-2 gap-1.5"
                 type="button"
@@ -216,11 +213,7 @@ import { MessageStore, type ViewAttachment } from '../../store/message.store';
 export class AttachmentComponent implements OnDestroy {
   readonly att = input.required<ViewAttachment>();
   private readonly store = inject(MessageStore);
-  private readonly board = inject(SoundboardStore);
-  private readonly sound = inject(SoundService);
-  private readonly toast = inject(ToastService);
-  private readonly i18n = inject(I18nService);
-  private readonly injector = inject(EnvironmentInjector);
+  private readonly imports = inject(SoundImportService);
   private readonly audioEl = viewChild<ElementRef<HTMLAudioElement>>('audio');
 
   protected readonly url = signal<string | null>(null);
@@ -310,45 +303,11 @@ export class AttachmentComponent implements OnDestroy {
     if (el && isFinite(el.duration)) this.duration.set(el.duration);
   }
 
-  /**
-   * Puts the sound of this attachment in the soundboard of the person. A short sound is added at once (it can be edited
-   * afterwards from the soundboard); a longer one, or one whose sound cannot be read here, opens the editor to cut it.
-   */
+  /** Puts the sound of this attachment in the soundboard: the editor opens to cut it, name it and give it an emoji. */
   protected async addToSoundboard(): Promise<void> {
     this.adding.set(true);
     try {
-      const att = this.att();
-      await this.board.load();
-      const blob = await (await fetch(await this.store.attachmentUrl(att))).blob();
-      const editor = await import('../../shared/components/sound-edit.component');
-      const name = att.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Sound';
-      let seconds = Infinity;
-      try {
-        seconds = (await this.sound.context.decodeAudioData(await blob.arrayBuffer())).duration;
-      } catch {
-        /* a video whose sound this browser cannot read alone: the editor decides */
-      }
-      if (seconds <= editor.MAX_CLIP_SECONDS) {
-        await this.board.save({
-          id: crypto.randomUUID(),
-          name,
-          blob,
-          duration: seconds,
-          createdAt: Date.now(),
-        });
-        this.toast.success(this.i18n.t('Added to your soundboard'));
-        return;
-      }
-      const result = await editor.editSound(this.injector, blob, null, name);
-      if (result) {
-        await this.board.save({ id: crypto.randomUUID(), createdAt: Date.now(), ...result });
-        this.toast.success(this.i18n.t('Added to your soundboard'));
-      }
-    } catch (e) {
-      this.toast.error(
-        this.i18n.t('Could not add the sound'),
-        this.i18n.t(e instanceof Error ? e.message : 'Unknown error'),
-      );
+      await this.imports.addOne(this.att());
     } finally {
       this.adding.set(false);
     }

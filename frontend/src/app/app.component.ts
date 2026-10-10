@@ -8,6 +8,7 @@ import { RouterOutlet } from '@angular/router';
 import { I18nService } from './core/i18n/i18n.service';
 import { ArrivalService } from './core/services/arrival.service';
 import { SettingsService } from './core/services/settings.service';
+import { SpinlyService } from './core/services/spinly.service';
 import { SoundService } from './core/services/sound.service';
 import { ArrivalComponent } from './shared/components/arrival.component';
 import { MeshBackgroundComponent } from './shared/components/mesh-background.component';
@@ -78,6 +79,9 @@ export class AppComponent {
   protected readonly arrival = inject(ArrivalService);
   private readonly settings = inject(SettingsService);
   private readonly sound = inject(SoundService);
+  // ! Made at the start on purpose: it is the one that listens to the wheel or tournament of the call. Made only when a screen
+  // asked for it, a call joined from any other page lost what a friend had already started (the message arrived to nobody).
+  private readonly spinly = inject(SpinlyService);
   private readonly i18n = inject(I18nService);
   private readonly injector = inject(Injector);
   private readonly wheelHandler = this.onWheel.bind(this);

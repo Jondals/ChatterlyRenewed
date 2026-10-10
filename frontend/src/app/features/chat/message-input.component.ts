@@ -8,6 +8,7 @@ import { GradientControlsComponent } from '../../shared/components/gradient-cont
 import { sortedStops, type GradientParts } from '../../shared/util/gradient';
 import {
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   OnDestroy,
@@ -656,6 +657,14 @@ export class MessageInputComponent implements OnDestroy {
   private recStart = 0;
 
   constructor() {
+    // The soundboard sends sounds to the chat that is open.
+    effect(
+      function announce(this: MessageInputComponent) {
+        const id = this.channelId();
+        untracked(this.ui.chatChannelId.set.bind(this.ui.chatChannelId, id));
+      }.bind(this),
+    );
+    inject(DestroyRef).onDestroy(this.ui.chatChannelId.set.bind(this.ui.chatChannelId, null));
     // Switching conversations keeps the draft per channel.
     effect(
       function (this: MessageInputComponent) {

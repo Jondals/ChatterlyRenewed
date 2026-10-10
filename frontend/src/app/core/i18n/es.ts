@@ -1411,4 +1411,13 @@ export const ES: Record<string, string> = {
   'The animation that plays once each time you open the browser.':
     'La animación que sale una vez cada vez que abres el navegador.',
   'Watch it again': 'Verla otra vez',
+  'Back 10 seconds': 'Retroceder 10 segundos',
+  'Forward 10 seconds': 'Adelantar 10 segundos',
+  'Sent, encrypted': 'Enviados, cifrados',
+  'Received, decrypted': 'Recibidos, descifrados',
+  'Add the pack to my soundboard': 'Añadir el pack a mi tablero de sonidos',
+  '{n} sounds added to your soundboard': '{n} sonidos añadidos a tu tablero de sonidos',
+  'Share as a pack': 'Compartir como pack',
+  'Open a chat to send it there.': 'Abre un chat para enviarlo ahí.',
+  'Sent to the chat': 'Enviado al chat',
 };

@@ -337,7 +337,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
             @if (social.incoming().length) {
               <span class="badge badge-red">{{ social.incoming().length }}</span>
             } @else if (social.onlineFriends().length) {
-              <span class="text-[0.6875rem] text-muted"
+              <span class="text-xs text-muted"
                 >{{ social.onlineFriends().length }} {{ 'online' | t }}</span
               >
             }
@@ -358,7 +358,7 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                 (click)="ui.sidebarOpen.set(false)"
                 (contextmenu)="openFriendMenu($event, dm.user)"
               >
-                <app-avatar [user]="dm.user" [size]="30" [status]="social.statusOf(dm.user.id)" />
+                <app-avatar [user]="dm.user" [size]="34" [status]="social.statusOf(dm.user.id)" />
                 <span class="min-w-0 flex-1 leading-tight">
                   <span
                     class="block truncate"
@@ -369,8 +369,8 @@ import { fontClassOf } from '../shared/util/user-font.directive';
                     >{{ dm.user.displayName }}</span
                   >
                   @if (call.rooms()[dm.channelId]?.length) {
-                    <span class="flex items-center gap-1 text-[0.625rem] text-accent"
-                      ><app-icon name="phone" [size]="10" /> {{ 'In a call' | t }}</span
+                    <span class="flex items-center gap-1.5 text-xs font-medium text-accent"
+                      ><app-icon name="phone" [size]="13" /> {{ 'In a call' | t }}</span
                     >
                   }
                 </span>

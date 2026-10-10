@@ -15,6 +15,8 @@ import {
   ESSENTIAL_SOUNDS,
   loadSounds,
   preloadSounds,
+  decodeClip,
+  soundReady,
   playSound,
   soundGap,
   soundLength,
@@ -138,9 +140,18 @@ export class SoundService {
 
   /** Starts loading the sounds of the interface when the browser is idle (no press of the person is needed for it). */
   preload(): void {
-    if (this.audible && this.settings.sounds()) {
+    if (!this.audible) {
+      return;
+    }
+    if (this.settings.sounds()) {
       void preloadSounds(ESSENTIAL_SOUNDS);
     }
+    // The six effects of the soundboard always: they are small, and the first press of one must sound.
+    void preloadSounds(
+      SOUNDBOARD.map(function file(effect) {
+        return effect.sound;
+      }),
+    );
   }
 
   /** Shared audio context (also used by calls for spatial audio and level meters). */
@@ -228,9 +239,29 @@ export class SoundService {
     if (!this.audible || !effect) {
       return;
     }
-    playSound(this.context, this.output, effect.sound, {
-      gain: this.settings.callEffectsVolume() / 100,
-    });
+    const options = { gain: this.settings.callEffectsVolume() / 100 };
+    // ? An effect that is not loaded yet is loaded and then played (before, that press was silent and the next one sounded).
+    if (!soundReady(effect.sound)) {
+      const context = this.context;
+      const output = this.output;
+      void loadSounds(context, [effect.sound]).then(function later() {
+        playSound(context, output, effect.sound, options);
+      });
+      return;
+    }
+    playSound(this.context, this.output, effect.sound, options);
+  }
+
+  /** Decodes a clip of the soundboard in advance, so that its first press already sounds. */
+  async warmClip(key: string, blob: Blob): Promise<void> {
+    if (!this.audible || this.clips.has(key)) {
+      return;
+    }
+    try {
+      this.clips.set(key, await decodeClip(await blob.arrayBuffer()));
+    } catch {
+      /* it will be decoded (or refused) when it is played */
+    }
   }
 
   /** Whether a name is one of the built-in effects (the signals of a call carry any text; only these play). */

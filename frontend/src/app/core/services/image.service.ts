@@ -159,13 +159,13 @@ export class ImageService {
 
   /**
    * ? The picture could not be opened (usually its owner has not sealed the key for this person yet because they have
-   * not been online since): it is asked for again after a while, up to ten times.
+   * not been online since): it is asked for again after a while, up to forty times (every few minutes at the end).
    */
   private retryLater(id: string, sealed: boolean): void {
     const tries = (this.retries.get(id) ?? 0) + 1;
     this.retries.set(id, tries);
-    if (tries <= 10) {
-      setTimeout(this.ensure.bind(this, id, sealed), 30_000 * Math.min(tries, 4));
+    if (tries <= 40) {
+      setTimeout(this.ensure.bind(this, id, sealed), 15_000 * Math.min(tries, 12));
     }
   }
 

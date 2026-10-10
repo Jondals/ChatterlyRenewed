@@ -170,6 +170,15 @@ export function soundGap(id: SoundId): number {
   return def.gap ?? 0;
 }
 
+/** The context that only decodes sounds the person made (see `decodeClip`). */
+let clipDecoder: OfflineAudioContext | undefined;
+
+/** Decodes a file of the person without a press being needed: a clip that is decoded in advance plays at the first press. */
+export async function decodeClip(data: ArrayBuffer): Promise<AudioBuffer> {
+  clipDecoder ??= new OfflineAudioContext(1, 1, 44100);
+  return clipDecoder.decodeAudioData(data);
+}
+
 /** What a sound plays with. */
 export interface PlayOptions {
   /** Playback speed: 1 is the recording, above 1 is higher and shorter. */

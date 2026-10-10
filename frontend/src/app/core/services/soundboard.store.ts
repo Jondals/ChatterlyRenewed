@@ -67,6 +67,7 @@ export class SoundboardStore {
     try {
       const clips = await runInStore<CustomSound[]>(LOCATION, 'readonly', readAll);
       this.clips.set(unpackBlobs(clips).sort(byCreation));
+      this.warm(this.clips());
     } catch {
       this.clips.set([]);
     }
@@ -76,6 +77,14 @@ export class SoundboardStore {
   async save(clip: CustomSound): Promise<void> {
     await runInStore(LOCATION, 'readwrite', writeClip.bind(null, await packBlobs(clip)));
     this.clips.set([...this.clips(), clip]);
+    this.warm([clip]);
+  }
+
+  /** Decodes the clips in the background so that the first press of each one already sounds. */
+  private warm(clips: CustomSound[]): void {
+    for (const clip of clips) {
+      void this.sound.warmClip(clip.id, clip.blob);
+    }
   }
 
   /** Puts a sound in a category (or takes it out of one). */

@@ -28,7 +28,8 @@ import { RichTextComponent } from '../../shared/components/rich-text.component';
 import { TimestampPipe } from '../../shared/pipes/timestamp.pipe';
 import { QUICK_REACTIONS } from '../../shared/util/emoji';
 import { parseRichText, plainText } from '../../shared/util/rich-text';
-import { MessageStore, type ViewMessage } from '../../store/message.store';
+import { MessageStore, type ViewAttachment, type ViewMessage } from '../../store/message.store';
+import { SoundImportService } from './sound-import.service';
 import { AttachmentComponent } from './attachment.component';
 import { LinkCardComponent } from './link-card.component';
 import { StatusMarkComponent } from './status-mark.component';
@@ -125,7 +126,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
           </div>
         } @else if ((m.text || m.undecryptable) && textShown()) {
           <div
-            class="anim-pop selectable px-3.5 pb-2.5 pt-2 text-[0.95em] leading-relaxed"
+            class="anim-pop selectable max-w-full px-3.5 pb-2.5 pt-2 text-[0.95em] leading-relaxed"
             [class.bubble-out]="bubbles() && mine()"
             [class.bubble-in]="bubbles() && !mine()"
             [class.bubble-emoji]="bigEmoji()"
@@ -141,7 +142,7 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
                 {{ 'Unable to decrypt — you may not have the key for this message.' | t }}</span
               >
             } @else {
-              <span class="whitespace-pre-wrap break-words"
+              <span class="whitespace-pre-wrap [overflow-wrap:anywhere]"
                 ><app-rich-text [segments]="segments()" (copy)="copy($event)"
               /></span>
             }
@@ -159,6 +160,17 @@ import { fontClassOf } from '../../shared/util/user-font.directive';
         }
         @for (a of m.attachments; track a.fileId) {
           <app-attachment [att]="a" />
+        }
+        @if (pack().length > 1) {
+          <button
+            type="button"
+            class="btn btn-sm mt-1.5 gap-1.5 self-start"
+            [disabled]="addingPack()"
+            (click)="addPack()"
+          >
+            <app-icon name="waveform" [size]="14" />
+            {{ 'Add the pack to my soundboard' | t }} ({{ pack().length }})
+          </button>
         }
 
         @if (visibleReactions().length) {
@@ -317,6 +329,10 @@ export class MessageItemComponent {
     }.bind(this),
   );
   private readonly menu = inject(ContextMenuService);
+  private readonly imports = inject(SoundImportService);
+  protected readonly addingPack = signal(false);
+  /** The sounds of this message that belong to a pack (the people who receive them can add all at once). */
+  protected readonly pack = computed(this.findPack.bind(this));
   private readonly ui = inject(UiService);
   /** False when the message is only a link whose preview card already shows it (so it is not drawn twice). */
   protected readonly textShown = computed(
@@ -462,6 +478,23 @@ export class MessageItemComponent {
       await this.store.toggleReaction(this.message(), emoji);
     } catch {
       this.toast.error('Could not react');
+    }
+  }
+
+  /** The attachments that are sounds of a pack. */
+  private findPack(): ViewAttachment[] {
+    return this.message().attachments.filter(function inPack(a) {
+      return !!a.pack && a.kind === 'audio';
+    });
+  }
+
+  /** Adds all the sounds of the pack to the soundboard. */
+  protected async addPack(): Promise<void> {
+    this.addingPack.set(true);
+    try {
+      await this.imports.addPack(this.pack());
+    } finally {
+      this.addingPack.set(false);
     }
   }
 

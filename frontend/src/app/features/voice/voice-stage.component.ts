@@ -109,6 +109,8 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
             [class.chip-accent]="call.mediaEncryption() === 'active'"
             [class.chip-amber]="call.mediaEncryption() === 'pending'"
             [class.chip-red]="call.mediaEncryption() === 'failing'"
+            [attr.title]="encryptionTitle()"
+            [attr.aria-label]="'End-to-end encryption' | t"
             (click)="verifyOpen.set(true)"
           >
             <app-icon
@@ -116,17 +118,9 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
               [size]="11"
               [class.animate-pulse]="call.mediaEncryption() === 'pending'"
             />
-            <span class="sr-only sm:hidden">{{ 'End-to-end encryption' | t }}</span>
-            <span class="max-sm:hidden">
-              @switch (call.mediaEncryption()) {
-                @case ('active') {
-                  {{ 'End-to-end encrypted' | t }}
-                }
-                @case ('failing') {
-                  {{ 'Encryption problem' | t }}
-                }
-              }
-            </span>
+            @if (call.mediaEncryption() === 'failing') {
+              <span class="max-sm:hidden">{{ 'Encryption problem' | t }}</span>
+            }
           </button>
           <span class="hidden font-mono text-xs text-muted md:inline"
             >{{ call.stats().rttMs ?? '—' }} ms · {{ call.stats().outKbps }}↑
@@ -358,6 +352,8 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                             [value]="elapsed()"
                             [attr.aria-label]="'Timeline' | t"
                             (pointerdown)="scrubbing.set(true)"
+                            (pointerup)="endScrub()"
+                            (pointercancel)="endScrub()"
                             (input)="elapsed.set(+$any($event.target).value)"
                             (change)="seekTo(+$any($event.target).value)"
                           />
@@ -1153,7 +1149,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
               <div class="player-box relative min-h-0 flex-1 bg-black">
                 @if (musicSrc(); as src) {
                   <iframe
-                    class="player-frame absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
+                    class="player-frame pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
                     [src]="src"
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     allowfullscreen
@@ -1163,6 +1159,14 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                     #reproductor
                     (load)="notifyPlayer(reproductor)"
                   ></iframe>
+                  <!-- the picture is only a picture: a press on it plays or pauses for everybody, nothing of YouTube answers -->
+                  <div
+                    class="absolute inset-0 cursor-pointer"
+                    role="button"
+                    tabindex="-1"
+                    [attr.aria-label]="(paused() ? 'Play' : 'Pause') | t"
+                    (click)="togglePause()"
+                  ></div>
                 } @else {
                   <div
                     class="absolute inset-0 flex items-center justify-center p-3 text-center text-xs text-muted"
@@ -1172,7 +1176,10 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                 }
               </div>
               @if (musicSrc()) {
-                <div class="timeline flex items-center gap-2 border-t border-white/8 px-3 py-2">
+                <div
+                  class="timeline flex items-center gap-2 border-t border-white/8 px-3 py-2"
+                  (dblclick)="$event.stopPropagation()"
+                >
                   <button
                     type="button"
                     class="btn btn-icon btn-sm btn-ghost"
@@ -1196,6 +1203,8 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                     [disabled]="duration() <= 0"
                     [attr.aria-label]="'Timeline' | t"
                     (pointerdown)="scrubbing.set(true)"
+                    (pointerup)="endScrub()"
+                    (pointercancel)="endScrub()"
                     (input)="elapsed.set(+$any($event.target).value)"
                     (change)="seekTo(+$any($event.target).value)"
                   />
@@ -1247,6 +1256,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
             <app-avatar
               [user]="t.user"
               [size]="small ? 44 : 88"
+              [ringRatio]="0.07"
               [aura]="true"
               [speaking]="t.speaking"
             />
@@ -1358,7 +1368,7 @@ const MUSIC_PLACES: Record<DockPlace, string> = {
                   {{ p.user?.displayName }}
                 </div>
                 <div class="text-xs text-muted">
-                  {{ 'frames encrypted' | t }}: {{ p.sent }} · {{ 'decrypted' | t }}:
+                  {{ 'Sent, encrypted' | t }}: {{ p.sent }} · {{ 'Received, decrypted' | t }}:
                   {{ p.received }}
                   @if (p.failed) {
                     · <span class="text-red-300">{{ 'rejected' | t }}: {{ p.failed }}</span>
@@ -1958,6 +1968,14 @@ export class VoiceStageComponent {
     this.call.setMusicPaused(next, this.playerTime);
   }
 
+  /**
+   * The pointer left the timeline. The bar follows the player again a moment later (after the jump, if there was one): if the
+   * person pressed it and let go without moving it, nothing else would give it back to the player and it would stay still.
+   */
+  protected endScrub(): void {
+    setTimeout(this.scrubbing.set.bind(this.scrubbing, false), 250);
+  }
+
   /** The person moved the timeline of the music bar: the player jumps, and so does everybody's. */
   protected seekTo(seconds: number): void {
     this.scrubbing.set(false);
@@ -1972,7 +1990,7 @@ export class VoiceStageComponent {
   /** Sends a command to the YouTube player (it must have been started with enablejsapi). */
   private commandPlayer(func: string, args: unknown[]): void {
     this.musicFrame?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func, args }),
+      JSON.stringify({ event: 'command', func, args, id: 1, channel: 'widget' }),
       'https://www.youtube-nocookie.com',
     );
   }
@@ -2117,11 +2135,28 @@ export class VoiceStageComponent {
     this.elapsed.set(0);
     this.lastSample = null;
     this.playlistIndex = -1;
+    this.listen(marco);
+    // ? The player starts telling its time and its length only once it has been asked after it is ready, and a first
+    // ask that arrives too early is lost: it is repeated until the length is known (then the timeline can be used).
+    for (const wait of [400, 1000, 2000, 3500, 6000, 10000]) {
+      setTimeout(this.listenAgain.bind(this, marco), wait);
+    }
+    this.applyMusicVolume();
+  }
+
+  /** Asks the player to start reporting its state. */
+  private listen(marco: HTMLIFrameElement): void {
     marco.contentWindow?.postMessage(
-      JSON.stringify({ event: 'listening', id: 1 }),
+      JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }),
       'https://www.youtube-nocookie.com',
     );
-    this.applyMusicVolume();
+  }
+
+  /** Asks again while the length of the video is still unknown and this is still the frame that plays. */
+  private listenAgain(marco: HTMLIFrameElement): void {
+    if (marco === this.musicFrame && marco.isConnected && this.duration() <= 0) {
+      this.listen(marco);
+    }
   }
 
   /** Sets the volume of the music player (silent when the person is deafened). */
@@ -2529,12 +2564,21 @@ export class VoiceStageComponent {
       return this.i18n.t('{n} in the call', { n });
     }.bind(this),
   );
+  /** What the chip of the encryption says when the pointer is over it. */
+  protected encryptionTitle(): string {
+    const state = this.call.mediaEncryption();
+    if (state === 'active') {
+      return this.i18n.t('End-to-end encrypted');
+    }
+    return this.i18n.t(state === 'failing' ? 'Encryption problem' : 'End-to-end encryption');
+  }
+
+  /** The cipher of the media, short: "AES-128-GCM" or "AES-128-CM" (the name the browser gives is long and varies). */
   protected readonly cipherLabel = computed(
     function (this: VoiceStageComponent) {
-      return (this.call.stats().srtpCipher ?? 'AES-128')
-        .replace('AES_CM_128_HMAC_SHA1_80', 'AES-128-CM')
-        .replace('AEAD_AES_256_GCM', 'AES-256-GCM')
-        .replace('AEAD_AES_128_GCM', 'AES-128-GCM');
+      const raw = this.call.stats().srtpCipher ?? '';
+      const size = /256/.test(raw) ? '256' : '128';
+      return raw ? 'AES-' + size + (/GCM/.test(raw) ? '-GCM' : '-CM') : 'AES-128';
     }.bind(this),
   );
 

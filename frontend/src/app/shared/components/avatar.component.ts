@@ -76,6 +76,8 @@ export class AvatarComponent {
   readonly size = input(40);
   readonly status = input<PresenceStatus | null>(null);
   readonly aura = input(false);
+  /** How thick the ring of the effect is, as a part of the size of the picture (a big picture in a call wants a thinner one). */
+  readonly ringRatio = input(0.14);
   readonly speaking = input(false);
 
   private readonly images = inject(ImageService);
@@ -105,7 +107,7 @@ export class AvatarComponent {
   /** Thickness of the ring of the effect: it grows with the picture, so a small avatar does not look heavy. */
   protected readonly ringPx = computed(
     function (this: AvatarComponent) {
-      return Math.max(4, Math.round(this.size() * 0.14 * 10) / 10);
+      return Math.max(4, Math.round(this.size() * this.ringRatio() * 10) / 10);
     }.bind(this),
   );
   /** How far the dot of the state is from the corner: its center sits on the edge of the picture (or of the ring). */

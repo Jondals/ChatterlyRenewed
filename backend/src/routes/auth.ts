@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../context';
-import { getUser, toPublicUser, toSelfUser, presenceAudience, type UserRow } from '../models';
+import { getUser, toPublicUser, toSelfUser, profileAudience, type UserRow } from '../models';
 import { hashAuthSecret, verifyAuthSecret, needsUpgrade } from '../security/password';
 import { deleteImage, imageFile, ownsImage } from './images';
 import {
@@ -539,7 +539,8 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       const row = getUser(db, id)!;
       const user = toPublicUser(row);
       const own = toSelfUser(row);
-      ctx.hub.sendToMany(presenceAudience(db, id), { t: 'user.update', user });
+      // * Everybody who may see the pictures gets the change, also people who only share a direct conversation or a pending request.
+      ctx.hub.sendToMany(profileAudience(db, id), { t: 'user.update', user });
       ctx.hub.sendTo(id, { t: 'user.update', user: own });
       // Each person around now gets what the new choice allows them to see (or "offline").
       if (presenceChanged) ctx.hub.refreshPresence(id);

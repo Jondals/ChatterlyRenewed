@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.21.0
+
+- **A long string without spaces no longer leaves its bubble** (`aaaa…`): the bubble breaks it at any point.
+- **My profile keeps what you write.** The name, status, pronouns, colors, banner, effect and About me are kept when the settings are closed (or you go to another section) and are applied only when you press Save; "Reset" throws them away. They are kept in memory only (never written to the disk of the browser) and belong to the person who wrote them.
+- **Sounds from the chat to the soundboard.** Every voice note, audio and video of a chat has the button "Add to my soundboard" (before, only the ones marked by the sender), and it opens the editor to cut it, name it and give it an emoji.
+- **Share your sounds.** Every sound of yours has a button to send it to the chat that is open (the people who get it can add it with one button), and a category has "Share as a pack": it sends all its sounds in one message and whoever gets it has "Add the pack to my soundboard", which makes a category with the name of the pack and adds them all at once. What comes with a sound (pack name, emoji) is cut to 20 and 8 characters when it is received.
+- **Camera:** turning the camera off and on again (or the screen) sometimes left the other people with a frozen or missing picture until it was toggled twice. A camera or a screen goes now through a new transceiver each time and, when it stops, the other side hears that the track ended and drops the picture.
+- **Spinly in a call:** a wheel or tournament that a friend started was lost when you joined the call from another page, because the part that listens to it was made only when a screen asked for it. It is made when the app starts.
+- Call: the chip of the encryption is a lock (a shield while it is being set up) and says it with the pointer; the cipher is shown short ("AES-128-GCM", it overflowed its box); the counters of the encryption say "Sent, encrypted" and "Received, decrypted" (each is its own direction, so they are not equal); the ring of the profile effect on the big picture of a call is half as thick.
+- Direct messages: bigger names, state ("In a call") and titles.
+- Tests: an unsaved status survives closing the settings.
+
+## 2.20.4
+
+- **Watching videos together is fully custom.** The player of YouTube cannot be touched any more (nothing of it is shown or answers a press): the picture is only a picture, a press on it plays or pauses for everybody, and the bar of the call has play and pause, the time and the timeline. The +10 and −10 buttons were removed.
+- **The timeline moves the video, and everybody follows.** The messages to the player carry the channel that YouTube expects and the ask to report its time is repeated for ten seconds until it answers. Pressing the bar and letting go without moving it left it frozen (it did not follow the player again); now it does. The test of the app plays a real video, jumps to second 120 on one window and checks that the player jumped and that the other window is taken to the same second.
+
+## 2.20.3
+
+- **Watching videos together has one set of controls: the one of the call.** The player of YouTube kept its own bar (on a Short it hid itself in some browsers, and what it did was not shared with the others), so there were two sets of buttons. YouTube's controls, keyboard and full-screen button are off now; the bar of the call has play and pause, −10 and +10 seconds, the time and the timeline.
+- The timeline did not move the video when the player had not told its length yet (it stayed disabled): the app asks the player again, up to three times, until it answers.
+
+## 2.20.2
+
+- **The soundboard sounds at the first press.** The six effects were loaded only when one was pressed (that press stayed silent, and so did the next ones until the file arrived), and your own sounds were decoded at the first press too. Now the effects load when the page starts, your sounds are decoded as soon as the soundboard has them, and a press on an effect that is still loading plays it as soon as it arrives instead of being lost.
+
 ## 2.20.1
 
 - **My profile no longer narrows while the page is scrolled or a fold opens.** The cause was the close button of the settings: it was a sticky float, and a grid next to a float is made narrower by it, so when the float followed the scroll over the page the columns shrank. The button now lives in a box with no height, so nothing gives way to it.

@@ -1465,6 +1465,17 @@ export class CallService {
         this.protect(link, receiver, track.kind as 'audio' | 'video', 'recv');
       if (track.kind === 'video') this.preferVp8(transceiver);
       const stream = streams[0] ?? new MediaStream([track]);
+      if (track.kind === 'video') {
+        // The sender stopped (camera or screen turned off): that picture is not there any more, and a new one will come with a new track.
+        track.addEventListener(
+          'ended',
+          function gone(this: CallService) {
+            const peer = this.peers()[userId];
+            if (peer?.camera === stream) this.updatePeer(userId, { camera: null });
+            if (peer?.screen === stream) this.updatePeer(userId, { screen: null });
+          }.bind(this),
+        );
+      }
       if (track.kind === 'audio') {
         this.attachAudio(link, stream);
         this.updatePeer(userId, { audio: stream });
@@ -1498,7 +1509,12 @@ export class CallService {
   private addVideo(link: Link, stream: MediaStream, kind: 'camera' | 'screen'): void {
     const senders = stream.getTracks().map(
       function (this: CallService, track: MediaStreamTrack) {
-        const sender = link.pc.addTrack(track, stream);
+        // ? A NEW transceiver each time (addTrack reuses an old one that stopped sending, and then the other person never gets
+        // a new "track" event: the camera that was turned off and on again stayed frozen or missing until it was toggled again).
+        const sender = link.pc.addTransceiver(track, {
+          direction: 'sendrecv',
+          streams: [stream],
+        }).sender;
         const kind = track.kind === 'video' ? 'video' : 'audio';
         const transceiver = this.protectTrack(link, sender, kind);
         if (kind === 'video' && transceiver) this.preferVp8(transceiver);
@@ -1512,7 +1528,15 @@ export class CallService {
   private removeSenders(link: Link, kind: 'camera' | 'screen'): void {
     for (const sender of link.senders[kind] ?? []) {
       try {
-        link.pc.removeTrack(sender);
+        // Stopping the transceiver ends the track of the other person (they hear "ended") and frees its line for good.
+        const transceiver = link.pc.getTransceivers().find(function mine(t) {
+          return t.sender === sender;
+        });
+        if (transceiver) {
+          transceiver.stop();
+        } else {
+          link.pc.removeTrack(sender);
+        }
       } catch {
         /* connection already closed */
       }
